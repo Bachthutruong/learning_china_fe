@@ -24,12 +24,13 @@ import toast from 'react-hot-toast'
 
 interface Level {
   _id: string
-  level: number
+  level?: number
+  number: number
   name: string
   description: string
   requiredExperience: number
   color: string
-  icon: string
+  icon?: string
   vocabularyCount?: number
   testCount?: number
   userCount?: number
@@ -93,7 +94,8 @@ export const AdminLevels = () => {
     try {
       setLoading(true)
       const response = await api.get('/admin/levels')
-      setLevels(response.data.levels || [])
+      console.log('Levels response:', response.data)
+      setLevels(response.data.levels || response.data || [])
     } catch (error) {
       console.error('Error fetching levels:', error)
       toast.error('Không thể tải danh sách cấp độ')
@@ -185,17 +187,17 @@ export const AdminLevels = () => {
   const openEditDialog = (level: Level) => {
     setEditingLevel(level)
     setFormData({
-      level: level.level,
+      level: level.level || level.number,
       name: level.name,
       description: level.description,
       requiredExperience: level.requiredExperience,
       color: level.color,
-      icon: level.icon
+      icon: level.icon || 'star'
     })
     setShowEditDialog(true)
   }
 
-  const getIconComponent = (iconName: string) => {
+  const getIconComponent = (iconName: string | undefined) => {
     const iconConfig = levelIcons.find(i => i.value === iconName)
     return iconConfig ? iconConfig.icon : Star
   }
@@ -495,18 +497,18 @@ export const AdminLevels = () => {
       {/* Levels List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredLevels.map((level) => {
-          const IconComponent = getIconComponent(level.icon)
+          const IconComponent = getIconComponent(level.icon || 'star')
           return (
             <Card key={level._id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-lg ${level.color} flex items-center justify-center`}>
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center`} style={{ backgroundColor: level.color }}>
                       <IconComponent className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <CardTitle className="text-xl font-bold text-gray-900">
-                        Cấp {level.level}: {level.name}
+                        Cấp {level.level || level.number}: {level.name}
                       </CardTitle>
                       <CardDescription>
                         {level.requiredExperience} XP yêu cầu
@@ -574,9 +576,9 @@ export const AdminLevels = () => {
                     {new Date(level.createdAt).toLocaleDateString()}
                   </Badge>
                   <div className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded ${level.color}`} />
+                    <div className="w-4 h-4 rounded" style={{ backgroundColor: level.color }} />
                     <span className="text-xs text-gray-500">
-                      {colorOptions.find(c => c.value === level.color)?.name}
+                      {level.color}
                     </span>
                   </div>
                 </div>

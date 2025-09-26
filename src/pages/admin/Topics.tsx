@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -12,10 +12,12 @@ import {
   Edit, 
   Trash2, 
   Search, 
-  Palette,
   BookOpen,
   Loader2,
-  X
+  Grid3X3,
+  Table,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
@@ -62,6 +64,15 @@ export const AdminTopics = () => {
     description: ''
   })
   const [formLoading, setFormLoading] = useState(false)
+  
+  // Pagination states
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(9)
+  
+  // Delete dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null)
 
   useEffect(() => {
     fetchTopics()
@@ -71,7 +82,24 @@ export const AdminTopics = () => {
     try {
       setLoading(true)
       const response = await api.get('/admin/topics')
-      setTopics(response.data.topics || [])
+      console.log('Topics API response:', response.data)
+      const topicsData = response.data.topics || response.data || []
+      
+      // Fetch vocabulary count for each topic
+      const topicsWithCount = await Promise.all(
+        topicsData.map(async (topic: Topic) => {
+          try {
+            const vocabResponse = await api.get(`/admin/vocabularies?topic=${encodeURIComponent(topic.name)}`)
+            const vocabularyCount = vocabResponse.data.vocabularies?.length || vocabResponse.data?.length || 0
+            return { ...topic, vocabularyCount }
+          } catch (error) {
+            console.error(`Error fetching vocabulary count for topic ${topic.name}:`, error)
+            return { ...topic, vocabularyCount: 0 }
+          }
+        })
+      )
+      
+      setTopics(topicsWithCount)
     } catch (error) {
       console.error('Error fetching topics:', error)
       toast.error('Không thể tải danh sách chủ đề')
@@ -126,16 +154,26 @@ export const AdminTopics = () => {
     }
   }
 
-  const handleDeleteTopic = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa chủ đề này? Tất cả từ vựng liên quan sẽ bị ảnh hưởng.')) return
+  const openDeleteDialog = (topic: Topic) => {
+    setTopicToDelete(topic)
+    setShowDeleteDialog(true)
+  }
+
+  const handleDeleteTopic = async () => {
+    if (!topicToDelete) return
 
     try {
-      await api.delete(`/admin/topics/${id}`)
+      setFormLoading(true)
+      await api.delete(`/admin/topics/${topicToDelete._id}`)
       toast.success('Xóa chủ đề thành công!')
+      setShowDeleteDialog(false)
+      setTopicToDelete(null)
       fetchTopics()
     } catch (error: any) {
       console.error('Error deleting topic:', error)
       toast.error(error.response?.data?.message || 'Không thể xóa chủ đề')
+    } finally {
+      setFormLoading(false)
     }
   }
 
@@ -161,6 +199,54 @@ export const AdminTopics = () => {
     topic.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     topic.description.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredTopics.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedTopics = filteredTopics.slice(startIndex, endIndex)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage)
+    setCurrentPage(1) // Reset to first page
+  }
+
+  // Helper function to get color value for display
+  const getColorValue = (color: string) => {
+    if (color.startsWith('#')) {
+      return color // Hex color
+    } else if (color.startsWith('bg-')) {
+      return color // Tailwind class
+    }
+    return 'N/A'
+  }
+
+  // Helper function to get background color for inline styles
+  const getBackgroundColor = (color: string) => {
+    if (color.startsWith('#')) {
+      return color // Use hex color directly
+    } else if (color.startsWith('bg-')) {
+      // Convert Tailwind class to hex color
+      const colorMap: { [key: string]: string } = {
+        'bg-blue-500': '#3b82f6',
+        'bg-green-500': '#10b981',
+        'bg-red-500': '#ef4444',
+        'bg-yellow-500': '#f59e0b',
+        'bg-purple-500': '#8b5cf6',
+        'bg-pink-500': '#ec4899',
+        'bg-orange-500': '#f97316',
+        'bg-cyan-500': '#06b6d4',
+        'bg-gray-500': '#6b7280',
+        'bg-indigo-500': '#6366f1'
+      }
+      return colorMap[color] || '#6b7280' // Default gray if not found
+    }
+    return '#6b7280' // Default gray
+  }
 
   if (loading) {
     return (
@@ -336,10 +422,45 @@ export const AdminTopics = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Xác nhận xóa chủ đề</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn xóa chủ đề "{topicToDelete?.name}"? 
+                Tất cả từ vựng liên quan sẽ bị ảnh hưởng. Hành động này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDeleteDialog(false)}
+              >
+                Hủy
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteTopic}
+                disabled={formLoading}
+              >
+                {formLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  'Xóa'
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-4">
+      {/* Search and Controls */}
+      <div className="flex items-center justify-between gap-4">
         <div className="flex-1 max-w-md">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -351,69 +472,245 @@ export const AdminTopics = () => {
             />
           </div>
         </div>
+        
+        <div className="flex items-center gap-4">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+            >
+              <Table className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Items per page */}
+          <div className="flex items-center gap-2">
+            <Label htmlFor="itemsPerPage" className="text-sm">Hiển thị:</Label>
+            <select
+              id="itemsPerPage"
+              value={itemsPerPage}
+              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+            >
+              <option value={6}>6</option>
+              <option value={9}>9</option>
+              <option value={12}>12</option>
+              <option value={18}>18</option>
+              <option value={24}>24</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Topics List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTopics.map((topic) => (
-          <Card key={topic._id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-4 h-4 rounded-full ${topic.color}`} />
-                  <CardTitle className="text-xl font-bold text-gray-900">
-                    {topic.name}
-                  </CardTitle>
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginatedTopics.map((topic) => (
+            <Card key={topic._id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded-full" 
+                      style={{ backgroundColor: getBackgroundColor(topic.color) }}
+                    />
+                    <CardTitle className="text-xl font-bold text-gray-900">
+                      {topic.name}
+                    </CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(topic)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDeleteDialog(topic)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openEditDialog(topic)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteTopic(topic._id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {topic.description && (
-                <p className="text-gray-600 text-sm">
-                  {topic.description}
-                </p>
-              )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {topic.description && (
+                  <p className="text-gray-600 text-sm">
+                    {topic.description}
+                  </p>
+                )}
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">
-                    {topic.vocabularyCount || 0} từ vựng
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">
+                      {topic.vocabularyCount || 0} từ vựng
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {new Date(topic.createdAt).toLocaleDateString()}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  {new Date(topic.createdAt).toLocaleDateString()}
-                </Badge>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Màu:</span>
-                <div className={`w-6 h-6 rounded ${topic.color} border border-gray-200`} />
-                <span className="text-sm text-gray-600">
-                  {colorOptions.find(c => c.value === topic.color)?.name}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Màu:</span>
+                  <div 
+                    className="w-6 h-6 rounded border border-gray-200" 
+                    style={{ backgroundColor: getBackgroundColor(topic.color) }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Chủ đề
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Mô tả
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Màu sắc
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Từ vựng
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ngày tạo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginatedTopics.map((topic) => (
+                  <tr key={topic._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-4 h-4 rounded-full mr-3" 
+                          style={{ backgroundColor: getBackgroundColor(topic.color) }}
+                        />
+                        <div className="text-sm font-medium text-gray-900">
+                          {topic.name}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 max-w-xs truncate">
+                        {topic.description}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-6 h-6 rounded border border-gray-200 mr-2" 
+                          style={{ backgroundColor: getBackgroundColor(topic.color) }}
+                        />
+                        <span className="text-sm text-gray-600">
+                          {getColorValue(topic.color)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <BookOpen className="h-4 w-4 text-gray-500 mr-2" />
+                        <span className="text-sm text-gray-600">
+                          {topic.vocabularyCount || 0}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(topic.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(topic)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDeleteDialog(topic)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {filteredTopics.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-700">
+            Hiển thị {startIndex + 1} đến {Math.min(endIndex, filteredTopics.length)} trong tổng số {filteredTopics.length} chủ đề
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handlePageChange(page)}
+                  className="w-8 h-8 p-0"
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {filteredTopics.length === 0 && (
         <Card className="text-center py-12">

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { 
   BookOpen, 
-  Volume2, 
-  Star, 
   Target, 
   Brain, 
   TrendingUp,
@@ -19,7 +20,6 @@ import {
   Plus
 } from 'lucide-react'
 import { api } from '../services/api'
-import { useAuth } from '../contexts/AuthContext'
 import { ReportErrorDialog } from '../components/ReportErrorDialog'
 import toast from 'react-hot-toast'
 
@@ -52,27 +52,25 @@ interface QuizQuestion {
   explanation?: string
 }
 
+
 export const Vocabulary = () => {
-  const { user } = useAuth()
   const [vocabularies, setVocabularies] = useState<Vocabulary[]>([])
   const [topics, setTopics] = useState<Topic[]>([])
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [showAnswer, setShowAnswer] = useState(false)
-  const [userAnswer, setUserAnswer] = useState('')
-  const [score, setScore] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showQuiz, setShowQuiz] = useState(false)
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
-  const [quizAnswers, setQuizAnswers] = useState<string[]>([])
+  const [quizAnswers, setQuizAnswers] = useState<(string | number)[]>([])
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0)
   const [wordStatus, setWordStatus] = useState<'learning' | 'known' | 'needs-study' | 'skip'>('learning')
   const [showReportDialog, setShowReportDialog] = useState(false)
   const [showTopicSelector, setShowTopicSelector] = useState(true)
-  const [aiSuggestions, setAiSuggestions] = useState<Vocabulary[]>([])
-  const [suggestionLoading, setSuggestionLoading] = useState(false)
   const [customKeywords, setCustomKeywords] = useState('')
+  const [searchResults, setSearchResults] = useState<Vocabulary[]>([])
+  const [selectedVocabularies, setSelectedVocabularies] = useState<string[]>([])
+  const [showAddDialog, setShowAddDialog] = useState(false)
 
   const filteredVocabulary = selectedTopic 
     ? vocabularies.filter(word => word.topics.includes(selectedTopic))
@@ -104,12 +102,11 @@ export const Vocabulary = () => {
   const fetchVocabularies = async (topic?: string) => {
     try {
       setLoading(true)
-      const params = topic ? { topic } : {}
+      const params = topic ? { topic, limit: 10 } : { limit: 10 }
       const response = await api.get('/vocabulary/suggested', { params })
       setVocabularies(response.data)
       setCurrentWordIndex(0)
-      setShowAnswer(false)
-      setUserAnswer('')
+      setShowTopicSelector(false)
     } catch (error) {
       console.error('Failed to fetch vocabularies:', error)
       toast.error('Không thể tải từ vựng')
@@ -118,25 +115,15 @@ export const Vocabulary = () => {
     }
   }
 
-  const getAISuggestions = async (topic: string, keywords?: string) => {
+  const searchVocabulary = async () => {
+    if (!customKeywords.trim()) return
+
     try {
-      setSuggestionLoading(true)
-      const response = await api.post('/vocabulary/ai-suggestions', {
-        topic,
-        keywords: keywords || ''
-      })
-      setAiSuggestions(response.data.suggestedVocabulary || [])
-      setVocabularies(response.data.suggestedVocabulary || [])
-      setCurrentWordIndex(0)
-      setShowAnswer(false)
-      setUserAnswer('')
-      setShowTopicSelector(false)
-      toast.success(`Đã tìm thấy ${response.data.suggestedVocabulary?.length || 0} từ vựng theo chủ đề "${topic}"`)
+      const response = await api.get(`/vocabulary/search?keywords=${encodeURIComponent(customKeywords)}`)
+      setSearchResults(response.data.vocabularies)
     } catch (error) {
-      console.error('Failed to get AI suggestions:', error)
-      toast.error('Không thể lấy gợi ý từ AI')
-    } finally {
-      setSuggestionLoading(false)
+      console.error('Failed to search vocabulary:', error)
+      toast.error('Không thể tìm kiếm từ vựng')
     }
   }
 
@@ -152,8 +139,6 @@ export const Vocabulary = () => {
   const handleNext = () => {
     if (currentWordIndex < filteredVocabulary.length - 1) {
       setCurrentWordIndex(currentWordIndex + 1)
-      setShowAnswer(false)
-      setUserAnswer('')
       setWordStatus('learning')
     }
   }
@@ -161,18 +146,22 @@ export const Vocabulary = () => {
   const handlePrevious = () => {
     if (currentWordIndex > 0) {
       setCurrentWordIndex(currentWordIndex - 1)
-      setShowAnswer(false)
-      setUserAnswer('')
       setWordStatus('learning')
     }
   }
 
   const handleWordStatus = async (status: 'known' | 'needs-study' | 'skip') => {
     if (status === 'known') {
-      // Show quiz
+      // Show quiz - 3 câu hỏi ngẫu nhiên
       try {
-        const response = await api.get(`/vocabulary/${currentWord._id}/quiz`)
-        setQuizQuestions(response.data.questions)
+        const response = await api.get(`/vocabulary/${currentWord?._id}/quiz`)
+        const questions = response.data.questions || []
+        // Lấy tối đa 3 câu hỏi ngẫu nhiên
+        const randomQuestions = questions
+          .sort(() => 0.5 - Math.random())
+          .slice(0, Math.min(3, questions.length))
+        
+        setQuizQuestions(randomQuestions)
         setQuizAnswers([])
         setCurrentQuizIndex(0)
         setShowQuiz(true)
@@ -185,52 +174,119 @@ export const Vocabulary = () => {
       setWordStatus(status)
       if (status === 'skip') {
         handleNext()
+      } else {
+        // Cập nhật trạng thái từ vựng
+        try {
+          await api.post('/vocabulary/update-status', {
+            vocabularyId: currentWord?._id,
+            status: status
+          })
+          toast.success('Đã cập nhật trạng thái từ vựng')
+          handleNext()
+        } catch (error) {
+          console.error('Failed to update status:', error)
+          toast.error('Không thể cập nhật trạng thái')
+        }
       }
     }
   }
 
-  const handleQuizAnswer = (answer: string) => {
+
+
+  const handleReset = () => {
+    setCurrentWordIndex(0)
+    setWordStatus('learning')
+  }
+
+  const handleQuizAnswer = (answerIndex: number) => {
     const newAnswers = [...quizAnswers]
-    newAnswers[currentQuizIndex] = answer
+    newAnswers[currentQuizIndex] = answerIndex
     setQuizAnswers(newAnswers)
-    
+
     if (currentQuizIndex < quizQuestions.length - 1) {
       setCurrentQuizIndex(currentQuizIndex + 1)
     } else {
       // Submit quiz
-      completeVocabulary(newAnswers)
+      completeQuiz(newAnswers)
     }
   }
 
-  const completeVocabulary = async (answers: string[]) => {
+  const completeQuiz = async (answers: (string | number)[]) => {
     try {
-      const response = await api.post('/vocabulary/complete', {
-        vocabularyId: currentWord._id,
-        quizAnswers: answers
-      })
-      
-      if (response.data.quizPassed) {
-        toast.success('Chúc mừng! Bạn đã hoàn thành từ vựng này!')
-        setScore(score + 1)
+      // Kiểm tra đáp án
+      let correctCount = 0
+      for (let i = 0; i < answers.length; i++) {
+        if (quizQuestions[i] && answers[i] === quizQuestions[i].correctAnswer) {
+          correctCount++
+        }
+      }
+
+      const allCorrect = correctCount === answers.length
+
+      if (allCorrect) {
+        // Đúng hết 3 câu - +0.5 điểm +0.5 xu
+        await api.post('/vocabulary/complete', {
+          vocabularyId: currentWord?._id,
+          status: 'known',
+          reward: true
+        })
+        toast.success('Chúc mừng! Bạn đã học thuộc từ này! (+0.5 điểm, +0.5 xu)')
       } else {
+        // Sai - thêm vào danh sách cần học
+        await api.post('/vocabulary/update-status', {
+          vocabularyId: currentWord?._id,
+          status: 'needs-study'
+        })
         toast.error('Bạn cần học thêm từ này')
       }
-      
+
       setShowQuiz(false)
-      setShowAnswer(true)
-      setWordStatus(response.data.quizPassed ? 'known' : 'needs-study')
+      setWordStatus(allCorrect ? 'known' : 'needs-study')
+      
+      // Tự động chuyển sang từ tiếp theo sau 2 giây
+      setTimeout(() => {
+        handleNext()
+        // Tự động thêm từ mới nếu còn ít từ trong danh sách
+        if (vocabularies.length - currentWordIndex <= 2) {
+          addMoreWords()
+        }
+      }, 2000)
     } catch (error) {
-      console.error('Failed to complete vocabulary:', error)
-      toast.error('Không thể hoàn thành từ vựng')
+      console.error('Failed to complete quiz:', error)
+      toast.error('Không thể hoàn thành bài kiểm tra')
     }
   }
 
-  const handleReset = () => {
-    setCurrentWordIndex(0)
-    setShowAnswer(false)
-    setUserAnswer('')
-    setScore(0)
-    setWordStatus('learning')
+  const addMoreWords = async () => {
+    try {
+      const params = selectedTopic ? { topic: selectedTopic, limit: 5 } : { limit: 5 }
+      const response = await api.get('/vocabulary/suggested', { params })
+      const newWords = response.data.filter((newWord: any) => 
+        !vocabularies.some(existing => existing._id === newWord._id)
+      )
+      if (newWords.length > 0) {
+        setVocabularies(prev => [...prev, ...newWords])
+        toast.success(`Đã thêm ${newWords.length} từ vựng mới`)
+      }
+    } catch (error) {
+      console.error('Failed to add more words:', error)
+    }
+  }
+
+  const addVocabularyToLearning = async (vocabularyIds: string[]) => {
+    try {
+      await api.post('/vocabulary/add-to-learning', {
+        vocabularyIds
+      })
+      toast.success('Đã thêm từ vựng vào danh sách học tập')
+      setShowAddDialog(false)
+      // Thêm từ vựng vào danh sách hiện tại
+      const newVocabularies = await api.get('/vocabulary/suggested')
+      setVocabularies(newVocabularies.data)
+    } catch (error) {
+      console.error('Failed to add vocabulary:', error)
+      toast.error('Không thể thêm từ vựng')
+    }
   }
 
   if (loading) {
@@ -249,8 +305,19 @@ export const Vocabulary = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Học từ vựng</h1>
-          <p className="text-gray-600">Chọn chủ đề để bắt đầu học từ vựng mới</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Học từ vựng</h1>
+              <p className="text-gray-600">Chọn chủ đề để bắt đầu học từ vựng mới</p>
+            </div>
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Thêm từ vựng
+            </Button>
+          </div>
         </div>
 
         {/* Topic Selector */}
@@ -258,76 +325,37 @@ export const Vocabulary = () => {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-blue-600" />
-                Chọn cách học từ vựng
+                <BookOpen className="h-5 w-5 text-blue-600" />
+                Chọn chủ đề học từ vựng
               </CardTitle>
               <CardDescription>
-                Chọn chủ đề có sẵn hoặc nhập từ khóa để AI gợi ý từ vựng
+                Chọn chủ đề để bắt đầu học 10 từ vựng mới
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Predefined Topics */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Chủ đề có sẵn</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {topics.map((topic) => (
-                    <Button
-                      key={topic._id}
-                      variant="outline"
-                      className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-blue-50"
-                      onClick={() => getAISuggestions(topic.name)}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <BookOpen className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <span className="text-sm font-medium">{topic.name}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom Keywords */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Tùy chỉnh từ khóa</h3>
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      placeholder="Nhập từ khóa (ví dụ: gia đình, màu sắc, thức ăn...)"
-                      value={customKeywords}
-                      onChange={(e) => setCustomKeywords(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {topics.map((topic) => (
                   <Button
-                    onClick={() => getAISuggestions('Tùy chỉnh', customKeywords)}
-                    disabled={!customKeywords.trim() || suggestionLoading}
-                    className="px-6"
+                    key={topic._id}
+                    variant="outline"
+                    className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-blue-50"
+                    onClick={() => fetchVocabularies(topic.name)}
                   >
-                    {suggestionLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Đang tìm...
-                      </>
-                    ) : (
-                      <>
-                        <Brain className="h-4 w-4 mr-2" />
-                        AI Gợi ý
-                      </>
-                    )}
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <BookOpen className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <span className="text-sm font-medium">{topic.name}</span>
                   </Button>
-                </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  AI sẽ gợi ý 10 từ vựng phù hợp với từ khóa của bạn
-                </p>
+                ))}
               </div>
             </CardContent>
           </Card>
         )}
 
+        {/* Main Learning Area */}
         <div className="grid lg:grid-cols-4 gap-8">
-          {/* Topic Selection */}
-          <div className="lg:col-span-1">
+            {/* Topic Selection */}
+            <div className="lg:col-span-1">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -383,7 +411,7 @@ export const Vocabulary = () => {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Điểm số</span>
-                    <span className="font-semibold">{score}</span>
+                    <span className="font-semibold">0</span>
                   </div>
                 </div>
               </CardContent>
@@ -540,7 +568,7 @@ export const Vocabulary = () => {
                           key={index}
                           variant="outline"
                           className="justify-start h-auto p-4 text-left"
-                          onClick={() => handleQuizAnswer(option)}
+                          onClick={() => handleQuizAnswer(index)}
                         >
                           {String.fromCharCode(65 + index)}. {option}
                         </Button>
@@ -594,16 +622,100 @@ export const Vocabulary = () => {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Report Error Dialog */}
-      <ReportErrorDialog
-        isOpen={showReportDialog}
-        onClose={() => setShowReportDialog(false)}
-        itemType="vocabulary"
-        itemId={currentWord?._id || ''}
-        itemContent={currentWord?.word || ''}
-      />
+        {/* Add Vocabulary Dialog */}
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Thêm từ vựng mới</DialogTitle>
+              <DialogDescription>
+                Tìm kiếm và thêm từ vựng vào danh sách học tập
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* Custom Search */}
+              <div>
+                <Label htmlFor="keywords">Tìm kiếm từ khóa</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="keywords"
+                    placeholder="Nhập từ khóa để tìm kiếm..."
+                    value={customKeywords}
+                    onChange={(e) => setCustomKeywords(e.target.value)}
+                  />
+                  <Button onClick={searchVocabulary} disabled={!customKeywords.trim()}>
+                    Tìm kiếm
+                  </Button>
+                </div>
+              </div>
+
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Kết quả tìm kiếm:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-60 overflow-y-auto">
+                    {searchResults.map((vocab: Vocabulary) => (
+                      <Card key={vocab._id} className="cursor-pointer hover:bg-gray-50">
+                        <CardContent 
+                          className="p-4"
+                          onClick={() => {
+                            if (selectedVocabularies.includes(vocab._id)) {
+                              setSelectedVocabularies(selectedVocabularies.filter(id => id !== vocab._id));
+                            } else {
+                              setSelectedVocabularies([...selectedVocabularies, vocab._id]);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h5 className="font-semibold">{vocab.word}</h5>
+                              <p className="text-sm text-gray-600">{vocab.meaning}</p>
+                              <p className="text-xs text-gray-500">{vocab.pronunciation}</p>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={selectedVocabularies.includes(vocab._id)}
+                              onChange={() => {}}
+                              className="w-4 h-4"
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  
+                  {selectedVocabularies.length > 0 && (
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => addVocabularyToLearning(selectedVocabularies)}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        Thêm {selectedVocabularies.length} từ đã chọn
+                      </Button>
+                      <Button 
+                        onClick={() => setSelectedVocabularies([])}
+                        variant="outline"
+                      >
+                        Bỏ chọn tất cả
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Report Error Dialog */}
+        <ReportErrorDialog
+          isOpen={showReportDialog}
+          onClose={() => setShowReportDialog(false)}
+          itemType="vocabulary"
+          itemId={currentWord?._id || ''}
+          itemContent={currentWord?.word || ''}
+        />
+      </div>
     </div>
   )
 }

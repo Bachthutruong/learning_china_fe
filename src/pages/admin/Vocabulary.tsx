@@ -5,6 +5,7 @@ import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Badge } from '../../components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
+import { AudioUpload } from '../../components/ui/audio-upload'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { 
   BookOpen, 
@@ -33,6 +34,8 @@ interface Vocabulary {
   synonyms: string[]
   antonyms: string[]
   audio?: string
+  audioUrl?: string
+  questions?: QuizQuestion[]
   createdAt: string
   updatedAt: string
 }
@@ -42,6 +45,26 @@ interface Topic {
   name: string
   color: string
   description: string
+}
+
+interface Level {
+  _id: string
+  level?: number
+  number: number
+  name: string
+  description: string
+  requiredExperience: number
+  color: string
+  icon?: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface QuizQuestion {
+  question: string
+  options: string[]
+  correctAnswer: number
+  explanation?: string
 }
 
 interface VocabularyFormData {
@@ -55,11 +78,13 @@ interface VocabularyFormData {
   synonyms: string[]
   antonyms: string[]
   audio?: File
+  questions: QuizQuestion[]
 }
 
 export const AdminVocabulary = () => {
   const [vocabularies, setVocabularies] = useState<Vocabulary[]>([])
   const [topics, setTopics] = useState<Topic[]>([])
+  const [levels, setLevels] = useState<Level[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [levelFilter, setLevelFilter] = useState<string>('all')
@@ -78,16 +103,35 @@ export const AdminVocabulary = () => {
     topics: [],
     examples: [],
     synonyms: [],
-    antonyms: []
+    antonyms: [],
+    questions: []
   })
   const [formLoading, setFormLoading] = useState(false)
   const [newExample, setNewExample] = useState('')
   const [newSynonym, setNewSynonym] = useState('')
   const [newAntonym, setNewAntonym] = useState('')
+  const [newQuestion, setNewQuestion] = useState('')
+  const [newQuestionOptions, setNewQuestionOptions] = useState(['', '', '', ''])
+  const [newQuestionCorrectAnswer, setNewQuestionCorrectAnswer] = useState(0)
+  const [newQuestionExplanation, setNewQuestionExplanation] = useState('')
+  
+  // Edit question states
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
+  const [editQuestion, setEditQuestion] = useState('')
+  const [editQuestionOptions, setEditQuestionOptions] = useState(['', '', '', ''])
+  const [editQuestionCorrectAnswer, setEditQuestionCorrectAnswer] = useState(0)
+  const [editQuestionExplanation, setEditQuestionExplanation] = useState('')
+  const [audioRemoved, setAudioRemoved] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [vocabularyToDelete, setVocabularyToDelete] = useState<Vocabulary | null>(null)
 
   useEffect(() => {
     fetchVocabularies()
     fetchTopics()
+    fetchLevels()
   }, [])
 
   const fetchVocabularies = async () => {
@@ -112,6 +156,15 @@ export const AdminVocabulary = () => {
     }
   }
 
+  const fetchLevels = async () => {
+    try {
+      const response = await api.get('/admin/levels')
+      setLevels(response.data.levels || response.data || [])
+    } catch (error) {
+      console.error('Error fetching levels:', error)
+    }
+  }
+
   const handleCreateVocabulary = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -132,16 +185,22 @@ export const AdminVocabulary = () => {
       formDataToSend.append('examples', JSON.stringify(formData.examples))
       formDataToSend.append('synonyms', JSON.stringify(formData.synonyms))
       formDataToSend.append('antonyms', JSON.stringify(formData.antonyms))
+      formDataToSend.append('questions', JSON.stringify(formData.questions))
       
       if (formData.audio) {
         formDataToSend.append('audio', formData.audio)
       }
 
-      await api.post('/admin/vocabularies', formDataToSend, {
+      const response = await api.post('/admin/vocabularies', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
+      
+      // Add the new vocabulary to the list
+      if (response.data.vocabulary) {
+        setVocabularies(prev => [response.data.vocabulary, ...prev])
+      }
       
       toast.success('Tạo từ vựng thành công!')
       setShowCreateDialog(false)
@@ -172,16 +231,28 @@ export const AdminVocabulary = () => {
       formDataToSend.append('examples', JSON.stringify(formData.examples))
       formDataToSend.append('synonyms', JSON.stringify(formData.synonyms))
       formDataToSend.append('antonyms', JSON.stringify(formData.antonyms))
+      formDataToSend.append('questions', JSON.stringify(formData.questions))
       
       if (formData.audio) {
         formDataToSend.append('audio', formData.audio)
       }
 
-      await api.put(`/admin/vocabularies/${editingVocabulary._id}`, formDataToSend, {
+      const response = await api.put(`/admin/vocabularies/${editingVocabulary._id}`, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
+      
+      // Update the vocabulary in the list with the new audioUrl
+      if (response.data.vocabulary) {
+        setVocabularies(prev => 
+          prev.map(v => 
+            v._id === editingVocabulary._id 
+              ? { ...v, ...response.data.vocabulary }
+              : v
+          )
+        )
+      }
       
       toast.success('Cập nhật từ vựng thành công!')
       setShowEditDialog(false)
@@ -196,12 +267,19 @@ export const AdminVocabulary = () => {
     }
   }
 
-  const handleDeleteVocabulary = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa từ vựng này?')) return
+  const openDeleteDialog = (vocabulary: Vocabulary) => {
+    setVocabularyToDelete(vocabulary)
+    setShowDeleteDialog(true)
+  }
+
+  const handleDeleteVocabulary = async () => {
+    if (!vocabularyToDelete) return
 
     try {
-      await api.delete(`/admin/vocabularies/${id}`)
+      await api.delete(`/admin/vocabularies/${vocabularyToDelete._id}`)
       toast.success('Xóa từ vựng thành công!')
+      setShowDeleteDialog(false)
+      setVocabularyToDelete(null)
       fetchVocabularies()
     } catch (error: any) {
       console.error('Error deleting vocabulary:', error)
@@ -245,11 +323,16 @@ export const AdminVocabulary = () => {
       topics: [],
       examples: [],
       synonyms: [],
-      antonyms: []
+      antonyms: [],
+      questions: []
     })
     setNewExample('')
     setNewSynonym('')
     setNewAntonym('')
+    setNewQuestion('')
+    setNewQuestionOptions(['', '', '', ''])
+    setNewQuestionCorrectAnswer(0)
+    setNewQuestionExplanation('')
   }
 
   const openEditDialog = (vocabulary: Vocabulary) => {
@@ -263,8 +346,11 @@ export const AdminVocabulary = () => {
       topics: vocabulary.topics,
       examples: vocabulary.examples,
       synonyms: vocabulary.synonyms,
-      antonyms: vocabulary.antonyms
+      antonyms: vocabulary.antonyms,
+      questions: (vocabulary as any).questions || [],
+      audio: undefined // Reset audio file, will show existing audioUrl
     })
+    setAudioRemoved(false) // Reset audio removed state
     setShowEditDialog(true)
   }
 
@@ -319,6 +405,72 @@ export const AdminVocabulary = () => {
     }))
   }
 
+  const addQuestion = () => {
+    if (newQuestion.trim() && newQuestionOptions.every(opt => opt.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        questions: [...prev.questions, {
+          question: newQuestion.trim(),
+          options: newQuestionOptions.map(opt => opt.trim()),
+          correctAnswer: newQuestionCorrectAnswer,
+          explanation: newQuestionExplanation.trim() || undefined
+        }]
+      }))
+      setNewQuestion('')
+      setNewQuestionOptions(['', '', '', ''])
+      setNewQuestionCorrectAnswer(0)
+      setNewQuestionExplanation('')
+    }
+  }
+
+  const removeQuestion = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== index)
+    }))
+  }
+
+  const startEditQuestion = (index: number) => {
+    const question = formData.questions[index]
+    setEditingQuestionIndex(index)
+    setEditQuestion(question.question)
+    setEditQuestionOptions([...question.options])
+    setEditQuestionCorrectAnswer(question.correctAnswer)
+    setEditQuestionExplanation(question.explanation || '')
+  }
+
+  const saveEditQuestion = () => {
+    if (editingQuestionIndex !== null && editQuestion.trim() && editQuestionOptions.every(opt => opt.trim())) {
+      const updatedQuestions = [...formData.questions]
+      updatedQuestions[editingQuestionIndex] = {
+        question: editQuestion.trim(),
+        options: editQuestionOptions.map(opt => opt.trim()),
+        correctAnswer: editQuestionCorrectAnswer,
+        explanation: editQuestionExplanation.trim() || undefined
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        questions: updatedQuestions
+      }))
+      
+      // Reset edit states
+      setEditingQuestionIndex(null)
+      setEditQuestion('')
+      setEditQuestionOptions(['', '', '', ''])
+      setEditQuestionCorrectAnswer(0)
+      setEditQuestionExplanation('')
+    }
+  }
+
+  const cancelEditQuestion = () => {
+    setEditingQuestionIndex(null)
+    setEditQuestion('')
+    setEditQuestionOptions(['', '', '', ''])
+    setEditQuestionCorrectAnswer(0)
+    setEditQuestionExplanation('')
+  }
+
   const filteredVocabularies = vocabularies.filter(vocabulary => {
     const matchesSearch = vocabulary.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          vocabulary.meaning.toLowerCase().includes(searchTerm.toLowerCase())
@@ -327,6 +479,11 @@ export const AdminVocabulary = () => {
     
     return matchesSearch && matchesLevel && matchesTopic
   })
+
+  const totalPages = Math.ceil(filteredVocabularies.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedVocabularies = filteredVocabularies.slice(startIndex, endIndex)
 
   if (loading) {
     return (
@@ -431,12 +588,11 @@ export const AdminVocabulary = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Cấp 1</SelectItem>
-                      <SelectItem value="2">Cấp 2</SelectItem>
-                      <SelectItem value="3">Cấp 3</SelectItem>
-                      <SelectItem value="4">Cấp 4</SelectItem>
-                      <SelectItem value="5">Cấp 5</SelectItem>
-                      <SelectItem value="6">Cấp 6</SelectItem>
+                      {levels.map((level) => (
+                        <SelectItem key={level._id} value={level.level?.toString() || level.number.toString()}>
+                          Cấp {level.level || level.number}: {level.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -473,16 +629,12 @@ export const AdminVocabulary = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="audio">File âm thanh</Label>
-                <Input
-                  id="audio"
-                  type="file"
+                <Label>File âm thanh</Label>
+                <AudioUpload
+                  value={formData.audio}
+                  onChange={(file) => setFormData(prev => ({ ...prev, audio: file || undefined }))}
+                  maxSize={10}
                   accept="audio/*"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      setFormData(prev => ({ ...prev, audio: e.target.files![0] }))
-                    }
-                  }}
                 />
               </div>
 
@@ -571,6 +723,180 @@ export const AdminVocabulary = () => {
                     />
                     <Button type="button" onClick={addAntonym} disabled={!newAntonym.trim()}>
                       <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Câu hỏi khảo bài</Label>
+                <div className="space-y-4">
+                  {formData.questions.map((question, index) => (
+                    <div key={index} className="border rounded-lg p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">Câu hỏi {index + 1}</h4>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditQuestion(index)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeQuestion(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm">{question.question}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {question.options.map((option, optIndex) => (
+                          <div key={optIndex} className={`p-2 rounded text-sm ${
+                            optIndex === question.correctAnswer 
+                              ? 'bg-green-100 text-green-800 border border-green-300' 
+                              : 'bg-gray-100'
+                          }`}>
+                            {String.fromCharCode(65 + optIndex)}. {option}
+                          </div>
+                        ))}
+                      </div>
+                      {question.explanation && (
+                        <p className="text-xs text-gray-600">Giải thích: {question.explanation}</p>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {/* Edit Question Form */}
+                  {editingQuestionIndex !== null && (
+                    <div className="border-2 border-blue-300 rounded-lg p-4 space-y-3 bg-blue-50">
+                      <h4 className="font-semibold text-blue-800">Chỉnh sửa câu hỏi {editingQuestionIndex + 1}</h4>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-question">Câu hỏi</Label>
+                        <Input
+                          id="edit-question"
+                          value={editQuestion}
+                          onChange={(e) => setEditQuestion(e.target.value)}
+                          placeholder="Nhập câu hỏi..."
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Các lựa chọn</Label>
+                        {editQuestionOptions.map((option, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <span className="w-6 text-sm font-medium">{String.fromCharCode(65 + index)}.</span>
+                            <Input
+                              value={option}
+                              onChange={(e) => {
+                                const newOptions = [...editQuestionOptions]
+                                newOptions[index] = e.target.value
+                                setEditQuestionOptions(newOptions)
+                              }}
+                              placeholder={`Lựa chọn ${String.fromCharCode(65 + index)}`}
+                            />
+                            <Button
+                              type="button"
+                              variant={editQuestionCorrectAnswer === index ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setEditQuestionCorrectAnswer(index)}
+                            >
+                              Đúng
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-explanation">Giải thích (tùy chọn)</Label>
+                        <Input
+                          id="edit-explanation"
+                          value={editQuestionExplanation}
+                          onChange={(e) => setEditQuestionExplanation(e.target.value)}
+                          placeholder="Giải thích câu trả lời..."
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          onClick={saveEditQuestion}
+                          disabled={!editQuestion.trim() || !editQuestionOptions.every(opt => opt.trim())}
+                        >
+                          Lưu
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={cancelEditQuestion}
+                        >
+                          Hủy
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-3">
+                    <h4 className="font-semibold">Thêm câu hỏi mới</h4>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-question">Câu hỏi</Label>
+                      <Input
+                        id="new-question"
+                        value={newQuestion}
+                        onChange={(e) => setNewQuestion(e.target.value)}
+                        placeholder="Nhập câu hỏi..."
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Các lựa chọn</Label>
+                      {newQuestionOptions.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="w-6 text-sm font-medium">{String.fromCharCode(65 + index)}.</span>
+                          <Input
+                            value={option}
+                            onChange={(e) => {
+                              const newOptions = [...newQuestionOptions]
+                              newOptions[index] = e.target.value
+                              setNewQuestionOptions(newOptions)
+                            }}
+                            placeholder={`Lựa chọn ${String.fromCharCode(65 + index)}`}
+                          />
+                          <Button
+                            type="button"
+                            variant={newQuestionCorrectAnswer === index ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setNewQuestionCorrectAnswer(index)}
+                          >
+                            Đúng
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="new-explanation">Giải thích (tùy chọn)</Label>
+                      <Input
+                        id="new-explanation"
+                        value={newQuestionExplanation}
+                        onChange={(e) => setNewQuestionExplanation(e.target.value)}
+                        placeholder="Giải thích câu trả lời..."
+                      />
+                    </div>
+                    
+                    <Button
+                      type="button"
+                      onClick={addQuestion}
+                      disabled={!newQuestion.trim() || !newQuestionOptions.every(opt => opt.trim())}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Thêm câu hỏi
                     </Button>
                   </div>
                 </div>
@@ -666,12 +992,11 @@ export const AdminVocabulary = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Cấp 1</SelectItem>
-                      <SelectItem value="2">Cấp 2</SelectItem>
-                      <SelectItem value="3">Cấp 3</SelectItem>
-                      <SelectItem value="4">Cấp 4</SelectItem>
-                      <SelectItem value="5">Cấp 5</SelectItem>
-                      <SelectItem value="6">Cấp 6</SelectItem>
+                      {levels.map((level) => (
+                        <SelectItem key={level._id} value={level.level?.toString() || level.number.toString()}>
+                          Cấp {level.level || level.number}: {level.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -708,20 +1033,29 @@ export const AdminVocabulary = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-audio">File âm thanh mới (tùy chọn)</Label>
-                <Input
-                  id="edit-audio"
-                  type="file"
-                  accept="audio/*"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      setFormData(prev => ({ ...prev, audio: e.target.files![0] }))
+                <Label>File âm thanh mới (tùy chọn)</Label>
+                <AudioUpload
+                  value={audioRemoved ? null : (formData.audio || editingVocabulary?.audioUrl)}
+                  onChange={(file) => {
+                    if (file === null) {
+                      setAudioRemoved(true)
+                      setFormData(prev => ({ ...prev, audio: undefined }))
+                    } else {
+                      setAudioRemoved(false)
+                      setFormData(prev => ({ ...prev, audio: file }))
                     }
                   }}
+                  maxSize={10}
+                  accept="audio/*"
                 />
-                {editingVocabulary?.audio && (
+                {editingVocabulary?.audioUrl && !formData.audio && !audioRemoved && (
                   <div className="text-sm text-gray-600">
-                    Âm thanh hiện tại: {editingVocabulary.audio.split('/').pop()}
+                    Âm thanh hiện tại: {editingVocabulary.audioUrl.split('/').pop()}
+                  </div>
+                )}
+                {audioRemoved && (
+                  <div className="text-sm text-red-600">
+                    File âm thanh đã được xóa. Bạn có thể upload file mới.
                   </div>
                 )}
               </div>
@@ -816,6 +1150,180 @@ export const AdminVocabulary = () => {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label>Câu hỏi khảo bài</Label>
+                <div className="space-y-4">
+                  {formData.questions.map((question, index) => (
+                    <div key={index} className="border rounded-lg p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">Câu hỏi {index + 1}</h4>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditQuestion(index)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeQuestion(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm">{question.question}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {question.options.map((option, optIndex) => (
+                          <div key={optIndex} className={`p-2 rounded text-sm ${
+                            optIndex === question.correctAnswer 
+                              ? 'bg-green-100 text-green-800 border border-green-300' 
+                              : 'bg-gray-100'
+                          }`}>
+                            {String.fromCharCode(65 + optIndex)}. {option}
+                          </div>
+                        ))}
+                      </div>
+                      {question.explanation && (
+                        <p className="text-xs text-gray-600">Giải thích: {question.explanation}</p>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {/* Edit Question Form */}
+                  {editingQuestionIndex !== null && (
+                    <div className="border-2 border-blue-300 rounded-lg p-4 space-y-3 bg-blue-50">
+                      <h4 className="font-semibold text-blue-800">Chỉnh sửa câu hỏi {editingQuestionIndex + 1}</h4>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-question">Câu hỏi</Label>
+                        <Input
+                          id="edit-question"
+                          value={editQuestion}
+                          onChange={(e) => setEditQuestion(e.target.value)}
+                          placeholder="Nhập câu hỏi..."
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Các lựa chọn</Label>
+                        {editQuestionOptions.map((option, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <span className="w-6 text-sm font-medium">{String.fromCharCode(65 + index)}.</span>
+                            <Input
+                              value={option}
+                              onChange={(e) => {
+                                const newOptions = [...editQuestionOptions]
+                                newOptions[index] = e.target.value
+                                setEditQuestionOptions(newOptions)
+                              }}
+                              placeholder={`Lựa chọn ${String.fromCharCode(65 + index)}`}
+                            />
+                            <Button
+                              type="button"
+                              variant={editQuestionCorrectAnswer === index ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setEditQuestionCorrectAnswer(index)}
+                            >
+                              Đúng
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-explanation">Giải thích (tùy chọn)</Label>
+                        <Input
+                          id="edit-explanation"
+                          value={editQuestionExplanation}
+                          onChange={(e) => setEditQuestionExplanation(e.target.value)}
+                          placeholder="Giải thích câu trả lời..."
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          onClick={saveEditQuestion}
+                          disabled={!editQuestion.trim() || !editQuestionOptions.every(opt => opt.trim())}
+                        >
+                          Lưu
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={cancelEditQuestion}
+                        >
+                          Hủy
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-3">
+                    <h4 className="font-semibold">Thêm câu hỏi mới</h4>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-new-question">Câu hỏi</Label>
+                      <Input
+                        id="edit-new-question"
+                        value={newQuestion}
+                        onChange={(e) => setNewQuestion(e.target.value)}
+                        placeholder="Nhập câu hỏi..."
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Các lựa chọn</Label>
+                      {newQuestionOptions.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="w-6 text-sm font-medium">{String.fromCharCode(65 + index)}.</span>
+                          <Input
+                            value={option}
+                            onChange={(e) => {
+                              const newOptions = [...newQuestionOptions]
+                              newOptions[index] = e.target.value
+                              setNewQuestionOptions(newOptions)
+                            }}
+                            placeholder={`Lựa chọn ${String.fromCharCode(65 + index)}`}
+                          />
+                          <Button
+                            type="button"
+                            variant={newQuestionCorrectAnswer === index ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setNewQuestionCorrectAnswer(index)}
+                          >
+                            Đúng
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-new-explanation">Giải thích (tùy chọn)</Label>
+                      <Input
+                        id="edit-new-explanation"
+                        value={newQuestionExplanation}
+                        onChange={(e) => setNewQuestionExplanation(e.target.value)}
+                        placeholder="Giải thích câu trả lời..."
+                      />
+                    </div>
+                    
+                    <Button
+                      type="button"
+                      onClick={addQuestion}
+                      disabled={!newQuestion.trim() || !newQuestionOptions.every(opt => opt.trim())}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Thêm câu hỏi
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
                   Hủy
@@ -834,6 +1342,80 @@ export const AdminVocabulary = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Xác nhận xóa từ vựng</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn xóa từ vựng "{vocabularyToDelete?.word}"? 
+                Hành động này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDeleteDialog(false)}
+              >
+                Hủy
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteVocabulary}
+                disabled={formLoading}
+              >
+                {formLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  'Xóa'
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* View Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+            >
+              Grid
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+            >
+              Table
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="items-per-page">Hiển thị:</Label>
+            <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(parseInt(value))}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="text-sm text-gray-600">
+          Hiển thị {startIndex + 1}-{Math.min(endIndex, filteredVocabularies.length)} trong {filteredVocabularies.length} từ vựng
+        </div>
       </div>
 
       {/* Filters */}
@@ -855,12 +1437,11 @@ export const AdminVocabulary = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả</SelectItem>
-            <SelectItem value="1">Cấp 1</SelectItem>
-            <SelectItem value="2">Cấp 2</SelectItem>
-            <SelectItem value="3">Cấp 3</SelectItem>
-            <SelectItem value="4">Cấp 4</SelectItem>
-            <SelectItem value="5">Cấp 5</SelectItem>
-            <SelectItem value="6">Cấp 6</SelectItem>
+            {levels.map((level) => (
+              <SelectItem key={level._id} value={level.level?.toString() || level.number.toString()}>
+                Cấp {level.level || level.number}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={topicFilter} onValueChange={setTopicFilter}>
@@ -877,8 +1458,9 @@ export const AdminVocabulary = () => {
       </div>
 
       {/* Vocabulary List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredVocabularies.map((vocabulary) => (
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginatedVocabularies.map((vocabulary) => (
           <Card key={vocabulary._id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -917,7 +1499,7 @@ export const AdminVocabulary = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeleteVocabulary(vocabulary._id)}
+                    onClick={() => openDeleteDialog(vocabulary)}
                     className="text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -996,13 +1578,173 @@ export const AdminVocabulary = () => {
                 </div>
               )}
 
+              {vocabulary.questions && vocabulary.questions.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">Câu hỏi khảo bài:</h4>
+                  <div className="space-y-2">
+                    {vocabulary.questions.slice(0, 2).map((question, index) => (
+                      <div key={index} className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                        <div className="font-medium">{question.question}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {question.options.length} lựa chọn
+                        </div>
+                      </div>
+                    ))}
+                    {vocabulary.questions.length > 2 && (
+                      <div className="text-xs text-gray-500">
+                        ... và {vocabulary.questions.length - 2} câu hỏi khác
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="text-xs text-gray-500 pt-2 border-t">
                 Tạo: {new Date(vocabulary.createdAt).toLocaleDateString()}
               </div>
             </CardContent>
           </Card>
         ))}
-      </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Từ vựng
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Nghĩa
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cấp độ
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Chủ đề
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Câu hỏi
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Thao tác
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {paginatedVocabularies.map((vocabulary) => (
+                <tr key={vocabulary._id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">{vocabulary.word}</div>
+                      <div className="text-sm text-blue-600">{vocabulary.pronunciation}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">{vocabulary.meaning}</div>
+                    <div className="text-xs text-gray-500">{vocabulary.partOfSpeech}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Badge variant="secondary">Cấp {vocabulary.level}</Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {vocabulary.topics.slice(0, 2).map((topic, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">{topic}</Badge>
+                      ))}
+                      {vocabulary.topics.length > 2 && (
+                        <Badge variant="outline" className="text-xs">+{vocabulary.topics.length - 2}</Badge>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {vocabulary.questions?.length || 0} câu
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      {vocabulary.audio && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePlayAudio(vocabulary.audio!, vocabulary._id)}
+                          disabled={audioLoading === vocabulary._id}
+                        >
+                          {audioLoading === vocabulary._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : isPlaying === vocabulary._id ? (
+                            <Pause className="h-4 w-4" />
+                          ) : (
+                            <Play className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(vocabulary)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeleteDialog(vocabulary)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              Trước
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const page = i + 1
+                return (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Sau
+            </Button>
+          </div>
+          <div className="text-sm text-gray-600">
+            Trang {currentPage} / {totalPages}
+          </div>
+        </div>
+      )}
 
       {filteredVocabularies.length === 0 && (
         <Card className="text-center py-12">
