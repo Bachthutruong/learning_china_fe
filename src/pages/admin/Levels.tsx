@@ -75,6 +75,8 @@ export const AdminLevels = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingLevel, setEditingLevel] = useState<Level | null>(null)
   const [formData, setFormData] = useState<LevelFormData>({
     level: 1,
@@ -160,12 +162,18 @@ export const AdminLevels = () => {
     }
   }
 
-  const handleDeleteLevel = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa cấp độ này? Tất cả người dùng và nội dung liên quan sẽ bị ảnh hưởng.')) return
+  const handleDeleteLevel = (id: string) => {
+    setDeletingId(id)
+    setShowDeleteDialog(true)
+  }
 
+  const confirmDeleteLevel = async () => {
+    if (!deletingId) return
     try {
-      await api.delete(`/admin/levels/${id}`)
+      await api.delete(`/admin/levels/${deletingId}`)
       toast.success('Xóa cấp độ thành công!')
+      setShowDeleteDialog(false)
+      setDeletingId(null)
       fetchLevels()
     } catch (error: any) {
       console.error('Error deleting level:', error)
@@ -256,10 +264,9 @@ export const AdminLevels = () => {
                   <Input
                     id="level"
                     type="number"
-                    min="1"
-                    max="6"
+                    step="0.1"
                     value={formData.level}
-                    onChange={(e) => setFormData(prev => ({ ...prev, level: parseInt(e.target.value) }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, level: parseFloat(e.target.value) }))}
                     required
                   />
                 </div>
@@ -375,10 +382,9 @@ export const AdminLevels = () => {
                   <Input
                     id="edit-level"
                     type="number"
-                    min="1"
-                    max="6"
+                    step="0.1"
                     value={formData.level}
-                    onChange={(e) => setFormData(prev => ({ ...prev, level: parseInt(e.target.value) }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, level: parseFloat(e.target.value) }))}
                     required
                   />
                 </div>
@@ -503,7 +509,7 @@ export const AdminLevels = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center`} style={{ backgroundColor: level.color }}>
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${level.color}`}>
                       <IconComponent className="h-6 w-6 text-white" />
                     </div>
                     <div>
@@ -576,7 +582,7 @@ export const AdminLevels = () => {
                     {new Date(level.createdAt).toLocaleDateString()}
                   </Badge>
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: level.color }} />
+                    <div className={`w-4 h-4 rounded ${level.color}`} />
                     <span className="text-xs text-gray-500">
                       {level.color}
                     </span>
@@ -587,6 +593,22 @@ export const AdminLevels = () => {
           )
         })}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa cấp độ</DialogTitle>
+            <DialogDescription>
+              Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa cấp độ này?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Hủy</Button>
+            <Button className="bg-red-600 hover:bg-red-700" onClick={confirmDeleteLevel}>Xóa</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {filteredLevels.length === 0 && (
         <Card className="text-center py-12">

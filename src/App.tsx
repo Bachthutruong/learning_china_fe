@@ -11,7 +11,8 @@ import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { Dashboard } from './pages/Dashboard'
 import { Vocabulary } from './pages/Vocabulary'
-import { Tests } from './pages/Tests'
+import { VocabularyLearning } from './pages/VocabularyLearning'
+// import { Tests } from './pages/Tests'
 import { ProficiencyTest } from './pages/ProficiencyTest'
 import { Competition } from './pages/Competition'
 import { Profile } from './pages/Profile'
@@ -23,9 +24,19 @@ import { AdminLayout } from './layouts/AdminLayout'
 import { AdminReports } from './pages/admin/Reports'
 import { AdminTests as AdminTestsPage } from './pages/admin/Tests'
 import { AdminCompetitions } from './pages/admin/Competitions'
+import { AdminCompetitionEdit } from './pages/admin/CompetitionEdit'
+import { AdminCompetitionStats } from './pages/admin/CompetitionStats'
 import { AdminUsers } from './pages/admin/Users'
 import { AdminAnalytics } from './pages/admin/Analytics'
+import { AdminProficiencyConfig } from './pages/admin/ProficiencyConfig'
 import { AdminSettings } from './pages/admin/Settings'
+import { AdminProficiencyIndex } from './pages/admin/ProficiencyIndex'
+import { AdminProficiencyLevel } from './pages/admin/ProficiencyLevel'
+import { CoinPurchase } from './pages/CoinPurchase'
+import { AdminCoinPurchases } from './pages/admin/CoinPurchases'
+import { TestList } from './pages/TestList'
+import { TestDetail } from './pages/TestDetail'
+import { NewTestPage } from './pages/NewTestPage'
 
 // Help pages
 import { HelpCenter } from './pages/HelpCenter'
@@ -69,9 +80,24 @@ function App() {
                   <Vocabulary />
                 </ProtectedRoute>
               } />
+              <Route path="/vocabulary-learning" element={
+                <ProtectedRoute>
+                  <VocabularyLearning />
+                </ProtectedRoute>
+              } />
               <Route path="/tests" element={
                 <ProtectedRoute>
-                  <Tests />
+                  <TestList />
+                </ProtectedRoute>
+              } />
+              <Route path="/test/:id" element={
+                <ProtectedRoute>
+                  <TestDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/test/new" element={
+                <ProtectedRoute>
+                  <NewTestPage />
                 </ProtectedRoute>
               } />
               <Route path="/proficiency" element={
@@ -87,6 +113,11 @@ function App() {
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } />
+              <Route path="/coin-purchase" element={
+                <ProtectedRoute>
+                  <CoinPurchase />
                 </ProtectedRoute>
               } />
               <Route path="/admin" element={
@@ -129,10 +160,45 @@ function App() {
                   </AdminLayout>
                 </ProtectedRoute>
               } />
+              <Route path="/admin/proficiency" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminProficiencyIndex />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/proficiency/:level" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminProficiencyLevel />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/proficiency-config" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminProficiencyConfig />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
               <Route path="/admin/competitions" element={
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
                     <AdminCompetitions />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/competitions/:id" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminCompetitionEdit />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/competitions/:id/stats" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminCompetitionStats />
                   </AdminLayout>
                 </ProtectedRoute>
               } />
@@ -154,6 +220,13 @@ function App() {
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
                     <AdminSettings />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/coin-purchases" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminCoinPurchases />
                   </AdminLayout>
                 </ProtectedRoute>
               } />

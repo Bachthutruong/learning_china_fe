@@ -11,7 +11,8 @@ import {
   Trophy, 
   Settings,
   Home,
-  Brain
+  Brain,
+  Coins
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
@@ -39,11 +40,12 @@ export const Navbar = () => {
 
   const navItems = [
     { path: '/', label: 'Trang chủ', icon: Home },
-    { path: '/vocabulary', label: 'Từ vựng', icon: BookOpen },
+    // { path: '/vocabulary', label: 'Từ vựng', icon: BookOpen },
+    { path: '/vocabulary-learning', label: 'Học từ vựng', icon: BookOpen },
     { path: '/tests', label: 'Bài test', icon: TestTube },
     { path: '/proficiency', label: 'Test năng lực', icon: Brain },
     { path: '/competition', label: 'Cuộc thi', icon: Trophy },
-    ...(user?.role === 'admin' ? [{ path: '/admin', label: 'Quản trị', icon: Settings }] : [] as any),
+    { path: '/coin-purchase', label: 'Mua xu', icon: Coins },
   ]
 
   return (
@@ -61,7 +63,7 @@ export const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-2">
             {navItems.map((item) => {
               const Icon = item.icon
               return (
@@ -129,6 +131,12 @@ export const Navbar = () => {
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Hồ sơ</span>
                     </DropdownMenuItem>
+                    {user?.role === 'admin' && (
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Quản trị</span>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
@@ -189,6 +197,15 @@ export const Navbar = () => {
                     <div className="px-3 py-2 text-sm text-gray-500">
                       {user.name} - Lv.{user.level}
                     </div>
+                    {user.role === 'admin' && (
+                      <button
+                        onClick={() => { navigate('/admin'); setIsOpen(false) }}
+                        className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors w-full"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Quản trị</span>
+                      </button>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full"

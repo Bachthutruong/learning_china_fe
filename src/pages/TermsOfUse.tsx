@@ -9,7 +9,7 @@ import {
   XCircle,
   Mail,
   Phone,
-  Calendar
+  // Calendar
 } from 'lucide-react'
 
 const termsSections = [

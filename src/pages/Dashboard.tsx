@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -23,9 +23,38 @@ import toast from 'react-hot-toast'
 export const Dashboard = () => {
   const { user, setUser } = useAuth()
   const [isCheckingIn, setIsCheckingIn] = useState(false)
+  const [isRecalculating, setIsRecalculating] = useState(false)
+  const [levelInfo, setLevelInfo] = useState<{
+    currentLevel: number
+    nextLevel?: number
+    requiredXP?: number
+    progress?: number
+  } | null>(null)
 
-  const xpForNextLevel = 250
-  const progressPercentage = (user?.experience || 0) / xpForNextLevel * 100
+  useEffect(() => {
+    fetchLevelInfo()
+  }, [])
+
+  const fetchLevelInfo = async () => {
+    try {
+      const response = await api.get('/users/profile')
+      if (response.data.user.levelInfo) {
+        setLevelInfo(response.data.user.levelInfo)
+      }
+      // Also update user level in context
+      if (response.data.user.level && user) {
+        setUser({
+          ...user,
+          level: response.data.user.level
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching level info:', error)
+    }
+  }
+
+  const xpForNextLevel = levelInfo?.requiredXP || 250
+  const progressPercentage = levelInfo?.progress || ((user?.experience || 0) / xpForNextLevel * 100)
 
   const handleCheckIn = async () => {
     try {
@@ -43,6 +72,9 @@ export const Dashboard = () => {
         })
       }
       
+      // Refresh level info after check-in
+      await fetchLevelInfo()
+      
       let message = `Check-in thành công! +${response.data.rewards.experience} XP, +${response.data.rewards.coins} xu`
       if (response.data.rewards.milestoneBonus) {
         message += `\n🎉 Milestone bonus: +${response.data.rewards.milestoneBonus} XP!`
@@ -57,6 +89,47 @@ export const Dashboard = () => {
       }
     } finally {
       setIsCheckingIn(false)
+    }
+  }
+
+  const handleRecalculateLevel = async () => {
+    try {
+      setIsRecalculating(true)
+      const response = await api.post('/users/recalculate-level')
+      
+      // Update user data with new values
+      if (user) {
+        setUser({
+          ...user,
+          level: response.data.user.level,
+          experience: response.data.user.experience,
+          coins: response.data.user.coins
+        })
+      }
+      
+      // Update level info
+      setLevelInfo(response.data.levelInfo)
+      
+      let message = 'Cấp độ đã được tính lại!'
+      if (response.data.leveledUp) {
+        message += ` 🎉 Chúc mừng! Bạn đã lên cấp ${response.data.newLevel}!`
+      } else if (response.data.level !== user?.level) {
+        message += ` 📊 Cấp độ đã được điều chỉnh về cấp ${response.data.level}!`
+      }
+      
+      // Show debug info in console
+      if (response.data.debug) {
+        console.log('Debug level info:', response.data.debug)
+        console.log('Available levels:', response.data.debug.allLevels)
+        console.log('User experience:', response.data.debug.userExperience)
+        console.log('Previous level:', response.data.debug.previousLevel)
+      }
+      
+      toast.success(message)
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra')
+    } finally {
+      setIsRecalculating(false)
     }
   }
 
@@ -132,11 +205,24 @@ export const Dashboard = () => {
           <Card className="bg-gradient-to-br from-yellow-400 to-orange-500 text-white border-0 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Cấp độ</CardTitle>
-              <Star className="h-4 w-4" />
+              <div className="flex items-center gap-2">
+                <Star className="h-4 w-4" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-6 px-2 bg-white/20 hover:bg-white/30 text-white border-white/30"
+                  onClick={handleRecalculateLevel}
+                  disabled={isRecalculating}
+                >
+                  {isRecalculating ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Tính lại'}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{user?.level || 1}</div>
-              <p className="text-xs opacity-90">Cấp độ tiếp theo ở {xpForNextLevel} XP</p>
+              <p className="text-xs opacity-90">
+                {levelInfo?.nextLevel ? `Cấp độ tiếp theo ở ${xpForNextLevel} XP` : 'Đã đạt cấp độ tối đa'}
+              </p>
             </CardContent>
           </Card>
 

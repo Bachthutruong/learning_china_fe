@@ -6,10 +6,10 @@ import { Badge } from '../components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import { Progress } from '../components/ui/progress'
 import { 
-  User, 
-  Mail, 
+  // User, 
+  // Mail, 
   Star, 
-  Gem, 
+  // Gem, 
   TrendingUp, 
   Calendar,
   Award,
@@ -17,7 +17,7 @@ import {
   BookOpen,
   TestTube,
   Trophy,
-  Settings,
+  // Settings,
   Edit,
   Save,
   X,

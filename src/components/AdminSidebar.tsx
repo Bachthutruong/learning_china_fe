@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -10,22 +10,82 @@ import {
   Trophy, 
   Flag, 
   Users, 
-  Settings,
+  // Settings,
   ChevronLeft,
   ChevronRight,
-  BarChart3,
-  FileText,
+  // BarChart3,
+  // FileText,
   Layers,
-  Target
+  Target,
+  Coins
 } from 'lucide-react'
+import { api } from '../services/api'
 
 interface AdminSidebarProps {
   className?: string
+  onStatsUpdate?: () => void
 }
 
-export const AdminSidebar = ({ className }: AdminSidebarProps) => {
+export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false)
+  const [stats, setStats] = useState({
+    reports: 0,
+    vocabularies: 0,
+    topics: 0,
+    levels: 0,
+    tests: 0,
+    proficiencyTests: 0,
+    competitions: 0,
+    users: 0,
+    coinPurchases: 0
+  })
   const location = useLocation()
+
+  const fetchStats = async () => {
+    try {
+      const [reportsRes, vocabulariesRes, topicsRes, levelsRes, testsRes, proficiencyRes, competitionsRes, usersRes, coinPurchasesRes] = await Promise.all([
+        api.get('/reports/admin/all'),
+        api.get('/admin/vocabularies'),
+        api.get('/admin/topics'),
+        api.get('/admin/levels'),
+        api.get('/admin/tests'),
+        api.get('/admin/proficiency-tests'),
+        api.get('/admin/competitions'),
+        api.get('/admin/users'),
+        api.get('/coin-purchases/admin/pending')
+      ])
+
+      setStats({
+        reports: reportsRes.data?.total || reportsRes.data?.reports?.length || 0,
+        vocabularies: vocabulariesRes.data?.total || vocabulariesRes.data?.vocabularies?.length || 0,
+        topics: topicsRes.data?.total || topicsRes.data?.topics?.length || 0,
+        levels: levelsRes.data?.total || levelsRes.data?.levels?.length || 0,
+        tests: testsRes.data?.total || testsRes.data?.tests?.length || 0,
+        proficiencyTests: proficiencyRes.data?.total || proficiencyRes.data?.proficiencyTests?.length || 0,
+        competitions: competitionsRes.data?.total || competitionsRes.data?.competitions?.length || 0,
+        users: usersRes.data?.total || usersRes.data?.users?.length || 0,
+        coinPurchases: coinPurchasesRes.data?.total || coinPurchasesRes.data?.purchases?.length || 0
+      })
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchStats()
+    
+    // Auto-refresh stats every 30 seconds
+    const interval = setInterval(fetchStats, 30000)
+    
+    return () => clearInterval(interval)
+  }, [])
+
+  // Listen for stats updates from parent components
+  useEffect(() => {
+    if (onStatsUpdate) {
+      fetchStats()
+    }
+  }, [onStatsUpdate])
 
   const menuItems = [
     {
@@ -38,62 +98,68 @@ export const AdminSidebar = ({ className }: AdminSidebarProps) => {
       title: 'Báo cáo',
       icon: Flag,
       href: '/admin/reports',
-      badge: '12'
+      badge: stats.reports > 0 ? stats.reports.toString() : null
     },
     {
       title: 'Từ vựng',
       icon: BookOpen,
       href: '/admin/vocabulary',
-      badge: null
+      badge: stats.vocabularies > 0 ? stats.vocabularies.toString() : null
     },
     {
       title: 'Chủ đề',
       icon: Layers,
       href: '/admin/topics',
-      badge: null
+      badge: stats.topics > 0 ? stats.topics.toString() : null
     },
     {
       title: 'Cấp độ',
       icon: Target,
       href: '/admin/levels',
-      badge: null
+      badge: stats.levels > 0 ? stats.levels.toString() : null
     },
     {
       title: 'Bài test',
       icon: TestTube,
       href: '/admin/tests',
-      badge: null
+      badge: stats.tests > 0 ? stats.tests.toString() : null
     },
     {
       title: 'Test năng lực',
       icon: Brain,
       href: '/admin/proficiency',
-      badge: null
+      badge: stats.proficiencyTests > 0 ? stats.proficiencyTests.toString() : null
     },
     {
       title: 'Cuộc thi',
       icon: Trophy,
       href: '/admin/competitions',
-      badge: null
+      badge: stats.competitions > 0 ? stats.competitions.toString() : null
     },
     {
       title: 'Người dùng',
       icon: Users,
       href: '/admin/users',
-      badge: null
+      badge: stats.users > 0 ? stats.users.toString() : null
     },
     {
-      title: 'Thống kê',
-      icon: BarChart3,
-      href: '/admin/analytics',
-      badge: null
+      title: 'Mua xu',
+      icon: Coins,
+      href: '/admin/coin-purchases',
+      badge: stats.coinPurchases > 0 ? stats.coinPurchases.toString() : null
     },
-    {
-      title: 'Cài đặt',
-      icon: Settings,
-      href: '/admin/settings',
-      badge: null
-    }
+    // {
+    //   title: 'Thống kê',
+    //   icon: BarChart3,
+    //   href: '/admin/analytics',
+    //   badge: null
+    // },
+    // {
+    //   title: 'Cài đặt',
+    //   icon: Settings,
+    //   href: '/admin/settings',
+    //   badge: null
+    // }
   ]
 
   const isActive = (href: string) => {

@@ -124,6 +124,8 @@ export const AdminVocabulary = () => {
   const [audioRemoved, setAudioRemoved] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [vocabularyToDelete, setVocabularyToDelete] = useState<Vocabulary | null>(null)
@@ -134,14 +136,57 @@ export const AdminVocabulary = () => {
     fetchLevels()
   }, [])
 
+  // Refetch when pagination or filters change
+  useEffect(() => {
+    fetchVocabularies()
+  }, [currentPage, itemsPerPage, levelFilter, topicFilter])
+
+  // Debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (currentPage !== 1) {
+        setCurrentPage(1) // Reset to first page when searching
+      } else {
+        fetchVocabularies()
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm])
+
   const fetchVocabularies = async () => {
     try {
       setLoading(true)
-      const response = await api.get('/admin/vocabularies')
-      setVocabularies(response.data.vocabularies || response.data || [])
+      const response = await api.get('/admin/vocabularies', {
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          search: searchTerm,
+          level: levelFilter !== 'all' ? levelFilter : undefined,
+          topic: topicFilter !== 'all' ? topicFilter : undefined
+        }
+      })
+      
+      console.log('Vocabulary API response:', response.data)
+      
+      // Handle different response formats
+      if (response.data.vocabularies) {
+        setVocabularies(response.data.vocabularies)
+        setTotalPages(response.data.totalPages || 1)
+        setTotalItems(response.data.total || response.data.vocabularies.length)
+      } else if (Array.isArray(response.data)) {
+        setVocabularies(response.data)
+        setTotalPages(1)
+        setTotalItems(response.data.length)
+      } else {
+        setVocabularies([])
+        setTotalPages(1)
+        setTotalItems(0)
+      }
     } catch (error) {
       console.error('Error fetching vocabularies:', error)
       toast.error('Không thể tải danh sách từ vựng')
+      setVocabularies([])
     } finally {
       setLoading(false)
     }
@@ -471,19 +516,8 @@ export const AdminVocabulary = () => {
     setEditQuestionExplanation('')
   }
 
-  const filteredVocabularies = vocabularies.filter(vocabulary => {
-    const matchesSearch = vocabulary.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vocabulary.meaning.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesLevel = levelFilter === 'all' || vocabulary.level.toString() === levelFilter
-    const matchesTopic = topicFilter === 'all' || vocabulary.topics.includes(topicFilter)
-    
-    return matchesSearch && matchesLevel && matchesTopic
-  })
-
-  const totalPages = Math.ceil(filteredVocabularies.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedVocabularies = filteredVocabularies.slice(startIndex, endIndex)
+  // Use vocabularies directly from backend (already filtered and paginated)
+  const displayVocabularies = vocabularies
 
   if (loading) {
     return (
@@ -1400,7 +1434,10 @@ export const AdminVocabulary = () => {
           </div>
           <div className="flex items-center gap-2">
             <Label htmlFor="items-per-page">Hiển thị:</Label>
-            <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(parseInt(value))}>
+            <Select value={itemsPerPage.toString()} onValueChange={(value) => {
+              setItemsPerPage(parseInt(value))
+              setCurrentPage(1) // Reset to first page when changing items per page
+            }}>
               <SelectTrigger className="w-20">
                 <SelectValue />
               </SelectTrigger>
@@ -1414,7 +1451,7 @@ export const AdminVocabulary = () => {
           </div>
         </div>
         <div className="text-sm text-gray-600">
-          Hiển thị {startIndex + 1}-{Math.min(endIndex, filteredVocabularies.length)} trong {filteredVocabularies.length} từ vựng
+          Hiển thị {displayVocabularies.length} trong {totalItems} từ vựng (Trang {currentPage}/{totalPages})
         </div>
       </div>
 
@@ -1460,7 +1497,7 @@ export const AdminVocabulary = () => {
       {/* Vocabulary List */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paginatedVocabularies.map((vocabulary) => (
+          {displayVocabularies.map((vocabulary) => (
           <Card key={vocabulary._id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -1632,7 +1669,7 @@ export const AdminVocabulary = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedVocabularies.map((vocabulary) => (
+              {displayVocabularies.map((vocabulary) => (
                 <tr key={vocabulary._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
@@ -1746,7 +1783,7 @@ export const AdminVocabulary = () => {
         </div>
       )}
 
-      {filteredVocabularies.length === 0 && (
+      {displayVocabularies.length === 0 && (
         <Card className="text-center py-12">
           <CardContent>
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />

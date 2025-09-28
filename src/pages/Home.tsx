@@ -98,6 +98,7 @@ export const Home = () => {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => {
+              console.log('feature', feature, index)
               const Icon = feature.icon
               return (
                 <Card key={feature.title} className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border-0 shadow-lg">

@@ -40,7 +40,7 @@ cp env.example .env
 
 3. Cấu hình API URL trong file `.env`:
 ```
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:5005/api
 ```
 
 4. Chạy ứng dụng:

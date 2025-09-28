@@ -69,6 +69,8 @@ export const AdminTopics = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(9)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
   
   // Delete dialog states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -78,12 +80,52 @@ export const AdminTopics = () => {
     fetchTopics()
   }, [])
 
+  // Refetch when pagination or filters change
+  useEffect(() => {
+    fetchTopics()
+  }, [currentPage, itemsPerPage])
+
+  // Debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (currentPage !== 1) {
+        setCurrentPage(1) // Reset to first page when searching
+      } else {
+        fetchTopics()
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm])
+
   const fetchTopics = async () => {
     try {
       setLoading(true)
-      const response = await api.get('/admin/topics')
+      const response = await api.get('/admin/topics', {
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          search: searchTerm
+        }
+      })
+      
       console.log('Topics API response:', response.data)
-      const topicsData = response.data.topics || response.data || []
+      
+      // Handle different response formats
+      let topicsData = []
+      if (response.data.topics) {
+        topicsData = response.data.topics
+        setTotalPages(response.data.totalPages || 1)
+        setTotalItems(response.data.total || response.data.topics.length)
+      } else if (Array.isArray(response.data)) {
+        topicsData = response.data
+        setTotalPages(1)
+        setTotalItems(response.data.length)
+      } else {
+        topicsData = []
+        setTotalPages(1)
+        setTotalItems(0)
+      }
       
       // Fetch vocabulary count for each topic
       const topicsWithCount = await Promise.all(
@@ -103,6 +145,7 @@ export const AdminTopics = () => {
     } catch (error) {
       console.error('Error fetching topics:', error)
       toast.error('Không thể tải danh sách chủ đề')
+      setTopics([])
     } finally {
       setLoading(false)
     }
@@ -195,24 +238,11 @@ export const AdminTopics = () => {
     setShowEditDialog(true)
   }
 
-  const filteredTopics = topics.filter(topic =>
-    topic.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    topic.description.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredTopics.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedTopics = filteredTopics.slice(startIndex, endIndex)
+  // Use topics directly from backend (already filtered and paginated)
+  const displayTopics = topics
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-  }
-
-  const handleItemsPerPageChange = (newItemsPerPage: number) => {
-    setItemsPerPage(newItemsPerPage)
-    setCurrentPage(1) // Reset to first page
   }
 
   // Helper function to get color value for display
@@ -498,7 +528,10 @@ export const AdminTopics = () => {
             <select
               id="itemsPerPage"
               value={itemsPerPage}
-              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value))
+                setCurrentPage(1) // Reset to first page when changing items per page
+              }}
               className="border border-gray-300 rounded-md px-2 py-1 text-sm"
             >
               <option value={6}>6</option>
@@ -514,7 +547,7 @@ export const AdminTopics = () => {
       {/* Topics List */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paginatedTopics.map((topic) => (
+          {displayTopics.map((topic) => (
             <Card key={topic._id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -603,7 +636,7 @@ export const AdminTopics = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedTopics.map((topic) => (
+                {displayTopics.map((topic) => (
                   <tr key={topic._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -671,10 +704,10 @@ export const AdminTopics = () => {
       )}
 
       {/* Pagination */}
-      {filteredTopics.length > 0 && totalPages > 1 && (
+      {displayTopics.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-700">
-            Hiển thị {startIndex + 1} đến {Math.min(endIndex, filteredTopics.length)} trong tổng số {filteredTopics.length} chủ đề
+            Hiển thị {displayTopics.length} trong {totalItems} chủ đề (Trang {currentPage}/{totalPages})
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -712,7 +745,7 @@ export const AdminTopics = () => {
         </div>
       )}
 
-      {filteredTopics.length === 0 && (
+      {displayTopics.length === 0 && (
         <Card className="text-center py-12">
           <CardContent>
             <Layers className="h-12 w-12 text-gray-400 mx-auto mb-4" />

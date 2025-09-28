@@ -2,13 +2,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
-import { Badge } from '../components/ui/badge'
+// import { Badge } from '../components/ui/badge'
 import { 
-  MessageCircle, 
+  // MessageCircle, 
   Send, 
   Star,
-  ThumbsUp,
-  ThumbsDown,
+  // ThumbsUp,
+  // ThumbsDown,
   Loader2,
   CheckCircle,
   Heart

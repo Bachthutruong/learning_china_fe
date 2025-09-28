@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
-import { Input } from './ui/input'
+// import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { RadioGroup, RadioGroupItem } from './ui/radio-group'
 import { Flag, Send, X } from 'lucide-react'
 import { api } from '../services/api'
@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 interface ReportErrorDialogProps {
   isOpen: boolean
   onClose: () => void
-  itemType: 'vocabulary' | 'test'
+  itemType: 'vocabulary' | 'test' | 'question'
   itemId: string
   itemContent: string
 }

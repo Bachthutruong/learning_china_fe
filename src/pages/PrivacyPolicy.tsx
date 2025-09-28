@@ -8,7 +8,7 @@ import {
   Database,
   Mail,
   Phone,
-  Calendar
+  // Calendar
 } from 'lucide-react'
 
 const privacySections = [

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Button } from './ui/button'
-import { Card, CardContent } from './ui/card'
+// import { Card, CardContent } from './ui/card'
 import { 
   BookOpen, 
   TestTube, 
