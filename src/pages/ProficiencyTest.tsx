@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Progress } from '../components/ui/progress'
+import { ReportErrorDialog } from '../components/ReportErrorDialog'
 import { 
   Brain,
   Target,
@@ -22,7 +23,8 @@ import {
   BookOpen,
   Lightbulb,
   Diamond,
-  Flame
+  Flame,
+  Flag
 } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
@@ -88,6 +90,10 @@ export const ProficiencyTest = () => {
   const [config, setConfig] = useState<ProficiencyConfig | null>(null)
   const [configId, setConfigId] = useState<string | null>(null)
   const [branchName, setBranchName] = useState<string>('')
+  const [activeTab, setActiveTab] = useState<'test' | 'reports'>('test')
+  
+  // Report error states
+  const [showReportDialog, setShowReportDialog] = useState(false)
 
   const currentQuestion = questions[currentQuestionIndex]
 
@@ -258,6 +264,7 @@ export const ProficiencyTest = () => {
     if (level <= 6) return 'bg-purple-100 text-purple-800'
     return 'bg-red-100 text-red-800'
   }
+
 
   if (testResult) {
     return (
@@ -523,18 +530,29 @@ export const ProficiencyTest = () => {
             {/* Enhanced Question Card */}
             <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
               <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-3 text-2xl">
-                  <div className="p-2 bg-white/20 rounded-full">
-                    <Brain className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <span>Câu hỏi {currentQuestionIndex + 1}</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <BookOpen className="h-4 w-4 text-purple-200" />
-                      <span className="text-sm text-purple-100">Cấp {currentQuestion.proficiencyLevel || currentQuestion.level}</span>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3 text-2xl">
+                    <div className="p-2 bg-white/20 rounded-full">
+                      <Brain className="h-6 w-6" />
                     </div>
-                  </div>
-                </CardTitle>
+                    <div>
+                      <span>Câu hỏi {currentQuestionIndex + 1}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <BookOpen className="h-4 w-4 text-purple-200" />
+                        <span className="text-sm text-purple-100">Cấp {currentQuestion.proficiencyLevel || currentQuestion.level}</span>
+                      </div>
+                    </div>
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-white border-white/30 hover:bg-white/20 hover:border-white/50"
+                    onClick={() => setShowReportDialog(true)}
+                  >
+                    <Flag className="h-4 w-4 mr-1" />
+                    Báo lỗi
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="p-8 space-y-6">
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-l-4 border-purple-400">
@@ -767,10 +785,37 @@ export const ProficiencyTest = () => {
               </div>
               <p className="text-xl text-gray-700 font-medium">Đánh giá năng lực tiếng Trung của bạn</p>
             </div>
+            
+            {/* Tabs */}
+            <div className="flex space-x-1 mt-6 bg-gray-100 p-1 rounded-lg w-fit mx-auto">
+              <button
+                onClick={() => setActiveTab('test')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  activeTab === 'test'
+                    ? 'bg-white text-purple-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Làm test
+              </button>
+              <button
+                onClick={() => setActiveTab('reports')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  activeTab === 'reports'
+                    ? 'bg-white text-purple-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Báo cáo
+              </button>
+            </div>
           </div>
 
-          {/* Enhanced Test Info Card */}
-          <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50 mb-8">
+          {/* Test Tab Content */}
+          {activeTab === 'test' && (
+            <>
+              {/* Enhanced Test Info Card */}
+              <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50 mb-8">
             <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-t-lg">
               <CardTitle className="flex items-center gap-3 text-2xl">
                 <div className="p-2 bg-white/20 rounded-full">
@@ -914,6 +959,140 @@ export const ProficiencyTest = () => {
             </div>
           </CardContent>
         </Card>
+            </>
+          )}
+
+          {/* Reports Tab Content */}
+          {activeTab === 'reports' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Brain className="h-5 w-5 text-purple-600" />
+                        Báo cáo test năng lực
+                      </CardTitle>
+                      <p className="text-gray-600">Theo dõi tiến độ và kết quả test năng lực</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                      onClick={() => setShowReportDialog(true)}
+                    >
+                      <Flag className="h-4 w-4 mr-1" />
+                      Báo lỗi
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {/* Total Tests Taken */}
+                    <div className="bg-purple-50 p-6 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-purple-600">Tổng số test</p>
+                          <p className="text-2xl font-bold text-purple-900">0</p>
+                        </div>
+                        <Brain className="h-8 w-8 text-purple-600" />
+                      </div>
+                    </div>
+
+                    {/* Current Level */}
+                    <div className="bg-blue-50 p-6 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-blue-600">Cấp độ hiện tại</p>
+                          <p className="text-2xl font-bold text-blue-900">Chưa có</p>
+                        </div>
+                        <Trophy className="h-8 w-8 text-blue-600" />
+                      </div>
+                    </div>
+
+                    {/* Best Score */}
+                    <div className="bg-green-50 p-6 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-green-600">Điểm cao nhất</p>
+                          <p className="text-2xl font-bold text-green-900">0%</p>
+                        </div>
+                        <Award className="h-8 w-8 text-green-600" />
+                      </div>
+                    </div>
+
+                    {/* Average Score */}
+                    <div className="bg-orange-50 p-6 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-orange-600">Điểm trung bình</p>
+                          <p className="text-2xl font-bold text-orange-900">0%</p>
+                        </div>
+                        <Target className="h-8 w-8 text-orange-600" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Test History */}
+                  <div className="bg-white p-6 rounded-lg border">
+                    <h3 className="text-lg font-semibold mb-4">Lịch sử test</h3>
+                    <div className="h-64 flex items-center justify-center text-gray-500">
+                      <div className="text-center">
+                        <Brain className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                        <p>Chưa có lịch sử test</p>
+                        <p className="text-sm">Làm test năng lực để xem báo cáo</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Level Progress */}
+                  <div className="bg-white p-6 rounded-lg border mt-6">
+                    <h3 className="text-lg font-semibold mb-4">Tiến độ cấp độ</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-600">1</span>
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Cấp độ 1 - Cơ bản</h4>
+                            <p className="text-sm text-gray-600">Chưa đạt</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">0%</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-600">2</span>
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Cấp độ 2 - Trung cấp</h4>
+                            <p className="text-sm text-gray-600">Chưa đạt</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">0%</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Report Error Dialog */}
+          <ReportErrorDialog
+            isOpen={showReportDialog}
+            onClose={() => setShowReportDialog(false)}
+            itemType="question"
+            itemId={currentQuestion?._id || ''}
+            itemContent={currentQuestion?.question || ''}
+          />
         </div>
       </div>
     </div>

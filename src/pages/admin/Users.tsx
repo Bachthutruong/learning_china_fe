@@ -31,6 +31,7 @@ export const AdminUsers = () => {
   const fetchUsers = async () => {
     try {
       const res = await api.get('/admin/users', { params: { page, limit: pageSize, search } })
+      console.log('res', res.data)
       setUsers(res.data?.users || res.data || [])
     } catch {
       setUsers([])

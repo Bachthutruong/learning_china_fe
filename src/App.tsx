@@ -29,11 +29,13 @@ import { AdminCompetitionStats } from './pages/admin/CompetitionStats'
 import { AdminUsers } from './pages/admin/Users'
 import { AdminAnalytics } from './pages/admin/Analytics'
 import { AdminProficiencyConfig } from './pages/admin/ProficiencyConfig'
+import { ProficiencyConfigPage } from './pages/admin/ProficiencyConfigPage'
+import { ProficiencyConfigForm } from './pages/admin/ProficiencyConfigForm'
+import { AdminProficiencyQuestions } from './pages/admin/ProficiencyQuestions'
 import { AdminSettings } from './pages/admin/Settings'
-import { AdminProficiencyIndex } from './pages/admin/ProficiencyIndex'
-import { AdminProficiencyLevel } from './pages/admin/ProficiencyLevel'
 import { CoinPurchase } from './pages/CoinPurchase'
 import { AdminCoinPurchases } from './pages/admin/CoinPurchases'
+import { PaymentConfigPage } from './pages/admin/PaymentConfig'
 import { TestList } from './pages/TestList'
 import { TestDetail } from './pages/TestDetail'
 import { NewTestPage } from './pages/NewTestPage'
@@ -163,21 +165,35 @@ function App() {
               <Route path="/admin/proficiency" element={
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
-                    <AdminProficiencyIndex />
-                  </AdminLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/admin/proficiency/:level" element={
-                <ProtectedRoute requireAdmin>
-                  <AdminLayout>
-                    <AdminProficiencyLevel />
+                    <AdminProficiencyConfig />
                   </AdminLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/proficiency-config" element={
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
-                    <AdminProficiencyConfig />
+                    <ProficiencyConfigPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/proficiency-config/new" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <ProficiencyConfigForm />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/proficiency-config/:id/edit" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <ProficiencyConfigForm />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/proficiency-questions" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminProficiencyQuestions />
                   </AdminLayout>
                 </ProtectedRoute>
               } />
@@ -227,6 +243,13 @@ function App() {
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
                     <AdminCoinPurchases />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/payment-config" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <PaymentConfigPage />
                   </AdminLayout>
                 </ProtectedRoute>
               } />

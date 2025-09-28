@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { 
+  ArrowLeft,
   Plus, 
-  Edit, 
   Trash2, 
   Brain,
   Settings,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
+
 
 interface ProficiencyConfig {
   _id: string
@@ -38,13 +39,14 @@ interface ProficiencyConfig {
     }[]
     resultLevel?: number
     nextPhase?: 'followup' | 'final'
+    subBranches?: any[]
   }[]
   isActive: boolean
   createdAt: string
   updatedAt: string
 }
 
-export const AdminProficiencyConfig = () => {
+export const ProficiencyConfigPage = () => {
   const navigate = useNavigate()
   const [configs, setConfigs] = useState<ProficiencyConfig[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,6 +69,7 @@ export const AdminProficiencyConfig = () => {
       setLoading(false)
     }
   }
+
 
   const handleDeleteConfig = async (id: string) => {
     setDeletingId(id)
@@ -121,18 +124,30 @@ export const AdminProficiencyConfig = () => {
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Cấu hình Test Năng lực</h1>
-                <p className="text-gray-600">Quản lý logic và cấu hình test năng lực</p>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/admin/proficiency')}
+              className="mb-6 bg-white/50 hover:bg-white/70 border-2 border-blue-200"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Quay lại
+            </Button>
+            
+            <div className="text-center">
+              <div className="relative inline-block mb-4">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  ⚙️ Cấu hình Test năng lực
+                </h1>
+                <div className="absolute -top-2 -right-2">
+                  <Settings className="h-8 w-8 text-blue-400 animate-bounce" />
+                </div>
+                <div className="absolute -bottom-2 -left-2">
+                  <Brain className="h-6 w-6 text-purple-400 animate-pulse" />
+                </div>
               </div>
-              <Button 
-                onClick={() => navigate('/admin/proficiency-config/new')}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Tạo cấu hình mới
-              </Button>
+              <p className="text-xl text-gray-700 font-medium">
+                Quản lý cấu hình test năng lực
+              </p>
             </div>
           </div>
 
@@ -188,7 +203,7 @@ export const AdminProficiencyConfig = () => {
                           onClick={() => navigate(`/admin/proficiency-config/${config._id}/edit`)}
                           className="text-white hover:bg-white/20"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Settings className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -247,7 +262,7 @@ export const AdminProficiencyConfig = () => {
                         onClick={() => navigate(`/admin/proficiency-config/${config._id}/edit`)}
                         className="border-blue-300 text-blue-600 hover:bg-blue-50"
                       >
-                        <Edit className="h-4 w-4 mr-2" />
+                        <Settings className="h-4 w-4 mr-2" />
                         Chỉnh sửa
                       </Button>
                     </div>
@@ -256,6 +271,18 @@ export const AdminProficiencyConfig = () => {
               ))}
             </div>
           )}
+
+          {/* Create Button */}
+          <div className="text-center mt-8">
+            <Button
+              onClick={() => navigate('/admin/proficiency-config/new')}
+              className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+            >
+              <Plus className="h-6 w-6 mr-3" />
+              Tạo cấu hình mới
+              <Settings className="h-5 w-5 ml-3" />
+            </Button>
+          </div>
 
           {/* Delete Confirmation Dialog */}
           <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

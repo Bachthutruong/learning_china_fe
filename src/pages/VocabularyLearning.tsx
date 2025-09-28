@@ -21,6 +21,7 @@ import {
   XCircle,
   Flag
 } from 'lucide-react'
+import { ReportErrorDialog } from '../components/ReportErrorDialog'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -98,8 +99,12 @@ export const VocabularyLearning = () => {
   const [loadingVocabularies, setLoadingVocabularies] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
+  const [activeTab, setActiveTab] = useState<'learning' | 'reports' | 'manage'>('learning')
   const [totalVocabularies, setTotalVocabularies] = useState(0)
   const [userVocabularies, setUserVocabularies] = useState<any[]>([])
+  
+  // Report error states
+  const [showReportDialog, setShowReportDialog] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -134,20 +139,24 @@ export const VocabularyLearning = () => {
     }
   }
 
-  const fetchVocabularies = async () => {
+  const fetchVocabularies = async (topicId?: string) => {
     try {
+      const topicToUse = topicId || selectedTopic
       let topicParam = undefined
-      if (selectedTopic !== 'all') {
-        if (selectedTopic.startsWith('sys_')) {
+      
+      if (topicToUse !== 'all') {
+        if (topicToUse.startsWith('sys_')) {
           // System topic - use topic name
-          const topicId = selectedTopic.replace('sys_', '')
-          const topic = systemTopics.find(t => t._id === topicId)
+          const sysTopicId = topicToUse.replace('sys_', '')
+          const topic = systemTopics.find(t => t._id === sysTopicId)
           topicParam = topic?.name
         } else {
           // Personal topic - use topic ID
-          topicParam = selectedTopic
+          topicParam = topicToUse
         }
       }
+
+      console.log('Fetching vocabularies for topic:', topicToUse, 'param:', topicParam)
 
       const response = await api.get('/vocabulary-learning/vocabularies', {
         params: {
@@ -155,11 +164,21 @@ export const VocabularyLearning = () => {
           limit: 10
         }
       })
-      setVocabularies(response.data.vocabularies || response.data || [])
+      
+      const vocabData = response.data.vocabularies || response.data || []
+      console.log('Fetched vocabularies:', vocabData.length)
+      
+      setVocabularies(vocabData)
       setCurrentWordIndex(0)
       setShowTopicSelector(false)
+      
+      if (vocabData.length === 0) {
+        toast.error('Không có từ vựng nào trong chủ đề này')
+        setShowTopicSelector(true)
+      }
     } catch (error) {
       console.error('Error fetching vocabularies:', error)
+      toast.error('Không thể tải từ vựng')
     }
   }
 
@@ -362,6 +381,17 @@ export const VocabularyLearning = () => {
         toast.success(`Đã thêm từ "${currentStudyVocabulary.word}" vào ${action === 'studying' ? 'danh sách học' : 'danh sách bỏ qua'}`)
         setShowStudyDialog(false)
         fetchUserVocabularies()
+        
+        // Move to next word
+        if (currentWordIndex < vocabularies.length - 1) {
+          setCurrentWordIndex(currentWordIndex + 1)
+        } else {
+          // No more words, go back to topic selection
+          setShowTopicSelector(true)
+          setCurrentWordIndex(0)
+          setVocabularies([])
+          toast.success('Đã hoàn thành tất cả từ vựng trong chủ đề này!')
+        }
       }
     } catch (error: any) {
       console.error('Error handling vocabulary action:', error)
@@ -422,6 +452,27 @@ export const VocabularyLearning = () => {
         
         toast.success(`Chúc mừng! Bạn đã học thuộc từ "${currentStudyVocabulary?.word}" và nhận được 0.5 XP + 0.5 xu!`)
         fetchUserVocabularies()
+        
+        // Move to next word after quiz completion
+        setTimeout(() => {
+          if (currentWordIndex < vocabularies.length - 1) {
+            setCurrentWordIndex(currentWordIndex + 1)
+            setShowQuizDialog(false)
+            setQuizCompleted(false)
+            setQuizAnswers([])
+            setQuizScore(0)
+          } else {
+            // No more words, go back to topic selection
+            setShowTopicSelector(true)
+            setCurrentWordIndex(0)
+            setVocabularies([])
+            setShowQuizDialog(false)
+            setQuizCompleted(false)
+            setQuizAnswers([])
+            setQuizScore(0)
+            toast.success('Đã hoàn thành tất cả từ vựng trong chủ đề này!')
+          }
+        }, 2000) // Wait 2 seconds to show the result
       } catch (error: any) {
         console.error('Error adding learned vocabulary:', error)
         toast.error('Không thể lưu tiến độ học tập')
@@ -437,6 +488,27 @@ export const VocabularyLearning = () => {
         
         toast.error(`Bạn cần học thêm từ "${currentStudyVocabulary?.word}". Đã thêm vào danh sách cần học.`)
         fetchUserVocabularies()
+        
+        // Move to next word after quiz completion
+        setTimeout(() => {
+          if (currentWordIndex < vocabularies.length - 1) {
+            setCurrentWordIndex(currentWordIndex + 1)
+            setShowQuizDialog(false)
+            setQuizCompleted(false)
+            setQuizAnswers([])
+            setQuizScore(0)
+          } else {
+            // No more words, go back to topic selection
+            setShowTopicSelector(true)
+            setCurrentWordIndex(0)
+            setVocabularies([])
+            setShowQuizDialog(false)
+            setQuizCompleted(false)
+            setQuizAnswers([])
+            setQuizScore(0)
+            toast.success('Đã hoàn thành tất cả từ vựng trong chủ đề này!')
+          }
+        }, 2000) // Wait 2 seconds to show the result
       } catch (error: any) {
         console.error('Error adding studying vocabulary:', error)
         toast.error('Không thể lưu tiến độ học tập')
@@ -469,6 +541,7 @@ export const VocabularyLearning = () => {
       toast.error('Không thể phát âm thanh')
     }
   }
+
 
   const handleNext = () => {
     if (currentWordIndex < vocabularies.length - 1) {
@@ -574,28 +647,67 @@ export const VocabularyLearning = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Học từ vựng</h1>
               <p className="text-gray-600">Chọn chủ đề để bắt đầu học từ vựng mới</p>
             </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setShowCreateTopicDialog(true)}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Tạo chủ đề
-              </Button>
-              <Button
-                onClick={() => setShowAddVocabularyDialog(true)}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Thêm từ vựng
-              </Button>
-            </div>
+            {activeTab === 'learning' && (
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowCreateTopicDialog(true)}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tạo chủ đề
+                </Button>
+                <Button
+                  onClick={() => setShowAddVocabularyDialog(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Thêm từ vựng
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {/* Tabs */}
+          <div className="flex space-x-1 mt-6 bg-gray-100 p-1 rounded-lg w-fit">
+            <button
+              onClick={() => setActiveTab('learning')}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                activeTab === 'learning'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Học từ vựng
+            </button>
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                activeTab === 'reports'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Báo cáo
+            </button>
+            <button
+              onClick={() => setActiveTab('manage')}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                activeTab === 'manage'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Quản lý từ
+            </button>
           </div>
         </div>
 
-        {/* Topic Selector */}
-        {showTopicSelector && (
+        {/* Learning Tab Content */}
+        {activeTab === 'learning' && (
+          <>
+            {/* Topic Selector */}
+            {showTopicSelector && (
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -620,8 +732,7 @@ export const VocabularyLearning = () => {
                           className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-blue-50"
                         onClick={() => {
                           setSelectedTopic(`sys_${topic._id}`)
-                          setShowTopicSelector(false)
-                          fetchVocabularies()
+                          fetchVocabularies(`sys_${topic._id}`)
                         }}
                         >
                           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -646,8 +757,7 @@ export const VocabularyLearning = () => {
                           className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-purple-50 border-purple-200"
                           onClick={() => {
                             setSelectedTopic(topic._id)
-                            setShowTopicSelector(false)
-                            fetchVocabularies()
+                            fetchVocabularies(topic._id)
                           }}
                         >
                           <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
@@ -703,7 +813,7 @@ export const VocabularyLearning = () => {
                   className="w-full justify-start"
                   onClick={() => {
                     setSelectedTopic('all')
-                    fetchVocabularies()
+                    fetchVocabularies('all')
                   }}
                 >
                   <Target className="mr-2 h-4 w-4" />
@@ -721,7 +831,7 @@ export const VocabularyLearning = () => {
                         className="w-full justify-start"
                         onClick={() => {
                           setSelectedTopic(`sys_${topic._id}`)
-                          fetchVocabularies()
+                          fetchVocabularies(`sys_${topic._id}`)
                         }}
                       >
                         <div className="w-3 h-3 rounded-full bg-blue-500 mr-2" />
@@ -742,7 +852,7 @@ export const VocabularyLearning = () => {
                         className="w-full justify-start"
                         onClick={() => {
                           setSelectedTopic(topic._id)
-                          fetchVocabularies()
+                          fetchVocabularies(topic._id)
                         }}
                       >
                         <div className="w-3 h-3 rounded-full bg-purple-500 mr-2" />
@@ -823,6 +933,7 @@ export const VocabularyLearning = () => {
                         variant="outline"
                         size="sm"
                         className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                        onClick={() => setShowReportDialog(true)}
                       >
                         <Flag className="h-4 w-4 mr-1" />
                         Báo lỗi
@@ -1322,6 +1433,218 @@ export const VocabularyLearning = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Report Error Dialog */}
+      <ReportErrorDialog
+        isOpen={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        itemType="vocabulary"
+        itemId={currentStudyVocabulary?._id || ''}
+        itemContent={currentStudyVocabulary?.word || ''}
+      />
+          </>
+        )}
+
+        {/* Reports Tab Content */}
+        {activeTab === 'reports' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  Báo cáo học từ vựng
+                </CardTitle>
+                <CardDescription>
+                  Theo dõi tiến độ học tập và thống kê từ vựng
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  {/* Total Words Learned */}
+                  <div className="bg-blue-50 p-6 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-600">Tổng từ đã học</p>
+                        <p className="text-2xl font-bold text-blue-900">0</p>
+                      </div>
+                      <BookOpen className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </div>
+
+                  {/* Words This Week */}
+                  <div className="bg-green-50 p-6 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-600">Tuần này</p>
+                        <p className="text-2xl font-bold text-green-900">0</p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-green-600" />
+                    </div>
+                  </div>
+
+                  {/* Study Streak */}
+                  <div className="bg-orange-50 p-6 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-orange-600">Chuỗi học</p>
+                        <p className="text-2xl font-bold text-orange-900">0 ngày</p>
+                      </div>
+                      <Target className="h-8 w-8 text-orange-600" />
+                    </div>
+                  </div>
+
+                  {/* Accuracy Rate */}
+                  <div className="bg-purple-50 p-6 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-purple-600">Tỷ lệ đúng</p>
+                        <p className="text-2xl font-bold text-purple-900">0%</p>
+                      </div>
+                      <Brain className="h-8 w-8 text-purple-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Learning Progress Chart */}
+                <div className="bg-white p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-4">Tiến độ học tập (7 ngày qua)</h3>
+                  <div className="h-64 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <TrendingUp className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                      <p>Chưa có dữ liệu học tập</p>
+                      <p className="text-sm">Bắt đầu học từ vựng để xem báo cáo</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Topic Performance */}
+                <div className="bg-white p-6 rounded-lg border mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Hiệu suất theo chủ đề</h3>
+                  <div className="space-y-4">
+                    {personalTopics.length > 0 ? (
+                      personalTopics.map((topic) => (
+                        <div key={topic._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <h4 className="font-medium">{topic.name}</h4>
+                            <p className="text-sm text-gray-600">{topic.vocabularyCount} từ vựng</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <BookOpen className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                        <p>Chưa có chủ đề nào</p>
+                        <p className="text-sm">Tạo chủ đề để bắt đầu học</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Manage Tab Content */}
+        {activeTab === 'manage' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-blue-600" />
+                  Quản lý từ vựng
+                </CardTitle>
+                <p className="text-gray-600">Quản lý các từ vựng cần học và đã học</p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  {/* Studying Words */}
+                  <div className="bg-yellow-50 p-6 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-yellow-600">Cần học thêm</p>
+                        <p className="text-2xl font-bold text-yellow-900">0</p>
+                      </div>
+                      <Clock className="h-8 w-8 text-yellow-600" />
+                    </div>
+                  </div>
+
+                  {/* Learned Words */}
+                  <div className="bg-green-50 p-6 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-600">Đã học</p>
+                        <p className="text-2xl font-bold text-green-900">0</p>
+                      </div>
+                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                  </div>
+
+                  {/* Skipped Words */}
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Đã bỏ qua</p>
+                        <p className="text-2xl font-bold text-gray-900">0</p>
+                      </div>
+                      <X className="h-8 w-8 text-gray-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Word Lists */}
+                <div className="space-y-6">
+                  {/* Studying Words */}
+                  <div className="bg-white p-6 rounded-lg border">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-yellow-600" />
+                      Từ cần học thêm
+                    </h3>
+                    <div className="h-64 flex items-center justify-center text-gray-500">
+                      <div className="text-center">
+                        <Clock className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                        <p>Chưa có từ nào cần học thêm</p>
+                        <p className="text-sm">Bắt đầu học từ vựng để xem danh sách</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Learned Words */}
+                  <div className="bg-white p-6 rounded-lg border">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      Từ đã học
+                    </h3>
+                    <div className="h-64 flex items-center justify-center text-gray-500">
+                      <div className="text-center">
+                        <CheckCircle className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                        <p>Chưa có từ nào đã học</p>
+                        <p className="text-sm">Hoàn thành quiz để thêm từ vào danh sách</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Skipped Words */}
+                  <div className="bg-white p-6 rounded-lg border">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <X className="h-5 w-5 text-gray-600" />
+                      Từ đã bỏ qua
+                    </h3>
+                    <div className="h-64 flex items-center justify-center text-gray-500">
+                      <div className="text-center">
+                        <X className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                        <p>Chưa có từ nào bị bỏ qua</p>
+                        <p className="text-sm">Bỏ qua từ vựng để xem danh sách</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   )

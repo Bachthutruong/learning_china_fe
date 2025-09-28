@@ -13,13 +13,26 @@ import {
   // Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   // BarChart3,
   // FileText,
   Layers,
   Target,
-  Coins
+  Coins,
+  BookOpenCheck,
+  Settings,
+  CreditCard
 } from 'lucide-react'
 import { api } from '../services/api'
+
+interface MenuItem {
+  title: string
+  icon: any
+  href: string
+  badge: string | null
+  submenu?: MenuItem[]
+}
 
 interface AdminSidebarProps {
   className?: string
@@ -28,6 +41,7 @@ interface AdminSidebarProps {
 
 export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false)
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState({
     reports: 0,
     vocabularies: 0,
@@ -87,7 +101,7 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
     }
   }, [onStatsUpdate])
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     {
       title: 'Tổng quan',
       icon: LayoutDashboard,
@@ -128,7 +142,27 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
       title: 'Test năng lực',
       icon: Brain,
       href: '/admin/proficiency',
-      badge: stats.proficiencyTests > 0 ? stats.proficiencyTests.toString() : null
+      badge: stats.proficiencyTests > 0 ? stats.proficiencyTests.toString() : null,
+      submenu: [
+        {
+          title: 'Cấu hình Test',
+          icon: Brain,
+          href: '/admin/proficiency',
+          badge: null
+        },
+        {
+          title: 'Tạo/Chỉnh sửa',
+          icon: Settings,
+          href: '/admin/proficiency-config/new',
+          badge: null
+        },
+        {
+          title: 'Quản lý câu hỏi',
+          icon: BookOpenCheck,
+          href: '/admin/proficiency-questions',
+          badge: null
+        }
+      ]
     },
     {
       title: 'Cuộc thi',
@@ -148,6 +182,12 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
       href: '/admin/coin-purchases',
       badge: stats.coinPurchases > 0 ? stats.coinPurchases.toString() : null
     },
+    {
+      title: 'Cấu hình thanh toán',
+      icon: CreditCard,
+      href: '/admin/payment-config',
+      badge: null
+    },
     // {
     //   title: 'Thống kê',
     //   icon: BarChart3,
@@ -162,11 +202,21 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
     // }
   ]
 
+  const toggleMenu = (menuKey: string) => {
+    const newExpanded = new Set(expandedMenus)
+    if (newExpanded.has(menuKey)) {
+      newExpanded.delete(menuKey)
+    } else {
+      newExpanded.add(menuKey)
+    }
+    setExpandedMenus(newExpanded)
+  }
+
   const isActive = (href: string) => {
     if (href === '/admin') {
       return location.pathname === '/admin'
     }
-    return location.pathname.startsWith(href)
+    return location.pathname === href
   }
 
   return (
@@ -203,29 +253,91 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
         {menuItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
+          const hasSubmenu = item.submenu && item.submenu.length > 0
+          const isExpanded = expandedMenus.has(item.href)
           
           return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-                active
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && (
-                <>
-                  <span className="font-medium">{item.title}</span>
-                  {item.badge && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
-                      {item.badge}
-                    </Badge>
+            <div key={item.href}>
+              {hasSubmenu ? (
+                <div>
+                  <button
+                    onClick={() => toggleMenu(item.href)}
+                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                      active
+                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    {!collapsed && (
+                      <>
+                        <span className="font-medium flex-1 text-left">{item.title}</span>
+                        {item.badge && (
+                          <Badge variant="secondary" className="text-xs">
+                            {item.badge}
+                          </Badge>
+                        )}
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </>
+                    )}
+                  </button>
+                  
+                  {!collapsed && isExpanded && item.submenu && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {item.submenu.map((subItem) => {
+                        const SubIcon = subItem.icon
+                        const subActive = isActive(subItem.href)
+                        
+                        return (
+                          <Link
+                            key={subItem.href}
+                            to={subItem.href}
+                            className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-sm ${
+                              subActive
+                                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                                : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            <SubIcon className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium">{subItem.title}</span>
+                            {subItem.badge && (
+                              <Badge variant="secondary" className="ml-auto text-xs">
+                                {subItem.badge}
+                              </Badge>
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
                   )}
-                </>
+                </div>
+              ) : (
+                <Link
+                  to={item.href}
+                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                    active
+                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && (
+                    <>
+                      <span className="font-medium">{item.title}</span>
+                      {item.badge && (
+                        <Badge variant="secondary" className="ml-auto text-xs">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </>
+                  )}
+                </Link>
               )}
-            </Link>
+            </div>
           )
         })}
       </nav>
