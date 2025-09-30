@@ -14,6 +14,7 @@ import {
   Brain,
   Coins
 } from 'lucide-react'
+import { CalendarCheck } from 'lucide-react'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import {
@@ -131,6 +132,10 @@ export const Navbar = () => {
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Hồ sơ</span>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/checkin')}>
+                      <CalendarCheck className="mr-2 h-4 w-4" />
+                      <span>Điểm danh</span>
+                    </DropdownMenuItem>
                     {user?.role === 'admin' && (
                       <DropdownMenuItem onClick={() => navigate('/admin')}>
                         <Settings className="mr-2 h-4 w-4" />
@@ -206,6 +211,13 @@ export const Navbar = () => {
                         <span>Quản trị</span>
                       </button>
                     )}
+                    <button
+                      onClick={() => { navigate('/checkin'); setIsOpen(false) }}
+                      className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors w-full"
+                    >
+                      <CalendarCheck className="w-4 h-4" />
+                      <span>Điểm danh</span>
+                    </button>
                     <button
                       onClick={handleLogout}
                       className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full"

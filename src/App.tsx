@@ -40,6 +40,7 @@ import { PaymentConfigPage } from './pages/admin/PaymentConfig'
 import { TestList } from './pages/TestList'
 import { TestDetail } from './pages/TestDetail'
 import { NewTestPage } from './pages/NewTestPage'
+import { Checkin } from './pages/Checkin'
 
 // Help pages
 import { HelpCenter } from './pages/HelpCenter'
@@ -121,6 +122,11 @@ function App() {
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } />
+              <Route path="/checkin" element={
+                <ProtectedRoute>
+                  <Checkin />
                 </ProtectedRoute>
               } />
               <Route path="/coin-purchase" element={
