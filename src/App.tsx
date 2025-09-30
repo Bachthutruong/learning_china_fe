@@ -15,6 +15,7 @@ import { VocabularyLearning } from './pages/VocabularyLearning'
 // import { Tests } from './pages/Tests'
 import { ProficiencyTest } from './pages/ProficiencyTest'
 import { Competition } from './pages/Competition'
+import { CompetitionDetail } from './pages/CompetitionDetail'
 import { Profile } from './pages/Profile'
 import { Admin } from './pages/Admin'
 import { AdminVocabulary } from './pages/admin/Vocabulary'
@@ -110,6 +111,11 @@ function App() {
               <Route path="/competition" element={
                 <ProtectedRoute>
                   <Competition />
+                </ProtectedRoute>
+              } />
+              <Route path="/competition/:id" element={
+                <ProtectedRoute>
+                  <CompetitionDetail />
                 </ProtectedRoute>
               } />
               <Route path="/profile" element={

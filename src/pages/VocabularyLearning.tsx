@@ -103,6 +103,36 @@ export const VocabularyLearning = () => {
   const [totalVocabularies, setTotalVocabularies] = useState(0)
   const [userVocabularies, setUserVocabularies] = useState<any[]>([])
   
+  // Derived stats for reports
+  const learnedVocabs = userVocabularies.filter((uv: any) => uv.status === 'learned')
+  const studyingVocabs = userVocabularies.filter((uv: any) => uv.status === 'studying')
+  const totalLearnedCount = learnedVocabs.length
+  const learnedThisWeekCount = learnedVocabs.filter((uv: any) => {
+    const d = uv.learnedAt ? new Date(uv.learnedAt) : null
+    if (!d) return false
+    const now = new Date()
+    const diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
+    return diffDays <= 7
+  }).length
+  const accuracyRate = (totalLearnedCount + studyingVocabs.length) > 0
+    ? Math.round((totalLearnedCount / (totalLearnedCount + studyingVocabs.length)) * 100)
+    : 0
+  const computeStreak = () => {
+    const days = new Set<string>()
+    learnedVocabs.forEach((uv: any) => {
+      if (uv.learnedAt) days.add(new Date(uv.learnedAt).toISOString().slice(0, 10))
+    })
+    let streak = 0
+    let cursor = new Date()
+    const hasDay = (d: Date) => days.has(d.toISOString().slice(0, 10))
+    while (hasDay(cursor)) {
+      streak++
+      cursor = new Date(cursor.getTime() - 24 * 60 * 60 * 1000)
+    }
+    return streak
+  }
+  const studyStreakDays = computeStreak()
+  
   // Report error states
   const [showReportDialog, setShowReportDialog] = useState(false)
 
@@ -161,7 +191,8 @@ export const VocabularyLearning = () => {
       const response = await api.get('/vocabulary-learning/vocabularies', {
         params: {
           topic: topicParam,
-          limit: 10
+          limit: 10,
+          excludeLearned: true
         }
       })
       
@@ -418,10 +449,89 @@ export const VocabularyLearning = () => {
     }
   }
 
+  // Start relearn flow from Manage tab
+  const startRelearn = async (vocab: any) => {
+    try {
+      // Open study dialog first; the user will press "Đã thuộc" to start quiz
+      const v = vocab?.vocabularyId || vocab
+      // Switch main learning context to this word and related topic
+      if (vocab?.personalTopicId?._id) {
+        setSelectedTopic(vocab.personalTopicId._id)
+      }
+      setVocabularies([v])
+      setCurrentWordIndex(0)
+      setShowTopicSelector(false)
+      setWordStatus('learning')
+      setActiveTab('learning')
+      setCurrentStudyVocabulary(v)
+      setShowStudyDialog(true)
+    } catch (e) {
+      toast.error('Không thể bắt đầu học lại')
+    }
+  }
+
   const handleQuizAnswer = (questionIndex: number, answerIndex: number) => {
+    // Only allow selecting once per question
+    if (quizAnswers[questionIndex] !== -1) return
     const newAnswers = [...quizAnswers]
     newAnswers[questionIndex] = answerIndex
     setQuizAnswers(newAnswers)
+
+    // Immediate feedback
+    const isCorrect = quizQuestions[questionIndex]?.correctAnswer === answerIndex
+    if (isCorrect) {
+      toast.success('Chính xác!')
+    } else {
+      toast.error('Sai rồi, thử câu tiếp theo nhé!')
+    }
+  }
+
+  const goToNextInlineQuiz = async () => {
+    if (currentQuizIndex < quizQuestions.length - 1) {
+      setCurrentQuizIndex(currentQuizIndex + 1)
+      return
+    }
+
+    let correctAnswers = 0
+    quizQuestions.forEach((question, index) => {
+      if (quizAnswers[index] === question.correctAnswer) {
+        correctAnswers++
+      }
+    })
+
+    const score = (correctAnswers / quizQuestions.length) * 100
+
+    try {
+      const vocabularyId = vocabularies[currentWordIndex]?._id
+      if (score === 100) {
+        const payload: any = { vocabularyId, quizScore: 100 }
+        if (selectedTopic !== 'all' && !selectedTopic.startsWith('sys_')) {
+          payload.personalTopicId = selectedTopic
+        }
+        await api.post('/vocabulary-learning/user/vocabularies/complete', payload)
+        toast.success(`🎉 Hoàn hảo! +10 điểm và +10 xu cho từ "${vocabularies[currentWordIndex]?.word}"`)
+      } else {
+        await api.post('/vocabulary-learning/user/vocabularies', { vocabularyId, status: 'studying' })
+        toast.error(`Bạn cần học thêm từ "${vocabularies[currentWordIndex]?.word}"`)
+      }
+
+      fetchUserVocabularies()
+    } catch (error) {
+      console.error('Failed to save inline quiz result:', error)
+    }
+
+    setShowQuiz(false)
+    setQuizQuestions([])
+    setQuizAnswers([])
+    setCurrentQuizIndex(0)
+
+    if (currentWordIndex < vocabularies.length - 1) {
+      setCurrentWordIndex(currentWordIndex + 1)
+    } else {
+      setShowTopicSelector(true)
+      setCurrentWordIndex(0)
+      setVocabularies([])
+    }
   }
 
   const handleSubmitQuiz = async () => {
@@ -444,35 +554,26 @@ export const VocabularyLearning = () => {
     if (score === 100) {
       // All correct - add to learned and give rewards
       try {
-        await api.post('/vocabulary-learning/user/vocabularies', {
-          vocabularyId: currentStudyVocabulary?._id,
-          status: 'learned',
-          personalTopicId: selectedTopic !== 'all' ? selectedTopic : undefined
-        })
+        {
+          const payload: any = { vocabularyId: currentStudyVocabulary?._id, status: 'learned' }
+          if (selectedTopic !== 'all' && !selectedTopic.startsWith('sys_')) {
+            payload.personalTopicId = selectedTopic
+          }
+          await api.post('/vocabulary-learning/user/vocabularies', payload)
+        }
         
-        toast.success(`Chúc mừng! Bạn đã học thuộc từ "${currentStudyVocabulary?.word}" và nhận được 0.5 XP + 0.5 xu!`)
+        toast.success(`🎉 Hoàn hảo! Bạn nhận được +10 điểm và +10 xu cho từ "${currentStudyVocabulary?.word}"`)
         fetchUserVocabularies()
         
         // Move to next word after quiz completion
-        setTimeout(() => {
-          if (currentWordIndex < vocabularies.length - 1) {
-            setCurrentWordIndex(currentWordIndex + 1)
-            setShowQuizDialog(false)
-            setQuizCompleted(false)
-            setQuizAnswers([])
-            setQuizScore(0)
-          } else {
-            // No more words, go back to topic selection
-            setShowTopicSelector(true)
-            setCurrentWordIndex(0)
-            setVocabularies([])
-            setShowQuizDialog(false)
-            setQuizCompleted(false)
-            setQuizAnswers([])
-            setQuizScore(0)
-            toast.success('Đã hoàn thành tất cả từ vựng trong chủ đề này!')
-          }
-        }, 2000) // Wait 2 seconds to show the result
+        setTimeout(async () => {
+          setShowQuizDialog(false)
+          setQuizCompleted(false)
+          setQuizAnswers([])
+          setQuizScore(0)
+          // Refresh a fresh batch that excludes learned words
+          await fetchVocabularies(selectedTopic)
+        }, 1200)
       } catch (error: any) {
         console.error('Error adding learned vocabulary:', error)
         toast.error('Không thể lưu tiến độ học tập')
@@ -482,33 +583,21 @@ export const VocabularyLearning = () => {
       try {
         await api.post('/vocabulary-learning/user/vocabularies', {
           vocabularyId: currentStudyVocabulary?._id,
-          status: 'studying',
-          personalTopicId: selectedTopic !== 'all' ? selectedTopic : undefined
+          status: 'studying'
         })
         
         toast.error(`Bạn cần học thêm từ "${currentStudyVocabulary?.word}". Đã thêm vào danh sách cần học.`)
         fetchUserVocabularies()
         
         // Move to next word after quiz completion
-        setTimeout(() => {
-          if (currentWordIndex < vocabularies.length - 1) {
-            setCurrentWordIndex(currentWordIndex + 1)
-            setShowQuizDialog(false)
-            setQuizCompleted(false)
-            setQuizAnswers([])
-            setQuizScore(0)
-          } else {
-            // No more words, go back to topic selection
-            setShowTopicSelector(true)
-            setCurrentWordIndex(0)
-            setVocabularies([])
-            setShowQuizDialog(false)
-            setQuizCompleted(false)
-            setQuizAnswers([])
-            setQuizScore(0)
-            toast.success('Đã hoàn thành tất cả từ vựng trong chủ đề này!')
-          }
-        }, 2000) // Wait 2 seconds to show the result
+        setTimeout(async () => {
+          setShowQuizDialog(false)
+          setQuizCompleted(false)
+          setQuizAnswers([])
+          setQuizScore(0)
+          // Refresh list (the current word should be in studying list; excludeLearned still true)
+          await fetchVocabularies(selectedTopic)
+        }, 1200)
       } catch (error: any) {
         console.error('Error adding studying vocabulary:', error)
         toast.error('Không thể lưu tiến độ học tập')
@@ -574,7 +663,7 @@ export const VocabularyLearning = () => {
           .slice(0, Math.min(3, questions.length))
         
         setQuizQuestions(randomQuestions)
-        setQuizAnswers([])
+        setQuizAnswers(new Array(randomQuestions.length).fill(-1))
         setCurrentQuizIndex(0)
         setShowQuiz(true)
       } catch (error) {
@@ -587,34 +676,14 @@ export const VocabularyLearning = () => {
       if (status === 'skip') {
         handleNext()
       } else {
-        // Tự động tạo chủ đề nếu chưa có
-        let topicId = selectedTopic
-        if (selectedTopic === 'all' || selectedTopic.startsWith('sys_')) {
-          // Tạo chủ đề cá nhân mới
-          try {
-            const topicResponse = await api.post('/vocabulary-learning/user/personal-topics', {
-              name: `Học từ vựng ${new Date().toLocaleDateString()}`,
-              description: 'Chủ đề tự động tạo khi học từ vựng'
-            })
-            topicId = topicResponse.data.topic._id
-            setSelectedTopic(topicId)
-            fetchPersonalTopics()
-            toast.success('Đã tạo chủ đề cá nhân mới!')
-          } catch (error) {
-            console.error('Failed to create personal topic:', error)
-            toast.error('Không thể tạo chủ đề cá nhân')
-            return
-          }
-        }
-
-        // Thêm từ vựng vào chủ đề
+        // Chỉ thêm vào danh sách "cần học thêm" của người dùng, không tạo chủ đề mới
         try {
+          const postStatus = status === 'needs-study' ? 'studying' : status
           await api.post('/vocabulary-learning/user/vocabularies', {
             vocabularyId: vocabularies[currentWordIndex]?._id,
-            status: status,
-            personalTopicId: topicId
+            status: postStatus
           })
-          toast.success('Đã thêm từ vựng vào chủ đề cá nhân!')
+          toast.success('Đã thêm vào danh sách Cần học thêm')
           handleNext()
         } catch (error) {
           console.error('Failed to add vocabulary:', error)
@@ -954,9 +1023,9 @@ export const VocabularyLearning = () => {
                     </div>
 
                     {/* Audio Button */}
-                    {currentWord.audio && (
+                    {(currentWord.audio || currentWord.audioUrl) && (
                       <Button
-                        onClick={() => handlePlayAudio(currentWord.audio!, currentWord._id)}
+                        onClick={() => handlePlayAudio((currentWord.audio || currentWord.audioUrl)!, currentWord._id)}
                         disabled={isPlaying === currentWord._id}
                         className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
                       >
@@ -1047,17 +1116,38 @@ export const VocabularyLearning = () => {
                       {quizQuestions[currentQuizIndex]?.question}
                     </h4>
                     <div className="grid grid-cols-1 gap-2">
-                      {quizQuestions[currentQuizIndex]?.options.map((option, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          className="justify-start h-auto p-4 text-left"
-                          onClick={() => handleQuizAnswer(index, index)}
-                        >
-                          {String.fromCharCode(65 + index)}. {option}
-                        </Button>
-                      ))}
+                      {quizQuestions[currentQuizIndex]?.options.map((option, index) => {
+                        const selectedIndex = quizAnswers[currentQuizIndex]
+                        const correctIndex = quizQuestions[currentQuizIndex].correctAnswer
+                        const isSelected = selectedIndex === index
+                        const isCorrect = isSelected && index === correctIndex
+                        const isWrong = isSelected && index !== correctIndex
+
+                        const stateClass = isCorrect
+                          ? 'bg-green-50 border-green-500'
+                          : isWrong
+                          ? 'bg-red-50 border-red-500'
+                          : ''
+
+                        return (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            className={`justify-start h-auto p-4 text-left ${stateClass}`}
+                            onClick={() => handleQuizAnswer(currentQuizIndex, index)}
+                          >
+                            {String.fromCharCode(65 + index)}. {option}
+                          </Button>
+                        )
+                      })}
                     </div>
+                    {quizAnswers[currentQuizIndex] !== -1 && (
+                      <div className="mt-4 flex justify-end">
+                        <Button onClick={goToNextInlineQuiz} className="bg-blue-600 text-white">
+                          {currentQuizIndex < quizQuestions.length - 1 ? 'Tiếp tục' : 'Hoàn tất'}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1125,9 +1215,9 @@ export const VocabularyLearning = () => {
                 <div className="text-xl text-blue-600 mb-4">
                   {currentStudyVocabulary.pronunciation}
                 </div>
-                {currentStudyVocabulary.audio && (
+                {(currentStudyVocabulary.audio || currentStudyVocabulary.audioUrl) && (
                   <Button
-                    onClick={() => handlePlayAudio(currentStudyVocabulary.audio!, currentStudyVocabulary._id)}
+                    onClick={() => handlePlayAudio((currentStudyVocabulary.audio || currentStudyVocabulary.audioUrl)!, currentStudyVocabulary._id)}
                     disabled={audioLoading === currentStudyVocabulary._id}
                     className="mb-4"
                   >
@@ -1465,7 +1555,7 @@ export const VocabularyLearning = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-blue-600">Tổng từ đã học</p>
-                        <p className="text-2xl font-bold text-blue-900">0</p>
+                        <p className="text-2xl font-bold text-blue-900">{totalLearnedCount}</p>
                       </div>
                       <BookOpen className="h-8 w-8 text-blue-600" />
                     </div>
@@ -1476,7 +1566,7 @@ export const VocabularyLearning = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-green-600">Tuần này</p>
-                        <p className="text-2xl font-bold text-green-900">0</p>
+                        <p className="text-2xl font-bold text-green-900">{learnedThisWeekCount}</p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-green-600" />
                     </div>
@@ -1487,7 +1577,7 @@ export const VocabularyLearning = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-orange-600">Chuỗi học</p>
-                        <p className="text-2xl font-bold text-orange-900">0 ngày</p>
+                        <p className="text-2xl font-bold text-orange-900">{studyStreakDays} ngày</p>
                       </div>
                       <Target className="h-8 w-8 text-orange-600" />
                     </div>
@@ -1498,7 +1588,7 @@ export const VocabularyLearning = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-purple-600">Tỷ lệ đúng</p>
-                        <p className="text-2xl font-bold text-purple-900">0%</p>
+                        <p className="text-2xl font-bold text-purple-900">{accuracyRate}%</p>
                       </div>
                       <Brain className="h-8 w-8 text-purple-600" />
                     </div>
@@ -1565,7 +1655,7 @@ export const VocabularyLearning = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-yellow-600">Cần học thêm</p>
-                        <p className="text-2xl font-bold text-yellow-900">0</p>
+                        <p className="text-2xl font-bold text-yellow-900">{userVocabularies.filter((v: any) => v.status === 'studying').length}</p>
                       </div>
                       <Clock className="h-8 w-8 text-yellow-600" />
                     </div>
@@ -1576,22 +1666,13 @@ export const VocabularyLearning = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-green-600">Đã học</p>
-                        <p className="text-2xl font-bold text-green-900">0</p>
+                        <p className="text-2xl font-bold text-green-900">{userVocabularies.filter((v: any) => v.status === 'learned').length}</p>
                       </div>
                       <CheckCircle className="h-8 w-8 text-green-600" />
                     </div>
                   </div>
 
-                  {/* Skipped Words */}
-                  <div className="bg-gray-50 p-6 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">Đã bỏ qua</p>
-                        <p className="text-2xl font-bold text-gray-900">0</p>
-                      </div>
-                      <X className="h-8 w-8 text-gray-600" />
-                    </div>
-                  </div>
+                  {/* Skipped removed per request */}
                 </div>
 
                 {/* Word Lists */}
@@ -1602,13 +1683,30 @@ export const VocabularyLearning = () => {
                       <Clock className="h-5 w-5 text-yellow-600" />
                       Từ cần học thêm
                     </h3>
-                    <div className="h-64 flex items-center justify-center text-gray-500">
-                      <div className="text-center">
-                        <Clock className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                        <p>Chưa có từ nào cần học thêm</p>
-                        <p className="text-sm">Bắt đầu học từ vựng để xem danh sách</p>
+                    {userVocabularies.filter((v: any) => v.status === 'studying').length === 0 ? (
+                      <div className="h-64 flex items-center justify-center text-gray-500">
+                        <div className="text-center">
+                          <Clock className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                          <p>Chưa có từ nào cần học thêm</p>
+                          <p className="text-sm">Bắt đầu học từ vựng để xem danh sách</p>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-auto">
+                        {userVocabularies.filter((v: any) => v.status === 'studying').map((uv: any) => (
+                          <div key={uv._id} className="flex items-center justify-between p-3 bg-yellow-50 rounded">
+                            <div>
+                              <div className="font-medium">{uv.vocabularyId?.word}</div>
+                              <div className="text-sm text-gray-600">{uv.vocabularyId?.meaning}</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">Cấp {uv.vocabularyId?.level}</Badge>
+                              <Button size="sm" onClick={() => startRelearn(uv)}>Học lại</Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Learned Words */}
@@ -1617,29 +1715,33 @@ export const VocabularyLearning = () => {
                       <CheckCircle className="h-5 w-5 text-green-600" />
                       Từ đã học
                     </h3>
-                    <div className="h-64 flex items-center justify-center text-gray-500">
-                      <div className="text-center">
-                        <CheckCircle className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                        <p>Chưa có từ nào đã học</p>
-                        <p className="text-sm">Hoàn thành quiz để thêm từ vào danh sách</p>
+                    {userVocabularies.filter((v: any) => v.status === 'learned').length === 0 ? (
+                      <div className="h-64 flex items-center justify-center text-gray-500">
+                        <div className="text-center">
+                          <CheckCircle className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                          <p>Chưa có từ nào đã học</p>
+                          <p className="text-sm">Hoàn thành quiz để thêm từ vào danh sách</p>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-auto">
+                        {userVocabularies.filter((v: any) => v.status === 'learned').map((uv: any) => (
+                          <div key={uv._id} className="flex items-center justify-between p-3 bg-green-50 rounded">
+                            <div>
+                              <div className="font-medium">{uv.vocabularyId?.word}</div>
+                              <div className="text-sm text-gray-600">{uv.vocabularyId?.meaning}</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">Cấp {uv.vocabularyId?.level}</Badge>
+                              <Button size="sm" onClick={() => startRelearn(uv)}>Học lại</Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Skipped Words */}
-                  <div className="bg-white p-6 rounded-lg border">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <X className="h-5 w-5 text-gray-600" />
-                      Từ đã bỏ qua
-                    </h3>
-                    <div className="h-64 flex items-center justify-center text-gray-500">
-                      <div className="text-center">
-                        <X className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                        <p>Chưa có từ nào bị bỏ qua</p>
-                        <p className="text-sm">Bỏ qua từ vựng để xem danh sách</p>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Skipped list removed per request */}
                 </div>
               </CardContent>
             </Card>

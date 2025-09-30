@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
+// Avatar imports not used on list page; used in detail page instead
 import { 
   Trophy, 
   Clock, 
@@ -12,11 +12,10 @@ import {
   Calendar,
   Gem,
   TrendingUp,
-  Crown,
-  Medal,
   Loader2
 } from 'lucide-react'
 import { api } from '../services/api'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -26,31 +25,25 @@ interface Competition {
   description: string
   startDate: string
   endDate: string
-  participants: number
+  participants: number | any[]
   cost: number
   reward: { xp: number; coins: number }
   status: 'active' | 'upcoming' | 'ended'
-  level: string
+  level: string | any
 }
 
-interface LeaderboardEntry {
-  rank: number
-  name: string
-  score: number
-  avatar?: string
-}
+// LeaderboardEntry is defined/used in detail page
 
 export const Competition = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [competitions, setCompetitions] = useState<Competition[]>([])
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  // leaderboard is shown in detail page
   const [loading, setLoading] = useState(true)
-  // Removed unused state: selectedCompetition, competitionStats
+  // details moved to separate page
 
   useEffect(() => {
     fetchCompetitions()
-    fetchLeaderboard()
-    // Removed unused fetchCompetitionStats
   }, [])
 
   const fetchCompetitions = async () => {
@@ -66,14 +59,7 @@ export const Competition = () => {
     }
   }
 
-  const fetchLeaderboard = async () => {
-    try {
-      const response = await api.get('/competitions/leaderboard')
-      setLeaderboard(response.data.leaderboard || [])
-    } catch (error) {
-      console.error('Failed to fetch leaderboard:', error)
-    }
-  }
+  // leaderboard fetching moved to detail page
 
   // Removed unused fetchCompetitionStats function
 
@@ -99,7 +85,17 @@ export const Competition = () => {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getComputedStatus = (c: Competition) => {
+    const now = new Date()
+    const start = new Date(c.startDate)
+    const end = new Date(c.endDate)
+    if (now < start) return 'upcoming'
+    if (now > end) return 'ended'
+    return 'active'
+  }
+
+  const getStatusBadge = (c: Competition) => {
+    const status = getComputedStatus(c)
     switch (status) {
       case 'active':
         return <Badge className="bg-green-100 text-green-800">Đang diễn ra</Badge>
@@ -112,14 +108,7 @@ export const Competition = () => {
     }
   }
 
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1: return <Crown className="h-5 w-5 text-yellow-500" />
-      case 2: return <Medal className="h-5 w-5 text-gray-400" />
-      case 3: return <Medal className="h-5 w-5 text-amber-600" />
-      default: return <span className="text-lg font-bold text-gray-500">#{rank}</span>
-    }
-  }
+  // Rank icon used in detail page only
 
   if (loading) {
     return (
@@ -166,7 +155,7 @@ export const Competition = () => {
                           {competition.description}
                         </CardDescription>
                       </div>
-                      {getStatusBadge(competition.status)}
+                      {getStatusBadge(competition)}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -182,14 +171,16 @@ export const Competition = () => {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Users className="h-4 w-4" />
-                          <span>{competition.participants} người tham gia</span>
+                          <span>
+                            {Array.isArray(competition.participants) ? competition.participants.length : competition.participants} người tham gia
+                          </span>
                         </div>
                       </div>
                       
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                           <Target className="h-4 w-4 text-blue-500" />
-                          <span>Cấp độ: {competition.level}</span>
+                          <span>Cấp độ: {typeof competition.level === 'string' ? competition.level : (competition.level?.name || 'Unknown')}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <Gem className="h-4 w-4 text-blue-500" />
@@ -205,12 +196,15 @@ export const Competition = () => {
                     <div className="flex gap-2">
                       <Button
                         onClick={() => joinCompetition(competition._id, competition.cost)}
-                        disabled={competition.status !== 'active' || (!!user && user.coins < competition.cost)}
+                        disabled={getComputedStatus(competition) !== 'active'}
                         className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
                       >
-                        {competition.status === 'active' ? 'Tham gia' : 'Chưa mở'}
+                        {getComputedStatus(competition) === 'active' ? 'Tham gia' : 'Chưa mở'}
                       </Button>
-                      <Button variant="outline">
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/competition/${competition._id}`)}
+                      >
                         Chi tiết
                       </Button>
                     </div>
@@ -219,46 +213,8 @@ export const Competition = () => {
               ))
             )}
           </div>
-
-          {/* Leaderboard */}
+          {/* Sidebar stats */}
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                  Bảng xếp hạng
-                </CardTitle>
-                <CardDescription>Top người chơi xuất sắc nhất</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {leaderboard.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Trophy className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Chưa có dữ liệu xếp hạng</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {leaderboard.slice(0, 10).map((player, index) => (
-                      <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
-                        <div className="flex items-center justify-center w-8 h-8">
-                          {getRankIcon(player.rank)}
-                        </div>
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={player.avatar} alt={player.name} />
-                          <AvatarFallback>{player.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{player.name}</p>
-                          <p className="text-xs text-gray-500">{player.score} điểm</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Stats */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -274,19 +230,21 @@ export const Competition = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Đang diễn ra</span>
                   <span className="font-semibold text-green-600">
-                    {competitions.filter(c => c.status === 'active').length}
+                    {competitions.filter(c => getComputedStatus(c) === 'active').length}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Sắp diễn ra</span>
                   <span className="font-semibold text-blue-600">
-                    {competitions.filter(c => c.status === 'upcoming').length}
+                    {competitions.filter(c => getComputedStatus(c) === 'upcoming').length}
                   </span>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
+
+        {/* Details moved to separate page */}
       </div>
     </div>
   )

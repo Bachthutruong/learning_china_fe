@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { CheckCircle, BookOpen, Target, BrainCircuit, Sparkles, Trophy, Users } from 'lucide-react'
@@ -43,6 +43,7 @@ const features = [
 ]
 
 export const Home = () => {
+  const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Hero Section */}
@@ -59,11 +60,20 @@ export const Home = () => {
                 Bài học cá nhân hóa, bài test AI và hành trình thú vị từ người mới bắt đầu đến thành thạo.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  onClick={() => navigate('/register')}
+                >
                   <Sparkles className="mr-2 h-5 w-5" />
                   Bắt đầu miễn phí
                 </Button>
-                <Button size="lg" variant="outline" className="border-2">
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="border-2"
+                  onClick={() => navigate('/help')}
+                >
                   Tìm hiểu thêm
                 </Button>
               </div>
@@ -97,8 +107,7 @@ export const Home = () => {
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => {
-              console.log('feature', feature, index)
+            {features.map((feature) => {
               const Icon = feature.icon
               return (
                 <Card key={feature.title} className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border-0 shadow-lg">
