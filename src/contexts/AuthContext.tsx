@@ -58,10 +58,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await api.get('/auth/profile')
       setUser(response.data)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch profile:', error)
-      localStorage.removeItem('token')
-      setToken(null)
+      // Only clear auth if it's a real auth error, not a network error
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token')
+        setToken(null)
+        setUser(null)
+      }
     } finally {
       setLoading(false)
     }

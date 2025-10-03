@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Progress } from '../components/ui/progress'
+import { Dialog, DialogContent, DialogFooter, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle } from '../components/ui/dialog'
 import { 
   Target, 
   RotateCcw,
@@ -57,12 +58,25 @@ export const Tests = () => {
   const [userLevel, setUserLevel] = useState(1)
   const [lastResult, setLastResult] = useState<{correct: boolean, explanation?: string} | null>(null)
   const [statuses, setStatuses] = useState<Array<'unanswered' | 'correct' | 'wrong'>>([])
+  const [totalAnswered, setTotalAnswered] = useState(0)
+  const [totalCorrect, setTotalCorrect] = useState(0)
+  const [totalWrong, setTotalWrong] = useState(0)
+  const [earnedXp, setEarnedXp] = useState(0)
+  const [earnedCoins, setEarnedCoins] = useState(0)
+  const [activeTab, setActiveTab] = useState<'practice' | 'history'>('practice')
+  const [sessions, setSessions] = useState<Array<{ id: string; startedAt: number; endedAt?: number; total: number; correct: number; wrong: number; xp: number; coins: number; items: Array<{question: string; correct: boolean; explanation?: string}> }>>([])
+  const [showSessionDetail, setShowSessionDetail] = useState<{open: boolean; sessionId?: string}>({ open: false })
 
   const currentQuestion = questions[currentIndex]
 
   useEffect(() => {
     fetchUserLevel()
     fetchNextQuestions()
+    // restore history from localStorage
+    try {
+      const raw = localStorage.getItem('tests.sessions')
+      if (raw) setSessions(JSON.parse(raw))
+    } catch {}
   }, [])
 
   const fetchUserLevel = async () => {
@@ -86,6 +100,23 @@ export const Tests = () => {
       setSelectedOption(null)
       setLastResult(null)
       setStatuses(new Array((qs as any[]).length).fill('unanswered'))
+      // start new local session
+      const newSession = {
+        id: `${Date.now()}`,
+        startedAt: Date.now(),
+        total: 0,
+        correct: 0,
+        wrong: 0,
+        xp: 0,
+        coins: 0,
+        items: [] as Array<{question: string; correct: boolean; explanation?: string}>
+      }
+      setTotalAnswered(0); setTotalCorrect(0); setTotalWrong(0); setEarnedXp(0); setEarnedCoins(0)
+      setSessions(prev => {
+        const updated = [newSession, ...prev]
+        localStorage.setItem('tests.sessions', JSON.stringify(updated))
+        return updated
+      })
     } catch (e) {
       toast.error('Không thể tải câu hỏi')
     } finally {
@@ -136,7 +167,29 @@ export const Tests = () => {
         copy[currentIndex] = correct ? 'correct' : 'wrong'
         return copy
       })
-      if (res.data.correct) toast.success('Chính xác! +5 XP')
+      // Update practice stats and session
+      setTotalAnswered(v => v + 1)
+      if (correct) {
+        setTotalCorrect(v => v + 1)
+        setEarnedXp(v => v + 5)
+        // optional coins: +0 here; keep coins for correct as 0 to avoid confusion, or +0
+      } else {
+        setTotalWrong(v => v + 1)
+      }
+      setSessions(prev => {
+        if (prev.length === 0) return prev
+        const [head, ...tail] = prev
+        head.total += 1
+        head.correct += correct ? 1 : 0
+        head.wrong += correct ? 0 : 1
+        head.xp += correct ? 5 : 0
+        head.coins += 0
+        head.items.push({ question: currentQuestion.question, correct, explanation: res.data.explanation || undefined })
+        const updated = [head, ...tail]
+        localStorage.setItem('tests.sessions', JSON.stringify(updated))
+        return updated
+      })
+      if (correct) toast.success('Chính xác! +5 XP')
       else toast.error('Chưa chính xác')
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Không gửi được câu trả lời')
@@ -184,7 +237,7 @@ export const Tests = () => {
       </div>
     )
   }
-  if (currentQuestion) {
+  if (activeTab === 'practice' && currentQuestion) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4">
         <div className="max-w-4xl mx-auto">
@@ -230,6 +283,13 @@ export const Tests = () => {
                     {Math.round(((currentIndex + 1) / Math.max(questions.length, 1)) * 100)}%
                   </span>
                 </div>
+              </div>
+              {/* Stats summary */}
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                <div className="px-3 py-2 bg-white/60 rounded">Đã làm: <span className="font-semibold">{totalAnswered}</span></div>
+                <div className="px-3 py-2 bg-green-50 rounded text-green-700">Đúng: <span className="font-semibold">{totalCorrect}</span></div>
+                <div className="px-3 py-2 bg-red-50 rounded text-red-700">Sai: <span className="font-semibold">{totalWrong}</span></div>
+                <div className="px-3 py-2 bg-yellow-50 rounded text-yellow-700">XP: <span className="font-semibold">{earnedXp}</span> • Xu: <span className="font-semibold">{earnedCoins}</span></div>
               </div>
             </CardContent>
           </Card>
@@ -386,6 +446,61 @@ export const Tests = () => {
     )
   }
 
+  // History tab
+  if (activeTab === 'history') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4">
+        <div className="max-w-5xl mx-auto space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">Lịch sử luyện tập</h2>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setActiveTab('practice')}>Quay lại luyện tập</Button>
+            </div>
+          </div>
+          <Card>
+            <CardContent className="p-4">
+              {sessions.length === 0 ? (
+                <div className="text-center text-gray-600 py-8">Chưa có lịch sử</div>
+              ) : (
+                <div className="space-y-2">
+                  {sessions.map(s => (
+                    <div key={s.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                      <div className="text-sm">
+                        <div className="font-semibold">{new Date(s.startedAt).toLocaleString()}</div>
+                        <div className="text-gray-600">Đã làm {s.total} • Đúng {s.correct} • Sai {s.wrong} • XP {s.xp} • Xu {s.coins}</div>
+                      </div>
+                      <Button size="sm" onClick={() => setShowSessionDetail({ open: true, sessionId: s.id })}>Xem chi tiết</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {/* Session detail dialog */}
+          <Dialog open={showSessionDetail.open} onOpenChange={(open) => { if (!open) setShowSessionDetail({ open: false }) }}>
+            <DialogContent className="max-w-3xl">
+              <UIDialogHeader><UIDialogTitle>Chi tiết phiên</UIDialogTitle></UIDialogHeader>
+              <div className="space-y-2 max-h-[70vh] overflow-auto">
+                {(sessions.find(s => s.id === showSessionDetail.sessionId)?.items || []).map((it, idx) => (
+                  <div key={idx} className={`p-3 rounded border ${it.correct ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="text-sm"><span className="font-semibold">Câu {idx + 1}:</span> {it.question}</div>
+                    <div className="text-xs text-gray-600">{it.correct ? 'Đúng' : 'Sai'}</div>
+                    {it.explanation && (
+                      <div className="mt-1 text-sm text-gray-700"><span className="font-semibold">Giải thích:</span> {it.explanation}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowSessionDetail({ open: false })}>Đóng</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4">
       <div className="max-w-7xl mx-auto">
@@ -443,14 +558,17 @@ export const Tests = () => {
                   Hệ thống sẽ tự động chọn những câu hỏi phù hợp nhất với trình độ của bạn
                 </p>
               </div>
-              <Button 
-                onClick={fetchNextQuestions} 
+              <div className="flex justify-center gap-3">
+                <Button 
+                  onClick={fetchNextQuestions} 
                 className="bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 hover:from-purple-600 hover:via-pink-600 hover:to-blue-600 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-              >
-                <Rocket className="mr-3 h-6 w-6" />
-                🚀 Bắt đầu luyện tập
-                <Sparkles className="ml-3 h-5 w-5" />
-              </Button>
+                >
+                  <Rocket className="mr-3 h-6 w-6" />
+                  🚀 Bắt đầu luyện tập
+                  <Sparkles className="ml-3 h-5 w-5" />
+                </Button>
+                <Button variant="outline" onClick={() => setActiveTab('history')}>Lịch sử</Button>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -1,27 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
+import { VocabularyStudyCard } from '../components/VocabularyStudyCard'
+import { TopicQuiz } from '../components/TopicQuiz'
 import { 
   Plus, 
-  Play,
-  CheckCircle,
-  Clock,
-  X,
-  Target,
   Loader2,
   BookOpen,
-  TrendingUp,
-  Pause,
-  RotateCcw,
-  Brain,
-  XCircle,
-  Flag
+  Tag,
+  Play,
+  RotateCcw
 } from 'lucide-react'
-import { ReportErrorDialog } from '../components/ReportErrorDialog'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -60,194 +53,75 @@ interface PersonalTopic {
   updatedAt: string
 }
 
-interface Topic {
-  _id: string
-  name: string
-  description?: string
-  color?: string
-}
-
 
 export const VocabularyLearning = () => {
-  const [vocabularies, setVocabularies] = useState<Vocabulary[]>([])
   const [personalTopics, setPersonalTopics] = useState<PersonalTopic[]>([])
-  const [systemTopics, setSystemTopics] = useState<Topic[]>([])
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([])
+  const [availableVocabularies, setAvailableVocabularies] = useState<Vocabulary[]>([])
+  const [selectedVocabularies, setSelectedVocabularies] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedTopic, setSelectedTopic] = useState<string>('all')
-  const [showStudyDialog, setShowStudyDialog] = useState(false)
-  const [currentStudyVocabulary, setCurrentStudyVocabulary] = useState<Vocabulary | null>(null)
-  const [showQuizDialog, setShowQuizDialog] = useState(false)
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
-  const [quizAnswers, setQuizAnswers] = useState<number[]>([])
-  const [quizCompleted, setQuizCompleted] = useState(false)
-  const [quizScore, setQuizScore] = useState(0)
-  const [isPlaying, setIsPlaying] = useState<string | null>(null)
-  const [audioLoading, setAudioLoading] = useState<string | null>(null)
-  const [currentWordIndex, setCurrentWordIndex] = useState(0)
-  const [wordStatus, setWordStatus] = useState<'learning' | 'known' | 'needs-study' | 'skip'>('learning')
-  const [showTopicSelector, setShowTopicSelector] = useState(true)
-  const [showQuiz, setShowQuiz] = useState(false)
-  const [currentQuizIndex, setCurrentQuizIndex] = useState(0)
   const [showCreateTopicDialog, setShowCreateTopicDialog] = useState(false)
+  const [showAddVocabularyDialog, setShowAddVocabularyDialog] = useState(false)
   const [newTopicName, setNewTopicName] = useState('')
   const [newTopicDescription, setNewTopicDescription] = useState('')
-  const [showAddVocabularyDialog, setShowAddVocabularyDialog] = useState(false)
+  const [searchTerm] = useState('')
   const [selectedPersonalTopic, setSelectedPersonalTopic] = useState('')
-  const [availableVocabularies, setAvailableVocabularies] = useState<any[]>([])
-  const [selectedVocabularies, setSelectedVocabularies] = useState<string[]>([])
-  const [searchVocabularyTerm, setSearchVocabularyTerm] = useState('')
-  const [loadingVocabularies, setLoadingVocabularies] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [activeTab, setActiveTab] = useState<'learning' | 'reports' | 'manage'>('learning')
-  const [totalVocabularies, setTotalVocabularies] = useState(0)
-  const [userVocabularies, setUserVocabularies] = useState<any[]>([])
   
-  // Derived stats for reports
-  const learnedVocabs = userVocabularies.filter((uv: any) => uv.status === 'learned')
-  const studyingVocabs = userVocabularies.filter((uv: any) => uv.status === 'studying')
-  const totalLearnedCount = learnedVocabs.length
-  const learnedThisWeekCount = learnedVocabs.filter((uv: any) => {
-    const d = uv.learnedAt ? new Date(uv.learnedAt) : null
-    if (!d) return false
-    const now = new Date()
-    const diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
-    return diffDays <= 7
-  }).length
-  const accuracyRate = (totalLearnedCount + studyingVocabs.length) > 0
-    ? Math.round((totalLearnedCount / (totalLearnedCount + studyingVocabs.length)) * 100)
-    : 0
-  const computeStreak = () => {
-    const days = new Set<string>()
-    learnedVocabs.forEach((uv: any) => {
-      if (uv.learnedAt) days.add(new Date(uv.learnedAt).toISOString().slice(0, 10))
-    })
-    let streak = 0
-    let cursor = new Date()
-    const hasDay = (d: Date) => days.has(d.toISOString().slice(0, 10))
-    while (hasDay(cursor)) {
-      streak++
-      cursor = new Date(cursor.getTime() - 24 * 60 * 60 * 1000)
-    }
-    return streak
-  }
-  const studyStreakDays = computeStreak()
-  
-  // Report error states
-  const [showReportDialog, setShowReportDialog] = useState(false)
+  // Study mode states
+  const [studyMode, setStudyMode] = useState(false)
+  const [studyVocabularies, setStudyVocabularies] = useState<Vocabulary[]>([])
+  const [currentStudyIndex, setCurrentStudyIndex] = useState(0)
+  const [showTopicQuiz, setShowTopicQuiz] = useState(false)
+  const [selectedTopicForQuiz, setSelectedTopicForQuiz] = useState<{id: string, name: string} | null>(null)
+  const [vocabularyStatuses, setVocabularyStatuses] = useState<Record<string, 'learned' | 'studying' | 'skipped'>>({})
 
   useEffect(() => {
-    fetchData()
+    fetchPersonalTopics()
   }, [])
 
-  useEffect(() => {
-    if (showAddVocabularyDialog) {
-      const timeoutId = setTimeout(() => {
-        setCurrentPage(1)
-        setAvailableVocabularies([])
-        fetchAvailableVocabularies(1, false)
-      }, 500) // 500ms debounce
-      
-      return () => clearTimeout(timeoutId)
-    }
-  }, [showAddVocabularyDialog, searchVocabularyTerm])
-
-  const fetchData = async () => {
+  const fetchPersonalTopics = async () => {
     try {
       setLoading(true)
-      await Promise.all([
-        fetchVocabularies(),
-        fetchPersonalTopics(),
-        fetchSystemTopics(),
-        fetchUserVocabularies().then(setUserVocabularies)
-      ])
+      const response = await api.get('/vocabulary-learning/user/personal-topics')
+      setPersonalTopics(response.data.topics || response.data)
     } catch (error) {
-      console.error('Error fetching data:', error)
-      toast.error('Không thể tải dữ liệu')
+      console.error('Error fetching personal topics:', error)
+      toast.error('Không thể tải danh sách chủ đề')
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchVocabularies = async (topicId?: string) => {
+  const fetchAvailableVocabularies = async () => {
+    if (selectedTopics.length === 0) {
+      setAvailableVocabularies([])
+      return
+    }
+
     try {
-      const topicToUse = topicId || selectedTopic
-      let topicParam = undefined
-      
-      if (topicToUse !== 'all') {
-        if (topicToUse.startsWith('sys_')) {
-          // System topic - use topic name
-          const sysTopicId = topicToUse.replace('sys_', '')
-          const topic = systemTopics.find(t => t._id === sysTopicId)
-          topicParam = topic?.name
-        } else {
-          // Personal topic - use topic ID
-          topicParam = topicToUse
-        }
-      }
-
-      console.log('Fetching vocabularies for topic:', topicToUse, 'param:', topicParam)
-
-      const response = await api.get('/vocabulary-learning/vocabularies', {
+      setLoading(true)
+      const response = await api.get('/vocabulary-learning/vocabulary/by-topic', {
         params: {
-          topic: topicParam,
-          limit: 10,
-          excludeLearned: true
+          personalTopicId: selectedTopics[0],
+          search: searchTerm,
+          limit: 20
         }
       })
-      
-      const vocabData = response.data.vocabularies || response.data || []
-      console.log('Fetched vocabularies:', vocabData.length)
-      
-      setVocabularies(vocabData)
-      setCurrentWordIndex(0)
-      setShowTopicSelector(false)
-      
-      if (vocabData.length === 0) {
-        toast.error('Không có từ vựng nào trong chủ đề này')
-        setShowTopicSelector(true)
+      setAvailableVocabularies(response.data.vocabularies || response.data)
+      // nhận trạng thái từ server (nếu có) để hiển thị lại sau reload
+      if (response.data.statuses) {
+        setVocabularyStatuses(response.data.statuses)
       }
     } catch (error) {
       console.error('Error fetching vocabularies:', error)
-      toast.error('Không thể tải từ vựng')
+      toast.error('Không thể tải danh sách từ vựng')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const fetchPersonalTopics = async () => {
-    try {
-      const response = await api.get('/vocabulary-learning/user/personal-topics')
-      setPersonalTopics(response.data.topics || response.data || [])
-    } catch (error) {
-      console.error('Error fetching personal topics:', error)
-    }
-  }
-
-  const fetchSystemTopics = async () => {
-    try {
-      const response = await api.get('/vocabulary/topics')
-      setSystemTopics(response.data || [])
-    } catch (error) {
-      console.error('Error fetching system topics:', error)
-    }
-  }
-
-  const fetchUserVocabularies = async () => {
-    try {
-      console.log('Fetching user vocabularies...')
-      const response = await api.get('/vocabulary-learning/user/vocabularies')
-      console.log('User vocabularies response:', response.data)
-      const userVocabs = response.data.userVocabularies || []
-      console.log('User vocabularies count:', userVocabs.length)
-      return userVocabs
-    } catch (error) {
-      console.error('Error fetching user vocabularies:', error)
-      return []
-    }
-  }
-
-  const handleCreatePersonalTopic = async (e: React.FormEvent) => {
+  const handleCreateTopic = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!newTopicName.trim()) {
       toast.error('Vui lòng nhập tên chủ đề')
       return
@@ -255,1153 +129,602 @@ export const VocabularyLearning = () => {
 
     try {
       await api.post('/vocabulary-learning/user/personal-topics', {
-        name: newTopicName.trim(),
-        description: newTopicDescription.trim()
+        name: newTopicName,
+        description: newTopicDescription
       })
       
-      toast.success('Tạo chủ đề cá nhân thành công!')
-      setShowCreateTopicDialog(false)
+      toast.success('Tạo chủ đề thành công!')
       setNewTopicName('')
       setNewTopicDescription('')
+      setShowCreateTopicDialog(false)
       fetchPersonalTopics()
     } catch (error: any) {
-      console.error('Error creating personal topic:', error)
+      console.error('Error creating topic:', error)
       toast.error(error.response?.data?.message || 'Không thể tạo chủ đề')
     }
   }
 
-  const fetchAvailableVocabularies = async (page = 1, append = false) => {
-    try {
-      setLoadingVocabularies(true)
-      console.log('Fetching vocabularies:', { page, search: searchVocabularyTerm, append })
-      
-      const response = await api.get('/vocabulary', {
-        params: {
-          page,
-          limit: 20, // Load 20 items per page
-          search: searchVocabularyTerm
-        }
-      })
-      console.log('API Response:', response.data) // Debug log
-      
-      const newVocabularies = response.data.vocabularies || []
-      const total = response.data.total || 0
-      
-      console.log('New vocabularies:', newVocabularies.length, 'Total:', total)
-      
-      if (append) {
-        setAvailableVocabularies(prev => {
-          const combined = [...prev, ...newVocabularies]
-          console.log('Appending - Previous:', prev.length, 'New:', newVocabularies.length, 'Combined:', combined.length)
-          return combined
-        })
-      } else {
-        setAvailableVocabularies(newVocabularies)
-        console.log('Replacing - New vocabularies:', newVocabularies.length)
-      }
-      
-      setTotalVocabularies(total)
-      setCurrentPage(page)
-      
-      // Calculate hasMore based on current state
-      const currentLength = append ? availableVocabularies.length + newVocabularies.length : newVocabularies.length
-      const hasMoreData = newVocabularies.length === 20 && currentLength < total
-      setHasMore(hasMoreData)
-      
-      // Force update hasMore after state update
-      setTimeout(() => {
-        const finalLength = append ? availableVocabularies.length + newVocabularies.length : newVocabularies.length
-        const finalHasMore = newVocabularies.length === 20 && finalLength < total
-        setHasMore(finalHasMore)
-        console.log('Final hasMore:', finalHasMore, 'Final length:', finalLength, 'Total:', total)
-      }, 100)
-      
-      console.log('Has more:', hasMoreData, 'Current length:', currentLength, 'Total:', total, 'New vocabularies:', newVocabularies.length)
-    } catch (error) {
-      console.error('Error fetching available vocabularies:', error)
-      toast.error('Không thể tải từ vựng')
-    } finally {
-      setLoadingVocabularies(false)
+  const handleAddVocabularies = async () => {
+    if (selectedVocabularies.length === 0) {
+      toast.error('Vui lòng chọn từ vựng để thêm')
+      return
     }
-  }
 
-  const handleAddVocabulariesToTopic = async () => {
-    if (!selectedPersonalTopic || selectedVocabularies.length === 0) {
-      toast.error('Vui lòng chọn chủ đề và từ vựng')
+    if (!selectedPersonalTopic) {
+      toast.error('Vui lòng chọn chủ đề')
       return
     }
 
     try {
-      // Thêm từng từ vựng vào chủ đề cá nhân
-      for (const vocabularyId of selectedVocabularies) {
-        await api.post('/vocabulary-learning/user/vocabularies', {
-          vocabularyId,
-          status: 'studying',
-          personalTopicId: selectedPersonalTopic
-        })
-      }
+      await api.post('/vocabulary-learning/personal-topics/add-vocabularies', {
+        topicId: selectedPersonalTopic,
+        vocabularyIds: selectedVocabularies
+      })
       
-      toast.success(`Đã thêm ${selectedVocabularies.length} từ vựng vào chủ đề!`)
-      setShowAddVocabularyDialog(false)
-      setSelectedPersonalTopic('')
+      toast.success('Thêm từ vựng thành công!')
       setSelectedVocabularies([])
-      setSearchVocabularyTerm('')
-      
-      // Refresh user vocabularies
-      const updatedUserVocabs = await fetchUserVocabularies()
-      setUserVocabularies(updatedUserVocabs)
+      setShowAddVocabularyDialog(false)
+      fetchPersonalTopics()
     } catch (error: any) {
       console.error('Error adding vocabularies:', error)
       toast.error(error.response?.data?.message || 'Không thể thêm từ vựng')
     }
   }
 
-  const handleVocabularySelection = (vocabularyId: string) => {
-    setSelectedVocabularies(prev => 
-      prev.includes(vocabularyId) 
-        ? prev.filter(id => id !== vocabularyId)
-        : [...prev, vocabularyId]
+  const handleTopicSelect = (topicId: string) => {
+    setSelectedTopics(prev => 
+      prev.includes(topicId) 
+        ? [] // Bỏ chọn nếu đã chọn
+        : [topicId] // Chỉ chọn 1 chủ đề
     )
   }
 
-  const loadMoreVocabularies = () => {
-    if (hasMore && !loadingVocabularies) {
-      fetchAvailableVocabularies(currentPage + 1, true)
-    }
-  }
 
-  // Scroll detection for lazy loading
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
-    const isNearBottom = scrollHeight - scrollTop <= clientHeight + 100
-    
-    console.log('Scroll detected:', {
-      scrollTop,
-      scrollHeight,
-      clientHeight,
-      isNearBottom,
-      hasMore,
-      loadingVocabularies,
-      currentPage
-    })
-    
-    if (isNearBottom && hasMore && !loadingVocabularies) {
-      console.log('Loading more vocabularies...')
-      loadMoreVocabularies()
-    }
-  }
-
-
-  const handleVocabularyAction = async (action: 'learned' | 'studying' | 'skipped', personalTopicId?: string) => {
-    if (!currentStudyVocabulary) return
-
+  const handlePlayAudio = async (audioUrl: string) => {
     try {
-      if (action === 'learned') {
-        // Start quiz for learned vocabulary
-        await fetchQuizQuestions(currentStudyVocabulary._id)
-        setShowStudyDialog(false)
-        setShowQuizDialog(true)
-      } else {
-        // Add to user vocabularies
-        await api.post('/vocabulary-learning/user/vocabularies', {
-          vocabularyId: currentStudyVocabulary._id,
-          status: action,
-          personalTopicId: personalTopicId
-        })
-        
-        toast.success(`Đã thêm từ "${currentStudyVocabulary.word}" vào ${action === 'studying' ? 'danh sách học' : 'danh sách bỏ qua'}`)
-        setShowStudyDialog(false)
-        fetchUserVocabularies()
-        
-        // Move to next word
-        if (currentWordIndex < vocabularies.length - 1) {
-          setCurrentWordIndex(currentWordIndex + 1)
-        } else {
-          // No more words, go back to topic selection
-          setShowTopicSelector(true)
-          setCurrentWordIndex(0)
-          setVocabularies([])
-          toast.success('Đã hoàn thành tất cả từ vựng trong chủ đề này!')
-        }
-      }
-    } catch (error: any) {
-      console.error('Error handling vocabulary action:', error)
-      toast.error(error.response?.data?.message || 'Không thể xử lý từ vựng')
-    }
-  }
-
-  const fetchQuizQuestions = async (vocabularyId: string) => {
-    try {
-      const response = await api.get(`/vocabulary-learning/vocabularies/${vocabularyId}/quiz`)
-      const questions = response.data.questions || []
-      
-      // Take up to 3 random questions
-      const shuffled = questions.sort(() => 0.5 - Math.random())
-      const selectedQuestions = shuffled.slice(0, Math.min(3, questions.length))
-      
-      setQuizQuestions(selectedQuestions)
-      setQuizAnswers(new Array(selectedQuestions.length).fill(-1))
-      setQuizCompleted(false)
-      setQuizScore(0)
-    } catch (error) {
-      console.error('Error fetching quiz questions:', error)
-      toast.error('Không thể tải câu hỏi khảo bài')
-    }
-  }
-
-  // Start relearn flow from Manage tab
-  const startRelearn = async (vocab: any) => {
-    try {
-      // Open study dialog first; the user will press "Đã thuộc" to start quiz
-      const v = vocab?.vocabularyId || vocab
-      // Switch main learning context to this word and related topic
-      if (vocab?.personalTopicId?._id) {
-        setSelectedTopic(vocab.personalTopicId._id)
-      }
-      setVocabularies([v])
-      setCurrentWordIndex(0)
-      setShowTopicSelector(false)
-      setWordStatus('learning')
-      setActiveTab('learning')
-      setCurrentStudyVocabulary(v)
-      setShowStudyDialog(true)
-    } catch (e) {
-      toast.error('Không thể bắt đầu học lại')
-    }
-  }
-
-  const handleQuizAnswer = (questionIndex: number, answerIndex: number) => {
-    // Only allow selecting once per question
-    if (quizAnswers[questionIndex] !== -1) return
-    const newAnswers = [...quizAnswers]
-    newAnswers[questionIndex] = answerIndex
-    setQuizAnswers(newAnswers)
-
-    // Immediate feedback
-    const isCorrect = quizQuestions[questionIndex]?.correctAnswer === answerIndex
-    if (isCorrect) {
-      toast.success('Chính xác!')
-    } else {
-      toast.error('Sai rồi, thử câu tiếp theo nhé!')
-    }
-  }
-
-  const goToNextInlineQuiz = async () => {
-    if (currentQuizIndex < quizQuestions.length - 1) {
-      setCurrentQuizIndex(currentQuizIndex + 1)
-      return
-    }
-
-    let correctAnswers = 0
-    quizQuestions.forEach((question, index) => {
-      if (quizAnswers[index] === question.correctAnswer) {
-        correctAnswers++
-      }
-    })
-
-    const score = (correctAnswers / quizQuestions.length) * 100
-
-    try {
-      const vocabularyId = vocabularies[currentWordIndex]?._id
-      if (score === 100) {
-        const payload: any = { vocabularyId, quizScore: 100 }
-        if (selectedTopic !== 'all' && !selectedTopic.startsWith('sys_')) {
-          payload.personalTopicId = selectedTopic
-        }
-        await api.post('/vocabulary-learning/user/vocabularies/complete', payload)
-        toast.success(`🎉 Hoàn hảo! +10 điểm và +10 xu cho từ "${vocabularies[currentWordIndex]?.word}"`)
-      } else {
-        await api.post('/vocabulary-learning/user/vocabularies', { vocabularyId, status: 'studying' })
-        toast.error(`Bạn cần học thêm từ "${vocabularies[currentWordIndex]?.word}"`)
-      }
-
-      fetchUserVocabularies()
-    } catch (error) {
-      console.error('Failed to save inline quiz result:', error)
-    }
-
-    setShowQuiz(false)
-    setQuizQuestions([])
-    setQuizAnswers([])
-    setCurrentQuizIndex(0)
-
-    if (currentWordIndex < vocabularies.length - 1) {
-      setCurrentWordIndex(currentWordIndex + 1)
-    } else {
-      setShowTopicSelector(true)
-      setCurrentWordIndex(0)
-      setVocabularies([])
-    }
-  }
-
-  const handleSubmitQuiz = async () => {
-    if (quizAnswers.some(answer => answer === -1)) {
-      toast.error('Vui lòng trả lời tất cả câu hỏi')
-      return
-    }
-
-    let correctAnswers = 0
-    quizQuestions.forEach((question, index) => {
-      if (quizAnswers[index] === question.correctAnswer) {
-        correctAnswers++
-      }
-    })
-
-    const score = (correctAnswers / quizQuestions.length) * 100
-    setQuizScore(score)
-    setQuizCompleted(true)
-
-    if (score === 100) {
-      // All correct - add to learned and give rewards
-      try {
-        {
-          const payload: any = { vocabularyId: currentStudyVocabulary?._id, status: 'learned' }
-          if (selectedTopic !== 'all' && !selectedTopic.startsWith('sys_')) {
-            payload.personalTopicId = selectedTopic
-          }
-          await api.post('/vocabulary-learning/user/vocabularies', payload)
-        }
-        
-        toast.success(`🎉 Hoàn hảo! Bạn nhận được +10 điểm và +10 xu cho từ "${currentStudyVocabulary?.word}"`)
-        fetchUserVocabularies()
-        
-        // Move to next word after quiz completion
-        setTimeout(async () => {
-          setShowQuizDialog(false)
-          setQuizCompleted(false)
-          setQuizAnswers([])
-          setQuizScore(0)
-          // Refresh a fresh batch that excludes learned words
-          await fetchVocabularies(selectedTopic)
-        }, 1200)
-      } catch (error: any) {
-        console.error('Error adding learned vocabulary:', error)
-        toast.error('Không thể lưu tiến độ học tập')
-      }
-    } else {
-      // Not all correct - add to studying
-      try {
-        await api.post('/vocabulary-learning/user/vocabularies', {
-          vocabularyId: currentStudyVocabulary?._id,
-          status: 'studying'
-        })
-        
-        toast.error(`Bạn cần học thêm từ "${currentStudyVocabulary?.word}". Đã thêm vào danh sách cần học.`)
-        fetchUserVocabularies()
-        
-        // Move to next word after quiz completion
-        setTimeout(async () => {
-          setShowQuizDialog(false)
-          setQuizCompleted(false)
-          setQuizAnswers([])
-          setQuizScore(0)
-          // Refresh list (the current word should be in studying list; excludeLearned still true)
-          await fetchVocabularies(selectedTopic)
-        }, 1200)
-      } catch (error: any) {
-        console.error('Error adding studying vocabulary:', error)
-        toast.error('Không thể lưu tiến độ học tập')
-      }
-    }
-  }
-
-  const handlePlayAudio = async (audioUrl: string, vocabularyId: string) => {
-    try {
-      setAudioLoading(vocabularyId)
       const audio = new Audio(audioUrl)
-      
-      audio.onplay = () => {
-        setIsPlaying(vocabularyId)
-        setAudioLoading(null)
-      }
-      
-      audio.onended = () => {
-        setIsPlaying(null)
-      }
-      
-      audio.onerror = () => {
-        setAudioLoading(null)
-        toast.error('Không thể phát âm thanh')
-      }
-      
       await audio.play()
     } catch (error) {
-      setAudioLoading(null)
+      console.error('Error playing audio:', error)
       toast.error('Không thể phát âm thanh')
     }
   }
 
-
-  const handleNext = () => {
-    if (currentWordIndex < vocabularies.length - 1) {
-      setCurrentWordIndex(currentWordIndex + 1)
-      setWordStatus('learning')
-    }
+  const startStudyMode = (vocabularies: Vocabulary[]) => {
+    setStudyVocabularies(vocabularies)
+    setCurrentStudyIndex(0)
+    setStudyMode(true)
   }
 
-  const handlePrevious = () => {
-    if (currentWordIndex > 0) {
-      setCurrentWordIndex(currentWordIndex - 1)
-      setWordStatus('learning')
-    }
-  }
+  const handleStudyStatusChange = async (status: 'learned' | 'studying' | 'skipped'): Promise<void> => {
+    const currentVocab = studyVocabularies[currentStudyIndex]
 
-  const handleReset = () => {
-    setCurrentWordIndex(0)
-    setWordStatus('learning')
-  }
+    // Bỏ qua: chỉ tạm thời trong phiên học, không gọi API, đưa từ hiện tại xuống cuối hàng
+    if (status === 'skipped') {
+      setVocabularyStatuses(prev => ({
+        ...prev,
+        [currentVocab._id]: 'skipped'
+      }))
 
-  const handleWordStatus = async (status: 'known' | 'needs-study' | 'skip') => {
-    if (status === 'known') {
-      // Show quiz - 3 câu hỏi ngẫu nhiên
-      try {
-        const response = await api.get(`/vocabulary-learning/vocabularies/${vocabularies[currentWordIndex]?._id}/quiz`)
-        const questions = response.data.questions || []
-        // Lấy tối đa 3 câu hỏi ngẫu nhiên
-        const randomQuestions = questions
-          .sort(() => 0.5 - Math.random())
-          .slice(0, Math.min(3, questions.length))
-        
-        setQuizQuestions(randomQuestions)
-        setQuizAnswers(new Array(randomQuestions.length).fill(-1))
-        setCurrentQuizIndex(0)
-        setShowQuiz(true)
-      } catch (error) {
-        console.error('Failed to fetch quiz:', error)
-        toast.error('Không thể tải câu hỏi')
+      setStudyVocabularies(prev => {
+        const next = [...prev]
+        const [item] = next.splice(currentStudyIndex, 1)
+        next.push(item)
+        return next
+      })
+
+      // giữ nguyên currentStudyIndex để đi tiếp sang phần tử kế tiếp sau khi đã đẩy phần tử hiện tại xuống cuối
+      if (currentStudyIndex === studyVocabularies.length - 1) {
+        setCurrentStudyIndex(currentStudyIndex) // sẽ trỏ tới phần tử mới cuối hàng, vòng tiếp theo sẽ reset nếu cần
       }
-    } else {
-      // Skip or mark as needs study
-      setWordStatus(status)
-      if (status === 'skip') {
-        handleNext()
+      toast('Đã bỏ qua tạm thời. Sẽ ôn lại ở vòng sau.')
+      return
+    }
+
+    // Các trạng thái còn lại học/đang học: lưu server
+    const selectedTopicId = selectedTopics[0]
+    try {
+      const response = await api.post('/vocabulary-learning/user/vocabularies', {
+        vocabularyId: currentVocab._id,
+        status,
+        personalTopicId: selectedTopicId
+      })
+
+      if (status === 'learned' && response.data.rewards) {
+        const { exp, coins, levelUp, newLevel, isNewlyLearned } = response.data.rewards
+        if (levelUp) {
+          toast.success(
+            isNewlyLearned
+              ? `🎉 Level up! Level ${newLevel}! Từ mới: +${exp} EXP, +${coins} xu`
+              : `🎉 Level up! Level ${newLevel}! Ôn tập: +${exp} EXP, +${coins} xu`
+          )
+        } else {
+          toast.success(
+            isNewlyLearned
+              ? `🎉 Từ mới! +${exp} EXP, +${coins} xu`
+              : `🎉 Ôn tập! +${exp} EXP, +${coins} xu`
+          )
+        }
       } else {
-        // Chỉ thêm vào danh sách "cần học thêm" của người dùng, không tạo chủ đề mới
-        try {
-          const postStatus = status === 'needs-study' ? 'studying' : status
-          await api.post('/vocabulary-learning/user/vocabularies', {
-            vocabularyId: vocabularies[currentWordIndex]?._id,
-            status: postStatus
-          })
-          toast.success('Đã thêm vào danh sách Cần học thêm')
-          handleNext()
-        } catch (error) {
-          console.error('Failed to add vocabulary:', error)
-          toast.error('Không thể thêm từ vựng')
+        toast.success(`Đã ${status === 'learned' ? 'đánh dấu đã thuộc' : 'thêm vào danh sách học'} từ vựng`)
+      }
+
+      setVocabularyStatuses(prev => ({
+        ...prev,
+        [currentVocab._id]: status
+      }))
+
+      // Di chuyển tiếp
+      if (currentStudyIndex < studyVocabularies.length - 1) {
+        setCurrentStudyIndex(currentStudyIndex + 1)
+      } else {
+        // Kết thúc một vòng: nếu còn từ chưa learned, bắt đầu vòng mới chỉ với các từ đó
+        const remaining = studyVocabularies.filter(v => (vocabularyStatuses[v._id] ?? (v._id === currentVocab._id ? status : undefined)) !== 'learned')
+        if (remaining.length > 0) {
+          setStudyVocabularies(remaining)
+          setCurrentStudyIndex(0)
+          toast('Bắt đầu lại với các từ chưa thuộc')
+        } else {
+          setStudyMode(false)
+          setCurrentStudyIndex(0)
+          toast.success('Hoàn thành học từ vựng!')
         }
       }
+    } catch (error: any) {
+      console.error('Error updating vocabulary status:', error)
+      toast.error(error.response?.data?.message || 'Không thể cập nhật trạng thái từ vựng')
     }
   }
 
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
+  const startTopicQuiz = (topicId: string, topicName: string) => {
+    setSelectedTopicForQuiz({ id: topicId, name: topicName })
+    setShowTopicQuiz(true)
+  }
+
+  useEffect(() => {
+    fetchAvailableVocabularies()
+  }, [selectedTopics, searchTerm])
+
+  // Study mode render
+  if (studyMode && studyVocabularies.length > 0) {
+  return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Enhanced Header */}
+          <div className="mb-8 text-center">
+            <div className="relative inline-block">
+                <Button
+                  variant="outline"
+                onClick={() => setStudyMode(false)}
+                className="absolute -left-32 top-0 bg-white/50 border-white/30 text-gray-700 hover:bg-white/70 hover:text-gray-900"
+                >
+                ← Quay lại
+                </Button>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4">
+                📚 Học từ vựng
+              </h1>
+              <div className="absolute -top-2 -right-2">
+                <BookOpen className="h-8 w-8 text-yellow-400 animate-bounce" />
+              </div>
+              <div className="absolute -bottom-2 -left-2">
+                <Tag className="h-6 w-6 text-purple-400 animate-pulse" />
+          </div>
+          </div>
+            <p className="text-xl text-gray-700 font-medium">
+              Học từng từ một cách có hệ thống
+            </p>
+            <div className="flex justify-center mt-4">
+              <div className="flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full">
+                <Play className="h-5 w-5 text-green-500" />
+                <span className="text-sm font-semibold text-green-700">
+                  Câu {currentStudyIndex + 1} / {studyVocabularies.length}
+                </span>
         </div>
+                          </div>
+                    </div>
+          
+          <VocabularyStudyCard
+            vocabulary={studyVocabularies[currentStudyIndex]}
+            onStatusChange={handleStudyStatusChange}
+            currentIndex={currentStudyIndex}
+            totalCount={studyVocabularies.length}
+          />
+                  </div>
       </div>
     )
   }
 
-  const currentWord = vocabularies[currentWordIndex]
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Học từ vựng</h1>
-              <p className="text-gray-600">Chọn chủ đề để bắt đầu học từ vựng mới</p>
-            </div>
-            {activeTab === 'learning' && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setShowCreateTopicDialog(true)}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Tạo chủ đề
-                </Button>
-                <Button
-                  onClick={() => setShowAddVocabularyDialog(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Thêm từ vựng
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          {/* Tabs */}
-          <div className="flex space-x-1 mt-6 bg-gray-100 p-1 rounded-lg w-fit">
-            <button
-              onClick={() => setActiveTab('learning')}
-              className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                activeTab === 'learning'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Học từ vựng
-            </button>
-            <button
-              onClick={() => setActiveTab('reports')}
-              className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                activeTab === 'reports'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Báo cáo
-            </button>
-            <button
-              onClick={() => setActiveTab('manage')}
-              className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                activeTab === 'manage'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Quản lý từ
-            </button>
-          </div>
-        </div>
-
-        {/* Learning Tab Content */}
-        {activeTab === 'learning' && (
-          <>
-            {/* Topic Selector */}
-            {showTopicSelector && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-blue-600" />
-                Chọn chủ đề học từ vựng
-              </CardTitle>
-              <CardDescription>
-                Chọn chủ đề để bắt đầu học 10 từ vựng mới
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* System Topics */}
-                {systemTopics.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Chủ đề hệ thống</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {systemTopics.map((topic) => (
-                        <Button
-                          key={topic._id}
-                          variant="outline"
-                          className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-blue-50"
-                        onClick={() => {
-                          setSelectedTopic(`sys_${topic._id}`)
-                          fetchVocabularies(`sys_${topic._id}`)
-                        }}
-                        >
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                            <BookOpen className="h-4 w-4 text-blue-600" />
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Enhanced Header */}
+        <div className="mb-8 text-center">
+          <div className="relative inline-block">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4">
+              📚 Học từ vựng
+            </h1>
+            <div className="absolute -top-2 -right-2">
+              <BookOpen className="h-8 w-8 text-yellow-400 animate-bounce" />
                           </div>
-                          <span className="text-sm font-medium">{topic.name}</span>
-                        </Button>
-                      ))}
+            <div className="absolute -bottom-2 -left-2">
+              <Tag className="h-6 w-6 text-purple-400 animate-pulse" />
                     </div>
                   </div>
-                )}
+          <p className="text-xl text-gray-700 font-medium">
+            Chọn chủ đề để bắt đầu học từ vựng
+          </p>
+          <div className="flex justify-center mt-4">
+            <div className="flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full">
+              <Play className="h-5 w-5 text-green-500" />
+              <span className="text-sm font-semibold text-green-700">Học tập thông minh</span>
+                  </div>
+              </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-4 mb-8">
+                <Button
+                  onClick={() => setShowCreateTopicDialog(true)}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                >
+            <Plus className="w-5 h-5 mr-2" />
+            Tạo chủ đề mới
+                </Button>
+                      <Button
+            onClick={() => window.location.href = '/vocabulary-learning/add'}
+            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                >
+            <BookOpen className="w-5 h-5 mr-2" />
+                  Thêm từ vựng
+                      </Button>
+                  </div>
 
                 {/* Personal Topics */}
                 {personalTopics.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Chủ đề cá nhân</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {personalTopics.map((topic) => (
-                        <Button
+          <Card className="mb-6 border-0 shadow-xl bg-gradient-to-br from-white to-purple-50">
+            <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="p-2 bg-white/20 rounded-full">
+                  <Tag className="w-6 h-6" />
+                  </div>
+                <div>
+                  <span>Chủ đề của bạn</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <BookOpen className="h-4 w-4 text-purple-200" />
+                    <span className="text-sm text-purple-100">Chọn một chủ đề để học</span>
+        </div>
+                </div>
+                </CardTitle>
+              </CardHeader>
+            <CardContent className="p-6">
+                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {personalTopics.map((topic) => (
+                    <div
                           key={topic._id}
-                          variant="outline"
-                          className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-purple-50 border-purple-200"
-                          onClick={() => {
-                            setSelectedTopic(topic._id)
-                            fetchVocabularies(topic._id)
-                          }}
-                        >
-                          <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                            <BookOpen className="h-4 w-4 text-purple-600" />
-                          </div>
-                          <span className="text-sm font-medium">{topic.name}</span>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* No Topics */}
-                {systemTopics.length === 0 && personalTopics.length === 0 && (
-                  <div className="text-center py-8">
-                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      Không có chủ đề nào
-                    </h3>
-                    <p className="text-gray-500 mb-4">
-                      Hãy liên hệ admin để thêm chủ đề hệ thống
-                    </p>
-                    <Button
-                      onClick={() => setShowTopicSelector(false)}
-                      className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
+                      className={`p-6 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-105 ${
+                        selectedTopics.includes(topic._id)
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                          : 'bg-white hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-2 hover:border-purple-300'
+                      }`}
+                      onClick={() => handleTopicSelect(topic._id)}
                     >
-                      Bắt đầu với tất cả từ vựng
-                    </Button>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-xl">{topic.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant="secondary"
+                            className={`${
+                              selectedTopics.includes(topic._id)
+                                ? 'bg-white/20 text-white border-white/30'
+                                : 'bg-purple-100 text-purple-700 border-purple-200'
+                            }`}
+                          >
+                            {topic.vocabularyCount} từ
+                          </Badge>
+                          {(topic as any).learnedCount !== undefined && (
+                            <Badge 
+                              variant="secondary"
+                              className={`${
+                                selectedTopics.includes(topic._id)
+                                  ? 'bg-white/20 text-white border-white/30'
+                                  : 'bg-green-100 text-green-700 border-green-200'
+                              }`}
+                            >
+                              Đã thuộc: {(topic as any).learnedCount}
+                            </Badge>
+                          )}
+                        </div>
+                    </div>
+                      <p className={`text-sm mb-4 ${
+                        selectedTopics.includes(topic._id) ? 'text-purple-100' : 'text-gray-600'
+                      }`}>
+                        {topic.description || 'Không có mô tả'}
+                      </p>
+                      <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            startTopicQuiz(topic._id, topic.name)
+                          }}
+                          className={`text-xs ${
+                            selectedTopics.includes(topic._id)
+                              ? 'border-white/30 text-black hover:bg-white/20'
+                              : 'border-purple-300 text-purple-700 hover:bg-purple-100'
+                          }`}
+                          disabled={(topic as any).learnedCount === 0}
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          Khảo bài
+                      </Button>
+                        {selectedTopics.includes(topic._id) && (
+                      <Button
+                            size="sm"
+                            onClick={() => startStudyMode(availableVocabularies)}
+                            className="text-xs bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                    >
+                            <Play className="w-3 h-3 mr-1" />
+                            Bắt đầu học
+                      </Button>
+                    )}
+                        </div>
+                      </div>
+                    ))}
+                        </div>
+                <div className="text-center mt-6">
+                  <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full">
+                    <Tag className="h-4 w-4" />
+                    <span className="text-sm font-semibold">💡 Click vào chủ đề để chọn, click "Khảo bài" để kiểm tra từ vựng đã học</span>
+                              </div>
+                          </div>
+                </div>
+              </CardContent>
+            </Card>
+        )}
+
+        {/* Selected Topic Vocabularies */}
+        {selectedTopics.length > 0 && (
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-pink-50">
+            <CardHeader className="bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-t-lg">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="p-2 bg-white/20 rounded-full">
+                  <BookOpen className="w-6 h-6" />
+                        </div>
+                <div>
+                  <span>Từ vựng trong chủ đề đã chọn</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Tag className="h-4 w-4 text-pink-200" />
+                    <span className="text-sm text-pink-100">Từ vựng có sẵn trong chủ đề</span>
+                      </div>
                   </div>
-                )}
+              </CardTitle>
+                </CardHeader>
+            <CardContent className="p-6">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                    </div>
+              ) : availableVocabularies.length > 0 ? (
+                  <div className="space-y-4">
+                  {/* Start Study Button */}
+                  <div className="text-center mb-6">
+                          <Button
+                      onClick={() => startStudyMode(availableVocabularies)}
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                    >
+                      <Play className="w-5 h-5 mr-3" />
+                      Bắt đầu học {availableVocabularies.length} từ vựng
+                          </Button>
+                    <p className="text-sm text-gray-600 mt-3 font-medium">
+                      Học từng từ một cách có hệ thống
+                    </p>
+                  </div>
+
+                  {/* Vocabulary Grid */}
+                  <div className="flex flex-wrap gap-3">
+                    {availableVocabularies.map((vocabulary) => {
+                      const status = vocabularyStatuses[vocabulary._id]
+                      return (
+                        <div
+                          key={vocabulary._id}
+                          className="relative group"
+                        >
+                          <div className="px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-105 bg-white hover:bg-gradient-to-r hover:from-pink-50 hover:to-rose-50 border-2 hover:border-pink-300 text-gray-700">
+                            {/* status badge at top-right */}
+                            {status && (
+                              <div className={`absolute -top-2 -right-2 rounded-full px-2 py-0.5 text-[11px] border ${
+                                status === 'learned'
+                                  ? 'bg-green-100 text-green-700 border-green-200'
+                                  : status === 'studying'
+                                  ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                  : 'bg-gray-100 text-gray-700 border-gray-200'
+                              }`}> 
+                                {status === 'learned' ? 'Đã thuộc' : status === 'studying' ? 'Cần học thêm' : ''}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-3">
+                                <div className="text-center">
+                                  <div className="font-bold text-lg">{vocabulary.word}</div>
+                                </div>
+                                <Badge 
+                                  variant="secondary" 
+                                  className="text-xs px-2 py-1 bg-pink-100 text-pink-700 border-pink-200"
+                                >
+                                  L{vocabulary.level}
+                                </Badge>
+                                {vocabulary.audioUrl && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 hover:bg-pink-100 text-pink-600"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handlePlayAudio(vocabulary.audioUrl!)
+                                    }}
+                                  >
+                                    <Play className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+
+                          {/* Tooltip with example */}
+                          {vocabulary.examples.length > 0 && (
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 shadow-xl">
+                              VD: {vocabulary.examples[0]}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                          </div>
+                        </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="relative inline-block mb-6">
+                    <div className="p-6 bg-gradient-to-r from-pink-100 to-rose-100 rounded-full">
+                      <BookOpen className="h-16 w-16 text-pink-500" />
               </div>
+                    <div className="absolute -top-2 -right-2">
+                      <Tag className="h-8 w-8 text-yellow-400 animate-bounce" />
+              </div>
+                    <div className="absolute -bottom-2 -left-2">
+                      <Play className="h-6 w-6 text-purple-400 animate-pulse" />
+                </div>
+                      </div>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                    📚 Chưa có từ vựng nào trong chủ đề này
+                  </h3>
+                  <p className="text-lg text-gray-600 mb-6">
+                    Hãy thêm từ vựng vào chủ đề để bắt đầu học
+                  </p>
+                  <div className="flex justify-center gap-4">
+                    <div className="flex items-center gap-2 bg-pink-100 text-pink-700 px-4 py-2 rounded-full">
+                      <BookOpen className="h-5 w-5" />
+                      <span className="font-semibold">Thêm từ vựng</span>
+                </div>
+                    <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full">
+                      <Play className="h-5 w-5" />
+                      <span className="font-semibold">Bắt đầu học</span>
+              </div>
+              </div>
+            </div>
+          )}
             </CardContent>
           </Card>
         )}
 
-        {/* Main Learning Area */}
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Topic Selection */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-blue-600" />
-                  Chủ đề
-                </CardTitle>
-                <CardDescription>
-                  Chọn chủ đề bạn muốn học
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant={selectedTopic === 'all' ? 'default' : 'outline'}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setSelectedTopic('all')
-                    fetchVocabularies('all')
-                  }}
-                >
-                  <Target className="mr-2 h-4 w-4" />
-                  Tất cả ({vocabularies.length})
-                </Button>
-                
-                {/* System Topics */}
-                {systemTopics.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Hệ thống</div>
-                    {systemTopics.map((topic) => (
-                      <Button
-                        key={topic._id}
-                        variant={selectedTopic === `sys_${topic._id}` ? 'default' : 'outline'}
-                        className="w-full justify-start"
-                        onClick={() => {
-                          setSelectedTopic(`sys_${topic._id}`)
-                          fetchVocabularies(`sys_${topic._id}`)
-                        }}
-                      >
-                        <div className="w-3 h-3 rounded-full bg-blue-500 mr-2" />
-                        {topic.name}
-                      </Button>
-                    ))}
+        {/* Empty State */}
+        {personalTopics.length === 0 && (
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-indigo-50">
+            <CardContent className="text-center py-16">
+              <div className="relative inline-block mb-6">
+                <div className="p-6 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full">
+                  <BookOpen className="h-16 w-16 text-indigo-500" />
                   </div>
-                )}
-
-                {/* Personal Topics */}
-                {personalTopics.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cá nhân</div>
-                    {personalTopics.map((topic) => (
-                      <Button
-                        key={topic._id}
-                        variant={selectedTopic === topic._id ? 'default' : 'outline'}
-                        className="w-full justify-start"
-                        onClick={() => {
-                          setSelectedTopic(topic._id)
-                          fetchVocabularies(topic._id)
-                        }}
-                      >
-                        <div className="w-3 h-3 rounded-full bg-purple-500 mr-2" />
-                        {topic.name}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Progress */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                  Tiến độ
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm">
-                    <span>Đã học</span>
-                    <span>{currentWordIndex + 1}/{vocabularies.length}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Từ vựng cá nhân</span>
-                    <span className="text-blue-600 font-semibold">{userVocabularies.length}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${vocabularies.length > 0 ? ((currentWordIndex + 1) / vocabularies.length) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Điểm số</span>
-                    <span className="font-semibold">0</span>
-                  </div>
+                <div className="absolute -top-2 -right-2">
+                  <Tag className="h-8 w-8 text-yellow-400 animate-bounce" />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Learning Area */}
-          <div className="lg:col-span-3">
-            {currentWord && !showQuiz ? (
-              <Card className="mb-6">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">Cấp {currentWord.level}</Badge>
-                      {selectedTopic !== 'all' ? (
-                        selectedTopic.startsWith('sys_') ? (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                            {systemTopics.find(t => t._id === selectedTopic.replace('sys_', ''))?.name}
-                          </Badge>
-                        ) : personalTopics.find(t => t._id === selectedTopic) ? (
-                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                            {personalTopics.find(t => t._id === selectedTopic)?.name}
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            {selectedTopic}
-                          </Badge>
-                        )
-                      ) : (
-                        currentWord.topics.map((topic) => (
-                          <Badge key={topic} variant="secondary">{topic}</Badge>
-                        ))
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-gray-500">
-                        {currentWordIndex + 1} / {vocabularies.length}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                        onClick={() => setShowReportDialog(true)}
-                      >
-                        <Flag className="h-4 w-4 mr-1" />
-                        Báo lỗi
-                      </Button>
-                    </div>
+                <div className="absolute -bottom-2 -left-2">
+                  <Plus className="h-6 w-6 text-purple-400 animate-pulse" />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center space-y-6">
-                    {/* Chinese Character */}
-                    <div className="text-6xl font-bold text-gray-900 mb-4">
-                      {currentWord.word}
-                    </div>
-
-                    {/* Pinyin */}
-                    <div className="text-2xl text-blue-600 font-medium">
-                      {currentWord.pronunciation}
-                    </div>
-
-                    {/* Audio Button */}
-                    {(currentWord.audio || currentWord.audioUrl) && (
-                      <Button
-                        onClick={() => handlePlayAudio((currentWord.audio || currentWord.audioUrl)!, currentWord._id)}
-                        disabled={isPlaying === currentWord._id}
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
-                      >
-                        {isPlaying === currentWord._id ? (
-                          <Pause className="mr-2 h-4 w-4" />
-                        ) : (
-                          <Play className="mr-2 h-4 w-4" />
-                        )}
-                        {isPlaying === currentWord._id ? 'Đang phát...' : 'Phát âm thanh'}
-                      </Button>
-                    )}
-
-                    {/* Word Status Buttons */}
-                    {wordStatus === 'learning' && (
-                      <div className="space-y-4">
-                        <h4 className="font-semibold text-gray-700">
-                          Bạn đã thuộc từ này chưa?
-                        </h4>
-                        <div className="flex gap-2 justify-center">
-                          <Button
-                            onClick={() => handleWordStatus('known')}
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
-                          >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Đã thuộc
-                          </Button>
-                          <Button
-                            onClick={() => handleWordStatus('needs-study')}
-                            className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
-                          >
-                            <Brain className="mr-2 h-4 w-4" />
-                            Cần học thêm
-                          </Button>
-                          <Button
-                            onClick={() => handleWordStatus('skip')}
-                            variant="outline"
-                          >
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Bỏ qua
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Show word details after status selection */}
-                    {wordStatus !== 'learning' && (
-                      <div className="space-y-4">
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <h4 className="font-semibold text-gray-700 mb-2">Nghĩa:</h4>
-                          <p className="text-lg">{currentWord.meaning}</p>
-                        </div>
-
-                        {currentWord.examples.length > 0 && (
-                          <div className="space-y-2">
-                            <h4 className="font-semibold text-gray-700">Ví dụ:</h4>
-                            {currentWord.examples.map((example, index) => (
-                              <div key={index} className="text-gray-600 italic">
-                                {example}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="flex gap-2 justify-center">
-                          <Button
-                            onClick={handleNext}
-                            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
-                          >
-                            Tiếp theo
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </CardContent>
-              </Card>
-            ) : showQuiz && quizQuestions.length > 0 ? (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Kiểm tra từ vựng: {currentWord?.word}</CardTitle>
-                  <CardDescription>
-                    Câu {currentQuizIndex + 1} / {quizQuestions.length}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold">
-                      {quizQuestions[currentQuizIndex]?.question}
-                    </h4>
-                    <div className="grid grid-cols-1 gap-2">
-                      {quizQuestions[currentQuizIndex]?.options.map((option, index) => {
-                        const selectedIndex = quizAnswers[currentQuizIndex]
-                        const correctIndex = quizQuestions[currentQuizIndex].correctAnswer
-                        const isSelected = selectedIndex === index
-                        const isCorrect = isSelected && index === correctIndex
-                        const isWrong = isSelected && index !== correctIndex
-
-                        const stateClass = isCorrect
-                          ? 'bg-green-50 border-green-500'
-                          : isWrong
-                          ? 'bg-red-50 border-red-500'
-                          : ''
-
-                        return (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            className={`justify-start h-auto p-4 text-left ${stateClass}`}
-                            onClick={() => handleQuizAnswer(currentQuizIndex, index)}
-                          >
-                            {String.fromCharCode(65 + index)}. {option}
-                          </Button>
-                        )
-                      })}
-                    </div>
-                    {quizAnswers[currentQuizIndex] !== -1 && (
-                      <div className="mt-4 flex justify-end">
-                        <Button onClick={goToNextInlineQuiz} className="bg-blue-600 text-white">
-                          {currentQuizIndex < quizQuestions.length - 1 ? 'Tiếp tục' : 'Hoàn tất'}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="mb-6">
-                <CardContent className="text-center py-12">
-                  <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                    Không có từ vựng nào
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                🎯 Chưa có chủ đề nào
                   </h3>
-                  <p className="text-gray-500">
-                    Hãy chọn một chủ đề để bắt đầu học
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Navigation */}
-            {currentWord && !showQuiz && (
-              <div className="flex justify-between">
-                <Button
-                  onClick={handlePrevious}
-                  disabled={currentWordIndex === 0}
-                  variant="outline"
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Trước
-                </Button>
-                
-                <div className="flex gap-2">
+              <p className="text-lg text-gray-600 mb-6">
+                Tạo chủ đề đầu tiên để bắt đầu học từ vựng
+              </p>
                   <Button
-                    onClick={handleReset}
-                    variant="outline"
-                  >
-                    Bắt đầu lại
+                onClick={() => setShowCreateTopicDialog(true)}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+              >
+                <Plus className="w-5 h-5 mr-3" />
+                Tạo chủ đề đầu tiên
                   </Button>
-                  <Button
-                    onClick={handleNext}
-                    disabled={currentWordIndex === vocabularies.length - 1}
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
-                  >
-                    Tiếp theo
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Study Dialog */}
-      <Dialog open={showStudyDialog} onOpenChange={setShowStudyDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Học từ vựng: {currentStudyVocabulary?.word}</DialogTitle>
-            <DialogDescription>
-              Hãy suy nghĩ về nghĩa của từ này trước khi xem đáp án
-            </DialogDescription>
-          </DialogHeader>
-          {currentStudyVocabulary && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-gray-900 mb-2">
-                  {currentStudyVocabulary.word}
-                </div>
-                <div className="text-xl text-blue-600 mb-4">
-                  {currentStudyVocabulary.pronunciation}
-                </div>
-                {(currentStudyVocabulary.audio || currentStudyVocabulary.audioUrl) && (
-                  <Button
-                    onClick={() => handlePlayAudio((currentStudyVocabulary.audio || currentStudyVocabulary.audioUrl)!, currentStudyVocabulary._id)}
-                    disabled={audioLoading === currentStudyVocabulary._id}
-                    className="mb-4"
-                  >
-                    {audioLoading === currentStudyVocabulary._id ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Play className="h-4 w-4 mr-2" />
-                    )}
-                    Phát âm
-                  </Button>
-                )}
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">Nghĩa:</h3>
-                <p className="text-lg">{currentStudyVocabulary.meaning}</p>
-                {currentStudyVocabulary.partOfSpeech && (
-                  <Badge variant="outline" className="mt-2">{currentStudyVocabulary.partOfSpeech}</Badge>
-                )}
-              </div>
-
-              {currentStudyVocabulary.examples.length > 0 && (
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-semibold mb-2">Ví dụ:</h3>
-                  <ul className="space-y-1">
-                    {currentStudyVocabulary.examples.slice(0, 2).map((example, index) => (
-                      <li key={index} className="text-sm">• {example}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="flex justify-center space-x-4">
-                <Button
-                  onClick={() => handleVocabularyAction('learned')}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Đã thuộc
-                </Button>
-                <Button
-                  onClick={() => handleVocabularyAction('studying')}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  Cần học thêm
-                </Button>
-                <Button
-                  onClick={() => handleVocabularyAction('skipped')}
-                  variant="outline"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Bỏ qua
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Quiz Dialog */}
-      <Dialog open={showQuizDialog} onOpenChange={setShowQuizDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Khảo bài: {currentStudyVocabulary?.word}</DialogTitle>
-            <DialogDescription>
-              Trả lời đúng tất cả câu hỏi để hoàn thành học từ này
-            </DialogDescription>
-          </DialogHeader>
-          {quizQuestions.length > 0 && (
-            <div className="space-y-6">
-              {quizQuestions.map((question, questionIndex) => (
-                <div key={questionIndex} className="border rounded-lg p-4">
-                  <h3 className="font-semibold mb-3">
-                    Câu {questionIndex + 1}: {question.question}
-                  </h3>
-                  <div className="space-y-2">
-                    {question.options.map((option, optionIndex) => (
-                      <label key={optionIndex} className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name={`question-${questionIndex}`}
-                          value={optionIndex}
-                          checked={quizAnswers[questionIndex] === optionIndex}
-                          onChange={() => handleQuizAnswer(questionIndex, optionIndex)}
-                          className="text-blue-600"
-                        />
-                        <span className="text-sm">{option}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              {quizCompleted ? (
-                <div className="text-center space-y-4">
-                  <div className={`text-2xl font-bold ${quizScore === 100 ? 'text-green-600' : 'text-red-600'}`}>
-                    {quizScore === 100 ? '🎉 Chúc mừng!' : '😔 Cần học thêm'}
-                  </div>
-                  <div className="text-lg">
-                    Điểm: {quizScore.toFixed(0)}% ({quizScore === 100 ? 'Hoàn hảo!' : 'Chưa đạt yêu cầu'})
-                  </div>
-                  <Button
-                    onClick={() => {
-                      setShowQuizDialog(false)
-                      setCurrentStudyVocabulary(null)
-                    }}
-                    className="w-full"
-                  >
-                    Đóng
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  onClick={handleSubmitQuiz}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Nộp bài
-                </Button>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Personal Topic Dialog */}
+        {/* Create Topic Dialog */}
       <Dialog open={showCreateTopicDialog} onOpenChange={setShowCreateTopicDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tạo chủ đề cá nhân</DialogTitle>
-            <DialogDescription>
-              Tạo chủ đề học tập cá nhân để quản lý từ vựng
-            </DialogDescription>
+          <DialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
+            <DialogHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg p-6 -m-6 mb-6">
+              <DialogTitle className="flex items-center gap-3 text-xl">
+                <div className="p-2 bg-white/20 rounded-full">
+                  <Plus className="w-6 h-6" />
+                </div>
+                <div>
+                  <span>Tạo chủ đề mới</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Tag className="h-4 w-4 text-purple-200" />
+                    <span className="text-sm text-purple-100">Tổ chức từ vựng cá nhân</span>
+                  </div>
+                </div>
+              </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreatePersonalTopic} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="topicName">Tên chủ đề *</Label>
+            <form onSubmit={handleCreateTopic} className="space-y-6">
+              <div>
+                <Label htmlFor="topicName" className="text-lg font-semibold text-gray-700">Tên chủ đề *</Label>
               <Input
                 id="topicName"
                 value={newTopicName}
                 onChange={(e) => setNewTopicName(e.target.value)}
-                placeholder="Gia đình, Công việc, Du lịch..."
+                  placeholder="Ví dụ: Từ vựng công việc"
+                  className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="topicDescription">Mô tả</Label>
+              <div>
+                <Label htmlFor="topicDescription" className="text-lg font-semibold text-gray-700">Mô tả (tùy chọn)</Label>
               <Input
                 id="topicDescription"
                 value={newTopicDescription}
                 onChange={(e) => setNewTopicDescription(e.target.value)}
-                placeholder="Mô tả về chủ đề này..."
+                  placeholder="Mô tả ngắn về chủ đề này"
+                  className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
               />
             </div>
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setShowCreateTopicDialog(false)}>
+              <div className="flex justify-end gap-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowCreateTopicDialog(false)}
+                  className="px-6 py-3 text-lg border-2 border-gray-300 hover:border-gray-400"
+                >
                 Hủy
               </Button>
-              <Button type="submit">Tạo chủ đề</Button>
+                <Button 
+                  type="submit"
+                  className="px-6 py-3 text-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                >
+                  Tạo chủ đề
+                </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Add Vocabulary to Personal Topic Dialog */}
+        {/* Add Vocabulary Dialog */}
       <Dialog open={showAddVocabularyDialog} onOpenChange={setShowAddVocabularyDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Thêm từ vựng vào chủ đề cá nhân</DialogTitle>
-            <DialogDescription>
-              Chọn từ vựng từ hệ thống để thêm vào chủ đề cá nhân của bạn
-            </DialogDescription>
+              <DialogTitle>Thêm từ vựng vào chủ đề</DialogTitle>
           </DialogHeader>
-          
-          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
-            {/* Select Personal Topic */}
-            <div className="space-y-2">
-              <Label>Chọn chủ đề cá nhân</Label>
+            <div className="space-y-4">
+              <div>
+                <Label>Chọn chủ đề *</Label>
               <select
                 value={selectedPersonalTopic}
                 onChange={(e) => setSelectedPersonalTopic(e.target.value)}
-                className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  required
               >
-                <option value="">-- Chọn chủ đề --</option>
+                  <option value="">Chọn chủ đề</option>
                 {personalTopics.map((topic) => (
                   <option key={topic._id} value={topic._id}>
                     {topic.name}
@@ -1410,342 +733,45 @@ export const VocabularyLearning = () => {
               </select>
             </div>
 
-            {/* Search Vocabularies */}
-            <div className="space-y-2">
-              <Label>Tìm kiếm từ vựng</Label>
-              <Input
-                value={searchVocabularyTerm}
-                onChange={(e) => setSearchVocabularyTerm(e.target.value)}
-                placeholder="Nhập từ khóa để tìm kiếm..."
-              />
-            </div>
-
-            {/* Vocabulary List */}
-            <div className="flex-1 overflow-auto border rounded-md" onScroll={handleScroll}>
-              <div className="p-4 space-y-2">
-                {loadingVocabularies && availableVocabularies.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    Đang tải từ vựng...
-                  </div>
-                ) : availableVocabularies.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    Không tìm thấy từ vựng nào
-                  </div>
-                ) : (
-                  <>
-                    {availableVocabularies.map((vocab) => (
-                      <div
-                        key={vocab._id}
-                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                          selectedVocabularies.includes(vocab._id)
-                            ? 'bg-blue-50 border-blue-300'
-                            : 'hover:bg-gray-50'
-                        }`}
-                        onClick={() => handleVocabularySelection(vocab._id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-semibold text-lg">{vocab.word}</div>
-                            <div className="text-gray-600">{vocab.meaning}</div>
-                            {vocab.pronunciation && (
-                              <div className="text-sm text-gray-500">{vocab.pronunciation}</div>
-                            )}
-                          </div>
-                          <div className="ml-4">
-                            {selectedVocabularies.includes(vocab._id) ? (
-                              <CheckCircle className="h-5 w-5 text-blue-600" />
-                            ) : (
-                              <div className="h-5 w-5 border-2 border-gray-300 rounded-full" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {/* Load More Button */}
-                    {hasMore && (
-                      <div className="text-center py-4">
-                        <Button
-                          variant="outline"
-                          onClick={loadMoreVocabularies}
-                          disabled={loadingVocabularies}
-                          className="w-full"
-                        >
-                          {loadingVocabularies ? 'Đang tải...' : 'Tải thêm từ vựng'}
-                        </Button>
-                      </div>
-                    )}
-                    
-                    {/* Loading indicator when scrolling */}
-                    {loadingVocabularies && availableVocabularies.length > 0 && (
-                      <div className="text-center py-4 text-gray-500">
-                        Đang tải thêm từ vựng...
-                      </div>
-                    )}
-                    
-                    {/* Total count */}
-                    <div className="text-center text-sm text-gray-500 py-2">
-                      Hiển thị {availableVocabularies.length} / {totalVocabularies} từ vựng
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Selected Count */}
             {selectedVocabularies.length > 0 && (
-              <div className="text-sm text-gray-600">
+                <div className="bg-blue-50 p-3 rounded-md">
+                  <p className="text-sm text-blue-800">
                 Đã chọn {selectedVocabularies.length} từ vựng
+                  </p>
               </div>
             )}
 
-            {/* Actions */}
-            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <div className="flex justify-end gap-2">
               <Button
-                type="button"
                 variant="outline"
-                onClick={() => {
-                  setShowAddVocabularyDialog(false)
-                  setSelectedPersonalTopic('')
-                  setSelectedVocabularies([])
-                  setSearchVocabularyTerm('')
-                }}
+                  onClick={() => setShowAddVocabularyDialog(false)}
               >
                 Hủy
               </Button>
               <Button
-                onClick={handleAddVocabulariesToTopic}
-                disabled={!selectedPersonalTopic || selectedVocabularies.length === 0}
+                  onClick={handleAddVocabularies}
+                  disabled={selectedVocabularies.length === 0 || !selectedPersonalTopic}
               >
-                Thêm {selectedVocabularies.length} từ vựng
+                  Thêm từ vựng
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Report Error Dialog */}
-      <ReportErrorDialog
-        isOpen={showReportDialog}
-        onClose={() => setShowReportDialog(false)}
-        itemType="vocabulary"
-        itemId={currentStudyVocabulary?._id || ''}
-        itemContent={currentStudyVocabulary?.word || ''}
-      />
-          </>
-        )}
-
-        {/* Reports Tab Content */}
-        {activeTab === 'reports' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                  Báo cáo học từ vựng
-                </CardTitle>
-                <CardDescription>
-                  Theo dõi tiến độ học tập và thống kê từ vựng
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                  {/* Total Words Learned */}
-                  <div className="bg-blue-50 p-6 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-600">Tổng từ đã học</p>
-                        <p className="text-2xl font-bold text-blue-900">{totalLearnedCount}</p>
-                      </div>
-                      <BookOpen className="h-8 w-8 text-blue-600" />
-                    </div>
-                  </div>
-
-                  {/* Words This Week */}
-                  <div className="bg-green-50 p-6 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-green-600">Tuần này</p>
-                        <p className="text-2xl font-bold text-green-900">{learnedThisWeekCount}</p>
-                      </div>
-                      <TrendingUp className="h-8 w-8 text-green-600" />
-                    </div>
-                  </div>
-
-                  {/* Study Streak */}
-                  <div className="bg-orange-50 p-6 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-orange-600">Chuỗi học</p>
-                        <p className="text-2xl font-bold text-orange-900">{studyStreakDays} ngày</p>
-                      </div>
-                      <Target className="h-8 w-8 text-orange-600" />
-                    </div>
-                  </div>
-
-                  {/* Accuracy Rate */}
-                  <div className="bg-purple-50 p-6 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-purple-600">Tỷ lệ đúng</p>
-                        <p className="text-2xl font-bold text-purple-900">{accuracyRate}%</p>
-                      </div>
-                      <Brain className="h-8 w-8 text-purple-600" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Learning Progress Chart */}
-                <div className="bg-white p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-4">Tiến độ học tập (7 ngày qua)</h3>
-                  <div className="h-64 flex items-center justify-center text-gray-500">
-                    <div className="text-center">
-                      <TrendingUp className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                      <p>Chưa có dữ liệu học tập</p>
-                      <p className="text-sm">Bắt đầu học từ vựng để xem báo cáo</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Topic Performance */}
-                <div className="bg-white p-6 rounded-lg border mt-6">
-                  <h3 className="text-lg font-semibold mb-4">Hiệu suất theo chủ đề</h3>
-                  <div className="space-y-4">
-                    {personalTopics.length > 0 ? (
-                      personalTopics.map((topic) => (
-                        <div key={topic._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div>
-                            <h4 className="font-medium">{topic.name}</h4>
-                            <p className="text-sm text-gray-600">{topic.vocabularyCount} từ vựng</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-500">Chưa có dữ liệu</p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <BookOpen className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                        <p>Chưa có chủ đề nào</p>
-                        <p className="text-sm">Tạo chủ đề để bắt đầu học</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Manage Tab Content */}
-        {activeTab === 'manage' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-blue-600" />
-                  Quản lý từ vựng
-                </CardTitle>
-                <p className="text-gray-600">Quản lý các từ vựng cần học và đã học</p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  {/* Studying Words */}
-                  <div className="bg-yellow-50 p-6 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-yellow-600">Cần học thêm</p>
-                        <p className="text-2xl font-bold text-yellow-900">{userVocabularies.filter((v: any) => v.status === 'studying').length}</p>
-                      </div>
-                      <Clock className="h-8 w-8 text-yellow-600" />
-                    </div>
-                  </div>
-
-                  {/* Learned Words */}
-                  <div className="bg-green-50 p-6 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-green-600">Đã học</p>
-                        <p className="text-2xl font-bold text-green-900">{userVocabularies.filter((v: any) => v.status === 'learned').length}</p>
-                      </div>
-                      <CheckCircle className="h-8 w-8 text-green-600" />
-                    </div>
-                  </div>
-
-                  {/* Skipped removed per request */}
-                </div>
-
-                {/* Word Lists */}
-                <div className="space-y-6">
-                  {/* Studying Words */}
-                  <div className="bg-white p-6 rounded-lg border">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-yellow-600" />
-                      Từ cần học thêm
-                    </h3>
-                    {userVocabularies.filter((v: any) => v.status === 'studying').length === 0 ? (
-                      <div className="h-64 flex items-center justify-center text-gray-500">
-                        <div className="text-center">
-                          <Clock className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                          <p>Chưa có từ nào cần học thêm</p>
-                          <p className="text-sm">Bắt đầu học từ vựng để xem danh sách</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 max-h-64 overflow-auto">
-                        {userVocabularies.filter((v: any) => v.status === 'studying').map((uv: any) => (
-                          <div key={uv._id} className="flex items-center justify-between p-3 bg-yellow-50 rounded">
-                            <div>
-                              <div className="font-medium">{uv.vocabularyId?.word}</div>
-                              <div className="text-sm text-gray-600">{uv.vocabularyId?.meaning}</div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">Cấp {uv.vocabularyId?.level}</Badge>
-                              <Button size="sm" onClick={() => startRelearn(uv)}>Học lại</Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Learned Words */}
-                  <div className="bg-white p-6 rounded-lg border">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      Từ đã học
-                    </h3>
-                    {userVocabularies.filter((v: any) => v.status === 'learned').length === 0 ? (
-                      <div className="h-64 flex items-center justify-center text-gray-500">
-                        <div className="text-center">
-                          <CheckCircle className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                          <p>Chưa có từ nào đã học</p>
-                          <p className="text-sm">Hoàn thành quiz để thêm từ vào danh sách</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 max-h-64 overflow-auto">
-                        {userVocabularies.filter((v: any) => v.status === 'learned').map((uv: any) => (
-                          <div key={uv._id} className="flex items-center justify-between p-3 bg-green-50 rounded">
-                            <div>
-                              <div className="font-medium">{uv.vocabularyId?.word}</div>
-                              <div className="text-sm text-gray-600">{uv.vocabularyId?.meaning}</div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">Cấp {uv.vocabularyId?.level}</Badge>
-                              <Button size="sm" onClick={() => startRelearn(uv)}>Học lại</Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Skipped list removed per request */}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Topic Quiz */}
+        {selectedTopicForQuiz && (
+          <TopicQuiz
+            topicId={selectedTopicForQuiz.id}
+            topicName={selectedTopicForQuiz.name}
+            isOpen={showTopicQuiz}
+            onClose={() => {
+              setShowTopicQuiz(false)
+              setSelectedTopicForQuiz(null)
+              // Refresh list and statuses after quiz persists results
+              fetchAvailableVocabularies()
+            }}
+          />
         )}
       </div>
     </div>

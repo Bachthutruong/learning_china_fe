@@ -8,13 +8,9 @@ import {
   Coins, 
   CheckCircle, 
   XCircle, 
-  Clock, 
   Search,
   // Filter,
-  Loader2,
-  User,
-  Calendar,
-  CreditCard
+  Loader2
 } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
@@ -27,13 +23,14 @@ interface CoinPurchase {
     email: string
   }
   amount: number
+  currency?: string
   coins: number
   paymentMethod: string
   bankAccount?: string
   transactionId?: string
   status: 'pending' | 'approved' | 'rejected'
   adminNotes?: string
-  proofOfPayment?: string
+  // receiptImage intentionally not present to hide from UI
   createdAt: string
 }
 
@@ -43,12 +40,18 @@ export const AdminCoinPurchases = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPurchase, setSelectedPurchase] = useState<CoinPurchase | null>(null)
+  const [selectedPurchaseFull, setSelectedPurchaseFull] = useState<any | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [currencyFilter, setCurrencyFilter] = useState<'all' | 'TWD' | 'VND'>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
 
   useEffect(() => {
     fetchPurchases()
-  }, [filter])
+  }, [filter, currencyFilter, currentPage, itemsPerPage])
 
   const fetchPurchases = async () => {
     setIsLoading(true)
@@ -57,14 +60,31 @@ export const AdminCoinPurchases = () => {
       if (filter !== 'all') {
         params.append('status', filter)
       }
+      params.append('page', String(currentPage))
+      params.append('limit', String(itemsPerPage))
       
       const response = await api.get(`/coin-purchases/admin/all?${params.toString()}`)
-      setPurchases(response.data.purchases)
+      let list: CoinPurchase[] = response.data.purchases || []
+      if (currencyFilter !== 'all') {
+        list = list.filter(p => (p.currency || 'VND') === currencyFilter)
+      }
+      setPurchases(list)
+      setTotalPages(response.data.totalPages || 1)
+      setTotalItems(response.data.total || list.length)
     } catch (error) {
       console.error('Error fetching purchases:', error)
       toast.error('Không thể tải danh sách mua xu')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadSelectedPurchaseFull = async (purchaseId: string) => {
+    try {
+      const resp = await api.get(`/coin-purchases/admin/${purchaseId}`)
+      setSelectedPurchaseFull(resp.data.purchase)
+    } catch (e) {
+      console.error('Error loading purchase details:', e)
     }
   }
 
@@ -106,18 +126,7 @@ export const AdminCoinPurchases = () => {
     }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle className="h-5 w-5 text-green-500" />
-      case 'rejected':
-        return <XCircle className="h-5 w-5 text-red-500" />
-      case 'pending':
-        return <Clock className="h-5 w-5 text-yellow-500" />
-      default:
-        return <Clock className="h-5 w-5 text-gray-500" />
-    }
-  }
+  // Removed getStatusIcon - not used in table layout
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -175,7 +184,7 @@ export const AdminCoinPurchases = () => {
       {/* Filters and Search */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col lg:flex-row gap-4 lg:items-end">
             <div className="flex-1">
               <Label htmlFor="search">Tìm kiếm</Label>
               <div className="relative">
@@ -200,7 +209,7 @@ export const AdminCoinPurchases = () => {
                 ].map((option) => (
                   <button
                     key={option.value}
-                    onClick={() => setFilter(option.value as any)}
+                    onClick={() => { setFilter(option.value as any); setCurrentPage(1); }}
                     className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                       filter === option.value
                         ? 'bg-blue-100 text-blue-800'
@@ -209,6 +218,41 @@ export const AdminCoinPurchases = () => {
                   >
                     {option.label}
                   </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Tiền tệ</Label>
+              <div className="flex gap-2 mt-1">
+                {[
+                  { value: 'all', label: 'Tất cả' },
+                  { value: 'TWD', label: 'Đài Loan (TWD)' },
+                  { value: 'VND', label: 'Việt Nam (VND)' }
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => { setCurrencyFilter(option.value as any); setCurrentPage(1); }}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      currencyFilter === option.value
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Số lượng mỗi trang</Label>
+              <div className="flex gap-2 mt-1">
+                {[5,10,20,50].map(n => (
+                  <button key={n}
+                    onClick={() => { setItemsPerPage(n); setCurrentPage(1); }}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      itemsPerPage === n ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >{n}</button>
                 ))}
               </div>
             </div>
@@ -223,98 +267,90 @@ export const AdminCoinPurchases = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredPurchases.map((purchase) => (
-            <Card key={purchase._id}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    {getStatusIcon(purchase.status)}
-                    <div>
-                      <h3 className="font-semibold text-lg">
-                        {purchase.amount.toLocaleString()} VND → {purchase.coins} xu
-                      </h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <User className="h-4 w-4" />
-                          {purchase.userId.name} ({purchase.userId.email})
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <CreditCard className="h-4 w-4" />
-                          {getPaymentMethodText(purchase.paymentMethod)}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(purchase.createdAt).toLocaleDateString('vi-VN')}
-                        </div>
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Người dùng</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Giao dịch</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tiền tệ</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phương thức</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ngày tạo</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ghi chú admin</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredPurchases.map((purchase) => (
+                  <tr key={purchase._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm">
+                      <div className="font-medium text-gray-900">{purchase.userId.name}</div>
+                      <div className="text-gray-500">{purchase.userId.email}</div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {purchase.amount.toLocaleString()} {purchase.currency || 'VND'} → {purchase.coins} xu
+                      {purchase.transactionId && (
+                        <div className="text-xs text-gray-500">Mã GD: {purchase.transactionId}</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">{purchase.currency || 'VND'}</td>
+                    <td className="px-4 py-3 text-sm">{getPaymentMethodText(purchase.paymentMethod)}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        purchase.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        purchase.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {getStatusText(purchase.status)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{new Date(purchase.createdAt).toLocaleDateString('vi-VN')}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">{purchase.adminNotes || '-'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {purchase.status === 'pending' && (
+                        <Button size="sm" onClick={() => { setSelectedPurchase(purchase); loadSelectedPurchaseFull(purchase._id); }}>Xử lý</Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {filteredPurchases.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-6 text-center text-gray-500">
+                      <div className="flex flex-col items-center gap-2">
+                        <Coins className="h-10 w-10 text-gray-400" />
+                        Không có giao dịch nào
                       </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium mb-2 ${
-                      purchase.status === 'approved' 
-                        ? 'bg-green-100 text-green-800'
-                        : purchase.status === 'rejected'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {getStatusText(purchase.status)}
-                    </div>
-                    {purchase.status === 'pending' && (
-                      <Button
-                        onClick={() => setSelectedPurchase(purchase)}
-                        size="sm"
-                      >
-                        Xử lý
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Additional Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  {purchase.bankAccount && (
-                    <div>
-                      <strong>Tài khoản:</strong> {purchase.bankAccount}
-                    </div>
-                  )}
-                  {purchase.transactionId && (
-                    <div>
-                      <strong>Mã giao dịch:</strong> {purchase.transactionId}
-                    </div>
-                  )}
-                  {purchase.proofOfPayment && (
-                    <div className="md:col-span-2">
-                      <strong>Chứng minh thanh toán:</strong>{' '}
-                      <a 
-                        href={purchase.proofOfPayment} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        Xem ảnh
-                      </a>
-                    </div>
-                  )}
-                </div>
-
-                {purchase.adminNotes && (
-                  <div className="mt-4 bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-700">
-                      <strong>Ghi chú admin:</strong> {purchase.adminNotes}
-                    </p>
-                  </div>
+                    </td>
+                  </tr>
                 )}
-              </CardContent>
-            </Card>
-          ))}
+              </tbody>
+            </table>
+          </div>
 
-          {filteredPurchases.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Coins className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">Không có giao dịch nào</p>
-              </CardContent>
-            </Card>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} trong {totalItems} mục
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                  «
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1}>
+                  ‹
+                </Button>
+                <span className="text-sm">Trang {currentPage} / {totalPages}</span>
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages}>
+                  ›
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
+                  »
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -330,6 +366,14 @@ export const AdminCoinPurchases = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {selectedPurchaseFull?.receiptImage && (
+                <div>
+                  <Label>Ảnh biên lai</Label>
+                  <div className="mt-2">
+                    <img src={selectedPurchaseFull.receiptImage} alt="Receipt" className="w-full max-h-80 object-contain border rounded" />
+                  </div>
+                </div>
+              )}
               <div>
                 <Label htmlFor="adminNotes">Ghi chú (tùy chọn)</Label>
                 <Textarea
@@ -372,6 +416,7 @@ export const AdminCoinPurchases = () => {
               <Button
                 onClick={() => {
                   setSelectedPurchase(null)
+                  setSelectedPurchaseFull(null)
                   setAdminNotes('')
                 }}
                 variant="outline"

@@ -12,6 +12,7 @@ import { Register } from './pages/Register'
 import { Dashboard } from './pages/Dashboard'
 import { Vocabulary } from './pages/Vocabulary'
 import { VocabularyLearning } from './pages/VocabularyLearning'
+import { AddVocabulary } from './pages/AddVocabulary'
 // import { Tests } from './pages/Tests'
 import { ProficiencyTest } from './pages/ProficiencyTest'
 import { Competition } from './pages/Competition'
@@ -87,6 +88,11 @@ function App() {
               <Route path="/vocabulary-learning" element={
                 <ProtectedRoute>
                   <VocabularyLearning />
+                </ProtectedRoute>
+              } />
+              <Route path="/vocabulary-learning/add" element={
+                <ProtectedRoute>
+                  <AddVocabulary />
                 </ProtectedRoute>
               } />
               <Route path="/tests" element={

@@ -8,17 +8,30 @@ import { api } from '../../services/api'
 import toast from 'react-hot-toast'
 
 interface ReportItem {
+  id: string
   _id: string
-  type: string
+  type: 'vocabulary' | 'question' | 'test'
   targetId: string
   category: string
   description: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'reviewed' | 'rejected'
   createdAt: string
-  userId: {
+  user?: {
     _id: string
-    name: string
-    email: string
+    email?: string
+    username?: string
+    name?: string
+  }
+  targetSummary?: {
+    // vocabulary
+    word?: string
+    pronunciation?: string
+    meaning?: string
+    level?: number
+    topics?: string[]
+    // question
+    question?: string
+    questionType?: string
   }
 }
 
@@ -32,6 +45,12 @@ export const AdminReports = () => {
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
   const [confirmAction, setConfirmAction] = useState<{id: string, action: 'approved' | 'rejected'} | null>(null)
+  const getStatusBadgeClass = (status: string) => {
+    if (status === 'pending') return 'bg-gray-200 text-gray-800'
+    if (status === 'approved' || status === 'reviewed') return 'bg-green-100 text-green-700 border border-green-200'
+    if (status === 'rejected') return 'bg-red-100 text-red-700 border border-red-200'
+    return 'bg-gray-200 text-gray-800'
+  }
 
   useEffect(() => {
     fetchReports()
@@ -39,10 +58,10 @@ export const AdminReports = () => {
 
   const fetchReports = async () => {
     try {
-      const res = await api.get('/reports/admin/all', { 
-        params: { page, limit: pageSize, search } 
+      const res = await api.get('/reports/admin/all', {
+        params: { page, limit: pageSize, search }
       })
-      setReports(res.data?.reports || res.data || [])
+      setReports(res.data?.reports || [])
     } catch {
       setReports([])
     }
@@ -51,8 +70,8 @@ export const AdminReports = () => {
   const updateReport = async (id: string, status: 'approved' | 'rejected') => {
     try {
       // Default rewards: 0.5 XP and 0.5 coins for approved reports
-      const defaultXp = 0.5
-      const defaultCoins = 0.5
+      const defaultXp = 5
+      const defaultCoins = 5
       const xp = status === 'approved' ? (rewardXp[id] || defaultXp) : 0
       const coins = status === 'approved' ? (rewardCoins[id] || defaultCoins) : 0
       
@@ -122,15 +141,26 @@ export const AdminReports = () => {
               </thead>
               <tbody>
                 {reports.map((r, i) => (
-                  <tr key={r._id} className="border-t">
+                  <tr key={r.id || r._id} className="border-t">
                     <td className="py-2 pr-4">{(page - 1) * pageSize + i + 1}</td>
                     <td className="py-2 pr-4">{r.type}</td>
                     <td className="py-2 pr-4 max-w-xs">
-                      <div className="truncate">{r.description}</div>
+                      <div className="truncate">
+                        {r.type === 'vocabulary' && r.targetSummary?.word && (
+                          <>
+                            <span className="font-medium">{r.targetSummary.word}</span>
+                            <span className="text-gray-600"> — {r.targetSummary.meaning}</span>
+                          </>
+                        )}
+                        {r.type === 'question' && r.targetSummary?.question && (
+                          <span className="text-gray-800">{r.targetSummary.question}</span>
+                        )}
+                        {!r.targetSummary && r.description}
+                      </div>
                     </td>
                     <td className="py-2 pr-4">
-                      <Badge variant={r.status === 'pending' ? 'secondary' : r.status === 'approved' ? 'default' : 'destructive'}>
-                        {r.status}
+                      <Badge className={getStatusBadgeClass(r.status)}>
+                        {r.status === 'reviewed' ? 'approved' : r.status}
                       </Badge>
                     </td>
                     <td className="py-2 pr-4">{new Date(r.createdAt).toLocaleDateString()}</td>
@@ -139,8 +169,8 @@ export const AdminReports = () => {
                         <Button variant="outline" size="sm" onClick={() => showReportDetail(r)}>Chi tiết</Button>
                         {r.status === 'pending' && (
                           <>
-                            <Button size="sm" onClick={() => handleApproveReject(r._id, 'approved')}>Duyệt</Button>
-                            <Button variant="outline" size="sm" onClick={() => handleApproveReject(r._id, 'rejected')}>Từ chối</Button>
+                            <Button size="sm" onClick={() => handleApproveReject(r.id || r._id, 'approved')}>Duyệt</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleApproveReject(r.id || r._id, 'rejected')}>Từ chối</Button>
                           </>
                         )}
                       </div>
@@ -186,19 +216,36 @@ export const AdminReports = () => {
                 <div>
                   <label className="text-xs text-gray-500">Trạng thái</label>
                   <div className="text-sm">
-                    <Badge variant={selectedReport.status === 'pending' ? 'secondary' : selectedReport.status === 'approved' ? 'default' : 'destructive'}>
-                      {selectedReport.status}
+                    <Badge className={getStatusBadgeClass(selectedReport.status)}>
+                      {selectedReport.status === 'reviewed' ? 'approved' : selectedReport.status}
                     </Badge>
                   </div>
                 </div>
               </div>
+              {/* Target summary */}
+              {selectedReport.type === 'vocabulary' && selectedReport.targetSummary && (
+                <div className="p-3 bg-purple-50 rounded border border-purple-100 text-sm">
+                  <div><span className="font-semibold">Từ:</span> {selectedReport.targetSummary.word} ({selectedReport.targetSummary.pronunciation})</div>
+                  <div><span className="font-semibold">Nghĩa:</span> {selectedReport.targetSummary.meaning}</div>
+                  <div><span className="font-semibold">Cấp:</span> L{selectedReport.targetSummary.level} • <span className="font-semibold">Chủ đề:</span> {(selectedReport.targetSummary.topics || []).join(', ')}</div>
+                </div>
+              )}
+              {selectedReport.type === 'question' && selectedReport.targetSummary?.question && (
+                <div className="p-3 bg-blue-50 rounded border border-blue-100 text-sm">
+                  <div><span className="font-semibold">Câu hỏi:</span> {selectedReport.targetSummary.question}</div>
+                  <div><span className="font-semibold">Loại:</span> {selectedReport.targetSummary.questionType}</div>
+                  {selectedReport.targetSummary.level && (
+                    <div><span className="font-semibold">Cấp:</span> L{selectedReport.targetSummary.level}</div>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="text-xs text-gray-500">Danh mục</label>
                 <div className="text-sm">{selectedReport.category}</div>
               </div>
               <div>
                 <label className="text-xs text-gray-500">Người báo cáo</label>
-                <div className="text-sm">{selectedReport.userId?.name} ({selectedReport.userId?.email})</div>
+                <div className="text-sm">{selectedReport.user?.name || selectedReport.user?.username || selectedReport.user?._id} ({selectedReport.user?.email})</div>
               </div>
               <div>
                 <label className="text-xs text-gray-500">Nội dung</label>
@@ -218,8 +265,8 @@ export const AdminReports = () => {
                         min={0}
                         step="0.1"
                         placeholder="0.5"
-                        value={rewardXp[selectedReport._id] ?? ''}
-                        onChange={(e) => setRewardXp({ ...rewardXp, [selectedReport._id]: Number(e.target.value) })}
+                        value={rewardXp[selectedReport.id || selectedReport._id] ?? ''}
+                        onChange={(e) => setRewardXp({ ...rewardXp, [selectedReport.id || selectedReport._id]: Number(e.target.value) })}
                       />
                     </div>
                     <div>
@@ -229,8 +276,8 @@ export const AdminReports = () => {
                         min={0}
                         step="0.1"
                         placeholder="0.5"
-                        value={rewardCoins[selectedReport._id] ?? ''}
-                        onChange={(e) => setRewardCoins({ ...rewardCoins, [selectedReport._id]: Number(e.target.value) })}
+                        value={rewardCoins[selectedReport.id || selectedReport._id] ?? ''}
+                        onChange={(e) => setRewardCoins({ ...rewardCoins, [selectedReport.id || selectedReport._id]: Number(e.target.value) })}
                       />
                     </div>
                   </div>
@@ -242,8 +289,8 @@ export const AdminReports = () => {
             <Button variant="outline" onClick={() => setShowDetailDialog(false)}>Đóng</Button>
             {selectedReport?.status === 'pending' && (
               <>
-                <Button onClick={() => { handleApproveReject(selectedReport._id, 'approved'); setShowDetailDialog(false) }}>Duyệt</Button>
-                <Button variant="outline" onClick={() => { handleApproveReject(selectedReport._id, 'rejected'); setShowDetailDialog(false) }}>Từ chối</Button>
+                <Button onClick={() => { handleApproveReject(selectedReport.id || selectedReport._id, 'approved'); setShowDetailDialog(false) }}>Duyệt</Button>
+                <Button variant="outline" onClick={() => { handleApproveReject(selectedReport.id || selectedReport._id, 'rejected'); setShowDetailDialog(false) }}>Từ chối</Button>
               </>
             )}
           </DialogFooter>

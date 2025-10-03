@@ -21,10 +21,12 @@ import {
   Edit,
   Save,
   X,
-  Loader2
+  Loader2,
+  RotateCcw
 } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
+import { TopicQuiz } from '../components/TopicQuiz'
 
 interface Report {
   _id: string
@@ -36,6 +38,32 @@ interface Report {
   rewardExperience?: number
   rewardCoins?: number
   createdAt: string
+}
+
+interface PersonalTopic {
+  _id: string
+  name: string
+  description: string
+  vocabularyCount: number
+  createdAt: string
+}
+
+interface UserVocabulary {
+  _id: string
+  vocabularyId: {
+    _id: string
+    word: string
+    pronunciation: string
+    meaning: string
+    level: number
+    audioUrl?: string
+  }
+  personalTopicId: {
+    _id: string
+    name: string
+  }
+  status: 'studying' | 'learned' | 'skipped'
+  addedAt: string
 }
 
 export const Profile = () => {
@@ -55,11 +83,18 @@ export const Profile = () => {
     testsCompleted: 0,
     competitionsJoined: 0
   })
+  const [personalTopics, setPersonalTopics] = useState<PersonalTopic[]>([])
+  const [userVocabularies, setUserVocabularies] = useState<UserVocabulary[]>([])
+  const [selectedTopic, setSelectedTopic] = useState<string>('all')
+  const [showTopicQuiz, setShowTopicQuiz] = useState(false)
+  const [selectedTopicForQuiz, setSelectedTopicForQuiz] = useState<{id: string, name: string} | null>(null)
 
   useEffect(() => {
     fetchReports()
     fetchAchievements()
     fetchLearningStats()
+    fetchPersonalTopics()
+    fetchUserVocabularies()
   }, [])
 
   const fetchReports = async () => {
@@ -93,6 +128,29 @@ export const Profile = () => {
       console.error('Failed to fetch learning stats:', error)
       // Keep default stats if API fails
     }
+  }
+
+  const fetchPersonalTopics = async () => {
+    try {
+      const response = await api.get('/vocabulary-learning/user/personal-topics')
+      setPersonalTopics(response.data.topics || response.data)
+    } catch (error) {
+      console.error('Failed to fetch personal topics:', error)
+    }
+  }
+
+  const fetchUserVocabularies = async () => {
+    try {
+      const response = await api.get('/vocabulary-learning/user/vocabularies')
+      setUserVocabularies(response.data.vocabularies || response.data)
+    } catch (error) {
+      console.error('Failed to fetch user vocabularies:', error)
+    }
+  }
+
+  const startTopicQuiz = (topicId: string, topicName: string) => {
+    setSelectedTopicForQuiz({ id: topicId, name: topicName })
+    setShowTopicQuiz(true)
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -349,11 +407,122 @@ export const Profile = () => {
               </CardContent>
             </Card>
 
+            {/* Personal Topics and Vocabularies */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-blue-600" />
+                  Chủ đề và từ vựng của bạn
+                </CardTitle>
+                <CardDescription>Quản lý chủ đề cá nhân và từ vựng đang học</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {personalTopics.length > 0 ? (
+                  <div className="space-y-6">
+                {/* Topic Filter */}
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant={selectedTopic === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedTopic('all')}
+                    >
+                      Tất cả
+                    </Button>
+                    {personalTopics.map((topic) => (
+                      <div key={topic._id} className="flex items-center gap-2">
+                        <Button
+                          variant={selectedTopic === topic._id ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setSelectedTopic(topic._id)}
+                        >
+                          {topic.name} ({topic.vocabularyCount})
+                        </Button>
+                        {topic.vocabularyCount > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => startTopicQuiz(topic._id, topic.name)}
+                            className="text-xs"
+                          >
+                            <RotateCcw className="w-3 h-3 mr-1" />
+                            Khảo bài
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    💡 Click vào chủ đề để lọc, click "Khảo bài" để kiểm tra từ vựng đã học
+                  </div>
+                </div>
+
+                    {/* Vocabularies List */}
+                    <div className="space-y-3">
+                      {userVocabularies
+                        .filter(vocab => selectedTopic === 'all' || vocab.personalTopicId._id === selectedTopic)
+                        .map((userVocab) => (
+                          <div key={userVocab._id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-medium">{userVocab.vocabularyId.word}</h4>
+                                <Badge variant="outline" className="text-xs">
+                                  Cấp {userVocab.vocabularyId.level}
+                                </Badge>
+                                <Badge 
+                                  variant={userVocab.status === 'learned' ? 'default' : userVocab.status === 'studying' ? 'secondary' : 'outline'}
+                                  className="text-xs"
+                                >
+                                  {userVocab.status === 'learned' ? 'Đã học' : userVocab.status === 'studying' ? 'Đang học' : 'Bỏ qua'}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-1">
+                                {userVocab.vocabularyId.pronunciation} - {userVocab.vocabularyId.meaning}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Chủ đề: {userVocab.personalTopicId.name}
+                              </p>
+                            </div>
+                            {userVocab.vocabularyId.audioUrl && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  const audio = new Audio(userVocab.vocabularyId.audioUrl!)
+                                  audio.play().catch(console.error)
+                                }}
+                              >
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.617 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.617l3.766-3.793a1 1 0 011.617.793zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                                </svg>
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+
+                    {userVocabularies.filter(vocab => selectedTopic === 'all' || vocab.personalTopicId._id === selectedTopic).length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <p>Chưa có từ vựng nào trong chủ đề này</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>Bạn chưa tạo chủ đề nào</p>
+                    <p className="text-sm">Hãy vào phần "Học từ vựng" để tạo chủ đề đầu tiên</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Learning Summary */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-purple-600" />
+                  <TrendingUp className="h-5 w-5 text-purple-600" />
                   Tóm tắt học tập
                 </CardTitle>
               </CardHeader>
@@ -379,6 +548,19 @@ export const Profile = () => {
             </Card>
           </div>
         </div>
+
+        {/* Topic Quiz */}
+        {selectedTopicForQuiz && (
+          <TopicQuiz
+            topicId={selectedTopicForQuiz.id}
+            topicName={selectedTopicForQuiz.name}
+            isOpen={showTopicQuiz}
+            onClose={() => {
+              setShowTopicQuiz(false)
+              setSelectedTopicForQuiz(null)
+            }}
+          />
+        )}
       </div>
     </div>
   )

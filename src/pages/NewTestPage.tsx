@@ -25,11 +25,13 @@ import {
   Diamond,
   Flame,
   Shield,
+  Flag,
   ChevronRight
 } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
+import { ReportErrorDialog } from '../components/ReportErrorDialog'
 
 interface Question {
   _id: string
@@ -65,10 +67,22 @@ export const NewTestPage = () => {
   const [testCompleted, setTestCompleted] = useState(false)
   const [testReport, setTestReport] = useState<TestReport | null>(null)
   const [userLevel, setUserLevel] = useState(1)
+  const [showReportDialog, setShowReportDialog] = useState(false)
+  // Immediate mode states
+  const [activeTab, _setActiveTab] = useState<'test' | 'history'>('test')
+  const [showResult, setShowResult] = useState(false)
+  const [lastCorrect, setLastCorrect] = useState<boolean | null>(null)
+  const [totalAnswered, setTotalAnswered] = useState(0)
+  const [totalCorrect, setTotalCorrect] = useState(0)
+  const [totalWrong, setTotalWrong] = useState(0)
+  const [earnedXp, setEarnedXp] = useState(0)
+  const [earnedCoins, setEarnedCoins] = useState(0)
+  const [, setSessions] = useState<Array<{ id: string; startedAt: number; total: number; correct: number; wrong: number; xp: number; coins: number; items: Array<{question: string; correct: boolean; explanation?: string}> }>>([])
 
   useEffect(() => {
     fetchUserLevel()
-  }, [])
+    try { const raw = localStorage.getItem('newtest.sessions'); if (raw) setSessions(JSON.parse(raw)) } catch {}
+  }, [setSessions])
 
   const fetchUserLevel = async () => {
     try {
@@ -97,6 +111,11 @@ export const NewTestPage = () => {
       setTestStarted(true)
       setCurrentIndex(0)
       setAnswers({})
+      setShowResult(false)
+      setLastCorrect(null)
+      setTotalAnswered(0); setTotalCorrect(0); setTotalWrong(0); setEarnedXp(0); setEarnedCoins(0)
+      const newSession = { id: `${Date.now()}`, startedAt: Date.now(), total: 0, correct: 0, wrong: 0, xp: 0, coins: 0, items: [] as Array<{question: string; correct: boolean; explanation?: string}> }
+      setSessions(prev => { const updated = [newSession, ...prev]; localStorage.setItem('newtest.sessions', JSON.stringify(updated)); return updated })
       
       toast.success('Bắt đầu làm bài test!')
     } catch (error: any) {
@@ -142,8 +161,28 @@ export const NewTestPage = () => {
   }
 
   const handleNextQuestion = () => {
+    setShowResult(false)
+    setLastCorrect(null)
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1)
+    } else {
+      // Unlimited: fetch more and continue
+      api.get(`/tests/questions/random?level=${userLevel}`).then(res => {
+        const more = res.data.questions || []
+        const prev = questions[questions.length - 1]
+        const isSameSingle = more.length === 1 && questions.length === 1 && prev && more[0]?._id === (prev as any)?._id
+        if (more.length > 0 && !isSameSingle) {
+          // Start a fresh batch to avoid repeating the same question
+          setQuestions(more)
+          setCurrentIndex(0)
+          setAnswers({})
+          setShowResult(false)
+        } else {
+          toast('Hết câu hỏi mới phù hợp')
+          // Stop the test gracefully to avoid looping on the same question
+          setTestStarted(false)
+        }
+      }).catch(() => toast.error('Không tải được thêm câu hỏi'))
     }
   }
 
@@ -153,28 +192,55 @@ export const NewTestPage = () => {
     }
   }
 
-  const submitTest = async () => {
-    try {
-      setLoading(true)
-      
-      const questionIds = questions.map(q => q._id)
-      const answerArray = questions.map((_, index) => answers[index] || null)
-      
-      const response = await api.post('/tests/submit', {
-        answers: answerArray,
-        questionIds
-      })
-      
-      setTestReport(response.data.report)
-      setTestCompleted(true)
-      
-      toast.success(`Hoàn thành test! Điểm: ${response.data.report.score}%`)
-    } catch (error: any) {
-      console.error('Error submitting test:', error)
-      toast.error(error.response?.data?.message || 'Không thể nộp test')
-    } finally {
-      setLoading(false)
+  // Deprecated batch submit kept for compatibility; no longer used in immediate mode
+
+  const checkCurrentAnswer = () => {
+    const q = questions[currentIndex]
+    const userAns = answers[currentIndex]
+    if (!q) return
+    // Determine correctness based on question type
+    let isCorrect = false
+    if (q.questionType === 'multiple-choice' || q.questionType === 'reading-comprehension') {
+      if (Array.isArray(q.correctAnswer)) {
+        const a = Array.isArray(userAns) ? [...userAns].sort() : []
+        const b = [...q.correctAnswer].sort()
+        isCorrect = a.length === b.length && a.every((v, i) => v === b[i])
+      } else {
+        isCorrect = Number(userAns) === Number(q.correctAnswer)
+      }
+    } else if (q.questionType === 'fill-blank') {
+      const ca = typeof q.correctAnswer === 'string' ? q.correctAnswer : ''
+      isCorrect = String(userAns || '').trim().toLowerCase() === ca.trim().toLowerCase()
+    } else if (q.questionType === 'sentence-order') {
+      const a = Array.isArray(userAns) ? userAns : []
+      const b = Array.isArray(q.correctAnswer) ? q.correctAnswer : []
+      isCorrect = a.length === b.length && a.every((v, i) => v === b[i])
     }
+    setShowResult(true)
+    setLastCorrect(isCorrect)
+    setTotalAnswered(v => v + 1)
+    if (isCorrect) {
+      setTotalCorrect(v => v + 1)
+      setEarnedXp(v => v + 100)
+      setEarnedCoins(v => v + 100)
+      toast.success('Chính xác! +100 XP, +100 xu')
+    } else {
+      setTotalWrong(v => v + 1)
+      toast.error('Chưa chính xác')
+    }
+    setSessions(prev => {
+      if (prev.length === 0) return prev
+      const [head, ...tail] = prev
+      head.total += 1
+      head.correct += isCorrect ? 1 : 0
+      head.wrong += isCorrect ? 0 : 1
+      head.xp += isCorrect ? 100 : 0
+      head.coins += isCorrect ? 100 : 0
+      head.items.push({ question: q.question, correct: isCorrect, explanation: q.explanation })
+      const updated = [head, ...tail]
+      localStorage.setItem('newtest.sessions', JSON.stringify(updated))
+      return updated
+    })
   }
 
   const resetTest = () => {
@@ -433,7 +499,7 @@ export const NewTestPage = () => {
     )
   }
 
-  if (testStarted && questions.length > 0) {
+  if (activeTab === 'test' && testStarted && questions.length > 0) {
     const currentQuestion = questions[currentIndex]
     const progress = ((currentIndex + 1) / questions.length) * 100
 
@@ -502,6 +568,12 @@ export const NewTestPage = () => {
                       </div>
                     </div>
                   </div>
+                  <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                    <div className="px-3 py-2 bg-white rounded">Đã làm: <span className="font-semibold">{totalAnswered}</span></div>
+                    <div className="px-3 py-2 bg-green-50 text-green-700 rounded">Đúng: <span className="font-semibold">{totalCorrect}</span></div>
+                    <div className="px-3 py-2 bg-red-50 text-red-700 rounded">Sai: <span className="font-semibold">{totalWrong}</span></div>
+                    <div className="px-3 py-2 bg-yellow-50 text-yellow-700 rounded">XP: <span className="font-semibold">{earnedXp}</span> • Xu: <span className="font-semibold">{earnedCoins}</span></div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -509,18 +581,29 @@ export const NewTestPage = () => {
             {/* Enhanced Question Card */}
             <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
               <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-3 text-2xl">
-                  <div className="p-2 bg-white/20 rounded-full">
-                    <Brain className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <span>Câu hỏi {currentIndex + 1}</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <BookOpen className="h-4 w-4 text-purple-200" />
-                      <span className="text-sm text-purple-100">Kiểm tra kiến thức</span>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3 text-2xl">
+                    <div className="p-2 bg-white/20 rounded-full">
+                      <Brain className="h-6 w-6" />
                     </div>
-                  </div>
-                </CardTitle>
+                    <div>
+                      <span>Câu hỏi {currentIndex + 1}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <BookOpen className="h-4 w-4 text-purple-200" />
+                        <span className="text-sm text-purple-100">Kiểm tra kiến thức</span>
+                      </div>
+                    </div>
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowReportDialog(true)}
+                    className="bg-white/20 border-white/30 text-white hover:bg-white/30 hover:text-white"
+                  >
+                    <Flag className="h-4 w-4 mr-1" />
+                    Báo lỗi
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="p-8 space-y-6">
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-l-4 border-purple-400">
@@ -530,7 +613,7 @@ export const NewTestPage = () => {
                   </div>
                 </div>
               
-                {/* Enhanced Multiple Choice */}
+                {/* Enhanced Multiple Choice with per-option check icon when selected & showResult */}
                 {currentQuestion.questionType === 'multiple-choice' && currentQuestion.options && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 mb-4">
@@ -546,6 +629,9 @@ export const NewTestPage = () => {
                       const currentAnswer = answers[currentIndex] || []
                       const isSelected = Array.isArray(currentAnswer) ? currentAnswer.includes(index) : currentAnswer === index
                       
+                      const isCorrect = Array.isArray(currentQuestion.correctAnswer)
+                        ? currentQuestion.correctAnswer.includes(index)
+                        : Number(currentQuestion.correctAnswer) === index
                       return (
                         <Button
                           key={index}
@@ -566,8 +652,12 @@ export const NewTestPage = () => {
                               {String.fromCharCode(65 + index)}
                             </div>
                             <span className="text-base">{option}</span>
-                            {isSelected && (
-                              <CheckCircle className="h-5 w-5 ml-auto text-white" />
+                            {showResult && (
+                              isCorrect ? (
+                                <CheckCircle className="h-5 w-5 ml-auto text-white" />
+                              ) : isSelected ? (
+                                <XCircle className="h-5 w-5 ml-auto text-white" />
+                              ) : null
                             )}
                           </div>
                         </Button>
@@ -673,6 +763,14 @@ export const NewTestPage = () => {
                   </div>
                 )}
 
+                {showResult && (
+                  <div className={`p-4 rounded border ${lastCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="text-sm font-semibold">{lastCorrect ? 'Đúng! +100 XP, +100 xu' : 'Sai. Hãy thử câu tiếp theo.'}</div>
+                    {currentQuestion.explanation && (
+                      <div className="mt-1 text-sm text-gray-700"><strong>Giải thích:</strong> {currentQuestion.explanation}</div>
+                    )}
+                  </div>
+                )}
                 {/* Enhanced Navigation */}
                 <div className="flex justify-between gap-4 pt-6 border-t-2 border-purple-200">
                   <Button
@@ -686,26 +784,16 @@ export const NewTestPage = () => {
                   </Button>
                   
                   <div className="flex gap-4">
-                    <Button
-                      onClick={submitTest}
-                      disabled={loading}
-                      className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                          Đang nộp...
-                        </>
-                      ) : (
-                        <>
-                          <Rocket className="mr-3 h-5 w-5" />
-                          🚀 Nộp bài
-                          <Sparkles className="ml-3 h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
-                    
-                    {currentIndex < questions.length - 1 && (
+                    {!showResult ? (
+                      <Button 
+                        onClick={checkCurrentAnswer}
+                        className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                      >
+                        <Rocket className="mr-3 h-5 w-5" />
+                        Kiểm tra
+                        <Sparkles className="ml-3 h-4 w-4" />
+                      </Button>
+                    ) : (
                       <Button 
                         onClick={handleNextQuestion}
                         className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
@@ -721,6 +809,14 @@ export const NewTestPage = () => {
             </Card>
           </div>
         </div>
+      {/* Report dialog for current question */}
+      <ReportErrorDialog
+        isOpen={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        itemType="question"
+        itemId={(questions[currentIndex] as any)?._id || ''}
+        itemContent={(questions[currentIndex] as any)?.question || ''}
+      />
       </div>
     )
   }

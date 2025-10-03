@@ -37,13 +37,18 @@ interface CoinPurchase {
   createdAt: string
 }
 
-interface PaymentConfig {
-  _id: string
+interface PaymentAccountConfig {
   qrCodeImage: string
   exchangeRate: number
   bankAccount: string
   bankName: string
   accountHolder: string
+}
+
+interface PaymentConfig {
+  _id: string
+  tw: PaymentAccountConfig
+  vn: PaymentAccountConfig
   isActive: boolean
 }
 
@@ -67,6 +72,7 @@ export const CoinPurchase = () => {
   const [bankAccount, setBankAccount] = useState('')
   const [transactionId, setTransactionId] = useState('')
   const [receiptImage, setReceiptImage] = useState('')
+  const [currency, setCurrency] = useState<'TWD' | 'VND'>('TWD')
 
   useEffect(() => {
     if (activeTab === 'history') {
@@ -121,7 +127,8 @@ export const CoinPurchase = () => {
         amount: parseInt(amount),
         bankAccount: bankAccount || undefined,
         transactionId: transactionId || undefined,
-        receiptImage: receiptImage || undefined
+        receiptImage: receiptImage || undefined,
+        currency
       })
 
       toast.success('Yêu cầu mua xu đã được gửi! Vui lòng chờ admin duyệt.')
@@ -237,7 +244,8 @@ export const CoinPurchase = () => {
 
   const calculateCoins = (amount: number) => {
     if (!paymentConfig) return 0
-    return Math.floor(amount * paymentConfig.exchangeRate)
+    const cfg = currency === 'VND' ? paymentConfig.vn : paymentConfig.tw
+    return Math.floor(amount * cfg.exchangeRate)
   }
 
   return (
@@ -295,34 +303,62 @@ export const CoinPurchase = () => {
                 {/* Payment Info */}
                 {paymentConfig && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <h3 className="font-semibold text-blue-900 mb-3">Thông tin thanh toán</h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-blue-900">Thông tin thanh toán</h3>
+                      <div className="flex items-center gap-2">
+                        <Label>Chọn quốc gia</Label>
+                        <Select value={currency} onValueChange={(v: any) => setCurrency(v)}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="TWD">Đài Loan (TWD)</SelectItem>
+                            <SelectItem value="VND">Việt Nam (VND)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(() => {
+                        const account = currency === 'VND' ? paymentConfig?.vn : paymentConfig?.tw
+                        if (!account) {
+                          return (
+                            <div className="md:col-span-2 text-sm text-red-600">
+                              Không có cấu hình tài khoản cho {currency}. Vui lòng thử lại sau.
+                            </div>
+                          )
+                        }
+                        return (
+                          <>
                       <div>
                         <p className="text-sm text-blue-700 mb-2">
-                          <strong>Ngân hàng:</strong> {paymentConfig.bankName}
+                          <strong>Ngân hàng:</strong> {account.bankName}
                         </p>
                         <p className="text-sm text-blue-700 mb-2">
-                          <strong>Số tài khoản:</strong> {paymentConfig.bankAccount}
+                          <strong>Số tài khoản:</strong> {account.bankAccount}
                         </p>
                         <p className="text-sm text-blue-700">
-                          <strong>Chủ tài khoản:</strong> {paymentConfig.accountHolder}
+                          <strong>Chủ tài khoản:</strong> {account.accountHolder}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-blue-700 mb-2">Quét mã QR để chuyển khoản</p>
                         <img 
-                          src={paymentConfig.qrCodeImage} 
+                          src={account.qrCodeImage} 
                           alt="QR Code" 
                           className="w-32 h-32 mx-auto border border-gray-300 rounded"
                         />
                       </div>
+                          </>
+                        )
+                      })()}
                     </div>
                   </div>
                 )}
 
                 {/* Amount Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="amount">Số tiền (TWD)</Label>
+                  <Label htmlFor="amount">Số tiền ({currency})</Label>
                   <div className="relative">
                     <Input
                       id="amount"
@@ -333,16 +369,21 @@ export const CoinPurchase = () => {
                       min="1"
                       required
                     />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
-                      TWD
-                    </div>
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">{currency}</div>
                   </div>
                   {amount && parseInt(amount) >= 1 && (
                     <p className="text-sm text-green-600">
                       Bạn sẽ nhận được: <strong>{calculateCoins(parseInt(amount))} xu</strong>
                       {paymentConfig && (
                         <span className="text-gray-500 ml-2">
-                          (Tỷ lệ: 1 TWD = {paymentConfig.exchangeRate} xu)
+                          {(() => {
+                            const account = currency === 'VND' ? paymentConfig?.vn : paymentConfig?.tw
+                            return account ? (
+                              currency === 'VND' 
+                                ? `(Tỷ lệ: 1 VND = ${account.exchangeRate} xu)`
+                                : `(Tỷ lệ: 1 TWD = ${account.exchangeRate} xu)`
+                            ) : ''
+                          })()}
                         </span>
                       )}
                     </p>
@@ -540,9 +581,6 @@ export const CoinPurchase = () => {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Ngày tạo
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Thao tác
-                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -580,27 +618,34 @@ export const CoinPurchase = () => {
                               }`}>
                                 {getStatusText(purchase.status)}
                               </span>
+                              {purchase.adminNotes && (
+                                <div className="mt-1 text-xs text-gray-600">
+                                  Ghi chú admin: {purchase.adminNotes}
+                                </div>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date(purchase.createdAt).toLocaleDateString('vi-VN', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              {purchase.status === 'pending' && purchase.canEdit && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleUpdatePurchase(purchase._id, 'cancel')}
-                                  className="text-red-600 border-red-200 hover:bg-red-50"
-                                >
-                                  Hủy
-                                </Button>
-                              )}
+                              <div className="flex items-center gap-3">
+                                <span>
+                                  {new Date(purchase.createdAt).toLocaleDateString('vi-VN', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                                {purchase.status === 'pending' && purchase.canEdit && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUpdatePurchase(purchase._id, 'cancel')}
+                                    className="text-red-600 border-red-200 hover:bg-red-50"
+                                  >
+                                    Hủy
+                                  </Button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
