@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -129,6 +129,8 @@ export const AdminVocabulary = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [vocabularyToDelete, setVocabularyToDelete] = useState<Vocabulary | null>(null)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     fetchVocabularies()
@@ -207,6 +209,47 @@ export const AdminVocabulary = () => {
       setLevels(response.data.levels || response.data || [])
     } catch (error) {
       console.error('Error fetching levels:', error)
+    }
+  }
+
+  const downloadTemplate = async () => {
+    try {
+      const res = await api.get('/admin/vocabularies/template', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'vocabularies_template.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch (e) {
+      toast.error('Tải template thất bại')
+    }
+  }
+
+  const openImportDialog = () => {
+    fileInputRef.current?.click()
+  }
+
+  const onFileSelected = async (ev: React.ChangeEvent<HTMLInputElement>) => {
+    const file = ev.target.files?.[0]
+    if (!file) return
+    try {
+      setImporting(true)
+      const form = new FormData()
+      form.append('file', file)
+      const res = await api.post('/admin/vocabularies/import', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const { created = 0, updated = 0, errors = [] } = res.data || {}
+      toast.success(`Import xong: +${created} mới, cập nhật ${updated}${errors.length ? `, lỗi ${errors.length}` : ''}`)
+      if (errors.length > 0) {
+        console.warn('Import errors:', errors)
+      }
+      fetchVocabularies()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Import thất bại')
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -546,6 +589,13 @@ export const AdminVocabulary = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Quản lý từ vựng</h1>
           <p className="text-gray-600">Quản lý từ vựng và nội dung học tập</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={downloadTemplate}>Tải template</Button>
+          <Button variant="outline" onClick={openImportDialog} disabled={importing}>
+            {importing ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Đang import...</>) : 'Import Excel'}
+          </Button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onFileSelected} />
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>

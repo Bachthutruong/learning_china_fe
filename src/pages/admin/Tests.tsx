@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -43,6 +43,8 @@ export const AdminTests = () => {
   const [formLoading, setFormLoading] = useState<boolean>(false)
   const [editing, setEditing] = useState<QuestionItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [importing, setImporting] = useState<boolean>(false)
+  const fileRef = useRef<HTMLInputElement | null>(null)
   const [levels, setLevels] = useState<Array<{ _id: string; number: number; name: string }>>([])
   const [form, setForm] = useState<QuestionFormData>({
     level: 1,
@@ -93,6 +95,41 @@ export const AdminTests = () => {
   }
 
   const openCreate = () => { resetForm(); setShowCreate(true) }
+
+  const downloadTemplate = async () => {
+    try {
+      const res = await api.get('/questions/template', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'questions_template.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch {
+      toast.error('Tải template thất bại')
+    }
+  }
+
+  const triggerImport = () => fileRef.current?.click()
+  const onImportSelected = async (ev: React.ChangeEvent<HTMLInputElement>) => {
+    const file = ev.target.files?.[0]
+    if (!file) return
+    try {
+      setImporting(true)
+      const form = new FormData()
+      form.append('file', file)
+      const res = await api.post('/questions/import', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const { created = 0, updated = 0, errors = [] } = res.data || {}
+      toast.success(`Import xong: +${created} mới, cập nhật ${updated}${errors.length ? `, lỗi ${errors.length}` : ''}`)
+      fetchQuestions()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Import thất bại')
+    } finally {
+      setImporting(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   const openEdit = (q: QuestionItem) => {
     setEditing(q)
@@ -366,9 +403,16 @@ export const AdminTests = () => {
           <h1 className="text-3xl font-bold text-gray-900">Ngân hàng câu hỏi</h1>
           <p className="text-gray-600">Quản lý câu hỏi theo cấp độ</p>
         </div>
-        <Button onClick={openCreate} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadTemplate}>Tải template</Button>
+          <Button variant="outline" onClick={triggerImport} disabled={importing}>
+            {importing ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang import...</>) : 'Import Excel'}
+          </Button>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onImportSelected} />
+          <Button onClick={openCreate} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
           <Plus className="mr-2 h-4 w-4" /> Thêm câu hỏi
-        </Button>
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
