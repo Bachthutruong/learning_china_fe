@@ -26,10 +26,12 @@ import toast from 'react-hot-toast'
 interface Vocabulary {
   _id: string
   word: string
-  pronunciation: string
+  pinyin: string
+  zhuyin?: string
   meaning: string
   level: number
   topics: string[]
+  imageUrl?: string
   audio?: string
   examples: string[]
   synonyms: string[]
@@ -452,11 +454,29 @@ export const Vocabulary = () => {
                     <div className="text-6xl font-bold text-gray-900 mb-4">
                       {currentWord.word}
                     </div>
+                    
+                    {/* Image */}
+                    {currentWord.imageUrl && (
+                      <div className="flex justify-center mb-4">
+                        <img 
+                          src={currentWord.imageUrl} 
+                          alt={currentWord.word}
+                          className="max-w-full h-48 object-contain rounded-lg border border-gray-200"
+                        />
+                      </div>
+                    )}
 
                     {/* Pinyin */}
                     <div className="text-2xl text-blue-600 font-medium">
-                      {currentWord.pronunciation}
+                      {currentWord.pinyin}
                     </div>
+                    
+                    {/* Zhuyin */}
+                    {currentWord.zhuyin && (
+                      <div className="text-lg text-gray-600">
+                        {currentWord.zhuyin}
+                      </div>
+                    )}
 
                     {/* Audio Button */}
                     {currentWord.audio && (
@@ -671,7 +691,7 @@ export const Vocabulary = () => {
                             <div>
                               <h5 className="font-semibold">{vocab.word}</h5>
                               <p className="text-sm text-gray-600">{vocab.meaning}</p>
-                              <p className="text-xs text-gray-500">{vocab.pronunciation}</p>
+                              <p className="text-xs text-gray-500">{vocab.pinyin}</p>
                             </div>
                             <input
                               type="checkbox"

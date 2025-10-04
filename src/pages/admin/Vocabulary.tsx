@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -13,11 +13,15 @@ import {
   Edit, 
   Trash2, 
   Search, 
-  
+  Download,
+  Upload,
   Play,
   Pause,
   Loader2,
-  X
+  X,
+  CheckCircle,
+  AlertCircle,
+  FileSpreadsheet
 } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
@@ -25,7 +29,8 @@ import toast from 'react-hot-toast'
 interface Vocabulary {
   _id: string
   word: string
-  pronunciation: string
+  pinyin: string
+  zhuyin?: string
   meaning: string
   partOfSpeech: string
   level: number
@@ -33,6 +38,7 @@ interface Vocabulary {
   examples: string[]
   synonyms: string[]
   antonyms: string[]
+  imageUrl?: string
   audio?: string
   audioUrl?: string
   questions?: QuizQuestion[]
@@ -69,7 +75,8 @@ interface QuizQuestion {
 
 interface VocabularyFormData {
   word: string
-  pronunciation: string
+  pinyin: string
+  zhuyin: string
   meaning: string
   partOfSpeech: string
   level: number
@@ -77,6 +84,7 @@ interface VocabularyFormData {
   examples: string[]
   synonyms: string[]
   antonyms: string[]
+  image?: File
   audio?: File
   questions: QuizQuestion[]
 }
@@ -96,7 +104,8 @@ export const AdminVocabulary = () => {
   const [audioLoading, setAudioLoading] = useState<string | null>(null)
   const [formData, setFormData] = useState<VocabularyFormData>({
     word: '',
-    pronunciation: '',
+    pinyin: '',
+    zhuyin: '',
     meaning: '',
     partOfSpeech: '',
     level: 1,
@@ -129,6 +138,17 @@ export const AdminVocabulary = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [vocabularyToDelete, setVocabularyToDelete] = useState<Vocabulary | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importProgress, setImportProgress] = useState<{
+    total: number
+    processed: number
+    created: number
+    updated: number
+    errors: Array<{ row: number; message: string }>
+    createdTopics?: string[]
+  } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     fetchVocabularies()
@@ -210,10 +230,79 @@ export const AdminVocabulary = () => {
     }
   }
 
+  const downloadTemplate = async () => {
+    try {
+      const res = await api.get('/admin/vocabularies/template', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'vocabularies_template.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch (e) {
+      toast.error('Tải template thất bại')
+    }
+  }
+
+  const openImportDialog = () => {
+    setShowImportDialog(true)
+    setImportProgress(null)
+  }
+
+  const onFileSelected = async (ev: React.ChangeEvent<HTMLInputElement>) => {
+    const file = ev.target.files?.[0]
+    if (!file) return
+    
+    setImporting(true)
+    setImportProgress({ total: 0, processed: 0, created: 0, updated: 0, errors: [] })
+    
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setImportProgress(prev => prev ? { ...prev, processed: Math.min(prev.processed + 1, prev.total) } : null)
+      }, 100)
+      
+      const res = await api.post('/admin/vocabularies/import', form, { 
+        headers: { 'Content-Type': 'multipart/form-data' } 
+      })
+      
+      clearInterval(progressInterval)
+      
+      const { created = 0, updated = 0, errors = [], createdTopics = [] } = res.data || {}
+      
+      setImportProgress({
+        total: created + updated + errors.length,
+        processed: created + updated + errors.length,
+        created,
+        updated,
+        errors,
+        createdTopics
+      })
+      
+      if (errors.length === 0) {
+        toast.success(`Import thành công: +${created} mới, cập nhật ${updated}${createdTopics.length ? `, tạo ${createdTopics.length} chủ đề mới` : ''}`)
+        fetchVocabularies()
+        fetchTopics() // Refresh topics list
+      } else {
+        toast.error(`Import hoàn tất với ${errors.length} lỗi: +${created} mới, cập nhật ${updated}`)
+      }
+    } catch (e: any) {
+      setImportProgress(prev => prev ? { ...prev, errors: [{ row: 0, message: e?.response?.data?.message || 'Import thất bại' }] } : null)
+      toast.error(e?.response?.data?.message || 'Import thất bại')
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const handleCreateVocabulary = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.word || !formData.pronunciation || !formData.meaning) {
+    if (!formData.word || !formData.pinyin || !formData.meaning) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc')
       return
     }
@@ -222,7 +311,8 @@ export const AdminVocabulary = () => {
       setFormLoading(true)
       const formDataToSend = new FormData()
       formDataToSend.append('word', formData.word)
-      formDataToSend.append('pronunciation', formData.pronunciation)
+      formDataToSend.append('pinyin', formData.pinyin)
+      formDataToSend.append('zhuyin', formData.zhuyin)
       formDataToSend.append('meaning', formData.meaning)
       formDataToSend.append('partOfSpeech', formData.partOfSpeech)
       formDataToSend.append('level', formData.level.toString())
@@ -232,6 +322,9 @@ export const AdminVocabulary = () => {
       formDataToSend.append('antonyms', JSON.stringify(formData.antonyms))
       formDataToSend.append('questions', JSON.stringify(formData.questions))
       
+      if (formData.image) {
+        formDataToSend.append('image', formData.image)
+      }
       if (formData.audio) {
         formDataToSend.append('audio', formData.audio)
       }
@@ -268,7 +361,8 @@ export const AdminVocabulary = () => {
       setFormLoading(true)
       const formDataToSend = new FormData()
       formDataToSend.append('word', formData.word)
-      formDataToSend.append('pronunciation', formData.pronunciation)
+      formDataToSend.append('pinyin', formData.pinyin)
+      formDataToSend.append('zhuyin', formData.zhuyin)
       formDataToSend.append('meaning', formData.meaning)
       formDataToSend.append('partOfSpeech', formData.partOfSpeech)
       formDataToSend.append('level', formData.level.toString())
@@ -278,6 +372,9 @@ export const AdminVocabulary = () => {
       formDataToSend.append('antonyms', JSON.stringify(formData.antonyms))
       formDataToSend.append('questions', JSON.stringify(formData.questions))
       
+      if (formData.image) {
+        formDataToSend.append('image', formData.image)
+      }
       if (formData.audio) {
         formDataToSend.append('audio', formData.audio)
       }
@@ -361,7 +458,8 @@ export const AdminVocabulary = () => {
   const resetForm = () => {
     setFormData({
       word: '',
-      pronunciation: '',
+      pinyin: '',
+      zhuyin: '',
       meaning: '',
       partOfSpeech: '',
       level: 1,
@@ -384,7 +482,8 @@ export const AdminVocabulary = () => {
     setEditingVocabulary(vocabulary)
     setFormData({
       word: vocabulary.word,
-      pronunciation: vocabulary.pronunciation,
+      pinyin: vocabulary.pinyin,
+      zhuyin: vocabulary.zhuyin || '',
       meaning: vocabulary.meaning,
       partOfSpeech: vocabulary.partOfSpeech,
       level: vocabulary.level,
@@ -547,6 +646,17 @@ export const AdminVocabulary = () => {
           <h1 className="text-3xl font-bold text-gray-900">Quản lý từ vựng</h1>
           <p className="text-gray-600">Quản lý từ vựng và nội dung học tập</p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={downloadTemplate}>
+            <Download className="mr-2 h-4 w-4" />
+            Tải template
+          </Button>
+          <Button variant="outline" onClick={openImportDialog} disabled={importing}>
+            <Upload className="mr-2 h-4 w-4" />
+            {importing ? 'Đang import...' : 'Import Excel'}
+          </Button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onFileSelected} />
+        </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
@@ -574,13 +684,22 @@ export const AdminVocabulary = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pronunciation">Phiên âm *</Label>
+                  <Label htmlFor="pinyin">Phiên âm (Pinyin) *</Label>
                   <Input
-                    id="pronunciation"
-                    value={formData.pronunciation}
-                    onChange={(e) => setFormData(prev => ({ ...prev, pronunciation: e.target.value }))}
+                    id="pinyin"
+                    value={formData.pinyin}
+                    onChange={(e) => setFormData(prev => ({ ...prev, pinyin: e.target.value }))}
                     placeholder="nǐ hǎo"
                     required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="zhuyin">Chú âm (Zhuyin)</Label>
+                  <Input
+                    id="zhuyin"
+                    value={formData.zhuyin}
+                    onChange={(e) => setFormData(prev => ({ ...prev, zhuyin: e.target.value }))}
+                    placeholder="ㄋㄧˇ ㄏㄠˇ"
                   />
                 </div>
               </div>
@@ -660,6 +779,26 @@ export const AdminVocabulary = () => {
                     </Button>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Hình ảnh</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setFormData(prev => ({ ...prev, image: file }))
+                    }
+                  }}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {formData.image && (
+                  <div className="text-sm text-green-600">
+                    Đã chọn: {formData.image.name}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -978,13 +1117,22 @@ export const AdminVocabulary = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-pronunciation">Phiên âm *</Label>
+                  <Label htmlFor="edit-pinyin">Phiên âm (Pinyin) *</Label>
                   <Input
-                    id="edit-pronunciation"
-                    value={formData.pronunciation}
-                    onChange={(e) => setFormData(prev => ({ ...prev, pronunciation: e.target.value }))}
+                    id="edit-pinyin"
+                    value={formData.pinyin}
+                    onChange={(e) => setFormData(prev => ({ ...prev, pinyin: e.target.value }))}
                     placeholder="nǐ hǎo"
                     required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-zhuyin">Chú âm (Zhuyin)</Label>
+                  <Input
+                    id="edit-zhuyin"
+                    value={formData.zhuyin}
+                    onChange={(e) => setFormData(prev => ({ ...prev, zhuyin: e.target.value }))}
+                    placeholder="ㄋㄧˇ ㄏㄠˇ"
                   />
                 </div>
               </div>
@@ -1064,6 +1212,31 @@ export const AdminVocabulary = () => {
                     </Button>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Hình ảnh mới (tùy chọn)</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setFormData(prev => ({ ...prev, image: file }))
+                    }
+                  }}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {editingVocabulary?.imageUrl && (
+                  <div className="text-sm text-gray-600">
+                    Hình ảnh hiện tại: <a href={editingVocabulary.imageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Xem hình ảnh</a>
+                  </div>
+                )}
+                {formData.image && (
+                  <div className="text-sm text-green-600">
+                    Đã chọn: {formData.image.name}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -1377,6 +1550,120 @@ export const AdminVocabulary = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Import Dialog */}
+        <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="h-5 w-5" />
+                Import từ vựng từ Excel
+              </DialogTitle>
+              <DialogDescription>
+                Tải lên file Excel để import nhiều từ vựng cùng lúc. Hệ thống sẽ tự động tạo chủ đề mới nếu chưa có.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {!importProgress ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Chọn file Excel để import</h3>
+                  <p className="text-gray-500 mb-4">
+                    Hỗ trợ file .xlsx, .xls. Tải template mẫu để xem định dạng.
+                  </p>
+                  <Button onClick={() => fileInputRef.current?.click()} disabled={importing}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Chọn file
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Tiến độ import</span>
+                      <span>{importProgress.processed}/{importProgress.total}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${importProgress.total > 0 ? (importProgress.processed / importProgress.total) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Results */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-green-600">{importProgress.created}</div>
+                      <div className="text-sm text-green-700">Tạo mới</div>
+                    </div>
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <CheckCircle className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-blue-600">{importProgress.updated}</div>
+                      <div className="text-sm text-blue-700">Cập nhật</div>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 rounded-lg">
+                      <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-red-600">{importProgress.errors.length}</div>
+                      <div className="text-sm text-red-700">Lỗi</div>
+                    </div>
+                  </div>
+
+                  {/* Created Topics */}
+                  {importProgress.createdTopics && importProgress.createdTopics.length > 0 && (
+                    <div className="p-4 bg-yellow-50 rounded-lg">
+                      <h4 className="font-medium text-yellow-800 mb-2">Chủ đề mới được tạo:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {importProgress.createdTopics.map((topic, index) => (
+                          <Badge key={index} variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            {topic}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Errors */}
+                  {importProgress.errors.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-red-800">Chi tiết lỗi:</h4>
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {importProgress.errors.map((error, index) => (
+                          <div key={index} className="text-sm text-red-700 bg-red-50 p-2 rounded">
+                            <span className="font-medium">Dòng {error.row}:</span> {error.message}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex justify-end space-x-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowImportDialog(false)
+                        setImportProgress(null)
+                        fetchVocabularies()
+                        fetchTopics()
+                      }}
+                    >
+                      Đóng
+                    </Button>
+                    {importProgress.errors.length > 0 && (
+                      <Button onClick={() => setImportProgress(null)}>
+                        Import lại
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogContent>
@@ -1506,7 +1793,7 @@ export const AdminVocabulary = () => {
                     {vocabulary.word}
                   </CardTitle>
                   <CardDescription className="text-lg text-blue-600">
-                    {vocabulary.pronunciation}
+                    {vocabulary.pinyin}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1674,7 +1961,10 @@ export const AdminVocabulary = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-lg font-semibold text-gray-900">{vocabulary.word}</div>
-                      <div className="text-sm text-blue-600">{vocabulary.pronunciation}</div>
+                      <div className="text-sm text-blue-600">{vocabulary.pinyin}</div>
+                      {vocabulary.zhuyin && (
+                        <div className="text-xs text-gray-500">{vocabulary.zhuyin}</div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">

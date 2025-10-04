@@ -14,7 +14,8 @@ import toast from 'react-hot-toast'
 interface Vocabulary {
   _id: string
   word: string
-  pronunciation: string
+  pinyin: string
+  zhuyin?: string
   meaning: string
   partOfSpeech: string
   level: number
@@ -22,6 +23,7 @@ interface Vocabulary {
   examples: string[]
   synonyms: string[]
   antonyms: string[]
+  imageUrl?: string
   audio?: string
   audioUrl?: string
   questions?: QuizQuestion[]

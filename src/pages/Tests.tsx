@@ -50,7 +50,7 @@ export const Tests = () => {
   // const { user } = useAuth()
   const [questions, setQuestions] = useState<QuestionItem[]>([])
   const [currentIndex, setCurrentIndex] = useState<number>(0)
-  const [selectedOption, setSelectedOption] = useState<number | null>(null)
+  const [selectedOption, setSelectedOption] = useState<number | string | number[] | null>(null)
   const [displayOptions, setDisplayOptions] = useState<Array<{ text: string; originalIndex: number }>>([])
   const [submitting, setSubmitting] = useState<boolean>(false)
   const [loading, setLoading] = useState(true)
@@ -152,7 +152,13 @@ export const Tests = () => {
   }, [currentQuestion])
 
   const submitCurrent = async () => {
-    if (!currentQuestion || currentQuestion.questionType !== 'multiple-choice' || selectedOption === null) return
+    if (!currentQuestion) return
+    
+    // Check if answer is provided based on question type
+    if (currentQuestion.questionType === 'multiple-choice' && selectedOption === null) return
+    if (currentQuestion.questionType === 'fill-blank' && (!selectedOption || (typeof selectedOption === 'string' && selectedOption.trim() === ''))) return
+    if (currentQuestion.questionType === 'reading-comprehension' && selectedOption === null) return
+    if (currentQuestion.questionType === 'sentence-order' && (!selectedOption || !Array.isArray(selectedOption) || selectedOption.length === 0)) return
     try {
       setSubmitting(true)
       const res = await api.post('/questions/submit', {
@@ -360,6 +366,115 @@ export const Tests = () => {
                         )}
                       </div>
                     </Button>
+                  ))}
+                </div>
+              )}
+
+              {/* Fill Blank Question */}
+              {currentQuestion.questionType === 'fill-blank' && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Target className="h-5 w-5 text-purple-500" />
+                    <span className="font-semibold text-purple-700">Điền từ vào chỗ trống:</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={typeof selectedOption === 'string' ? selectedOption : ''}
+                    onChange={(e) => setSelectedOption(e.target.value)}
+                    placeholder="Nhập đáp án của bạn..."
+                    className="w-full p-4 border-2 border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg"
+                  />
+                </div>
+              )}
+
+              {/* Reading Comprehension Question */}
+              {currentQuestion.questionType === 'reading-comprehension' && (
+                <div className="space-y-4">
+                  {/* Passage */}
+                  {currentQuestion.passage && (
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        <BookOpen className="h-5 w-5 text-blue-600" />
+                        <span className="font-semibold text-blue-700">Đoạn văn:</span>
+                      </div>
+                      <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        {currentQuestion.passage}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Question and Options */}
+                  {currentQuestion.options && currentQuestion.options.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Target className="h-5 w-5 text-purple-500" />
+                        <span className="font-semibold text-purple-700">Chọn đáp án đúng:</span>
+                      </div>
+                      {displayOptions.map((option, index) => (
+                        <Button
+                          key={index}
+                          variant={selectedOption === option.originalIndex ? 'default' : 'outline'}
+                          className={`w-full justify-start h-auto py-6 text-left transition-all duration-200 transform hover:scale-[1.02] ${
+                            selectedOption === option.originalIndex 
+                              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+                              : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-2 hover:border-purple-300'
+                          }`}
+                          onClick={() => setSelectedOption(option.originalIndex)}
+                        >
+                          <div className="flex items-center w-full">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 font-bold ${
+                              selectedOption === option.originalIndex 
+                                ? 'bg-white/20 text-white' 
+                                : 'bg-purple-100 text-purple-600'
+                            }`}>
+                              {String.fromCharCode(65 + index)}
+                            </div>
+                            <span className="text-base">{option.text}</span>
+                            {selectedOption === option.originalIndex && (
+                              <CheckCircle className="h-5 w-5 ml-auto text-white" />
+                            )}
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sentence Order Question */}
+              {currentQuestion.questionType === 'sentence-order' && currentQuestion.options && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Target className="h-5 w-5 text-purple-500" />
+                    <span className="font-semibold text-purple-700">Sắp xếp các câu theo thứ tự đúng:</span>
+                  </div>
+                  {displayOptions.map((option, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-[1.02] ${
+                        Array.isArray(selectedOption) && selectedOption.includes(option.originalIndex)
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500 shadow-lg'
+                          : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-purple-300'
+                      }`}
+                      onClick={() => {
+                        const currentAnswer = Array.isArray(selectedOption) ? selectedOption : []
+                        const newAnswer = currentAnswer.includes(option.originalIndex)
+                          ? currentAnswer.filter((i: number) => i !== option.originalIndex)
+                          : [...currentAnswer, option.originalIndex]
+                        setSelectedOption(newAnswer)
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                          Array.isArray(selectedOption) && selectedOption.includes(option.originalIndex)
+                            ? 'bg-white/20 text-white'
+                            : 'bg-purple-100 text-purple-600'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <span className="text-base">{option.text}</span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
