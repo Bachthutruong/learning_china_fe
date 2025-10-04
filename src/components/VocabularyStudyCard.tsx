@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { 
   Play, 
+  Pause,
   CheckCircle, 
   BookOpen, 
   ArrowLeft,
@@ -16,7 +17,8 @@ import { ReportErrorDialog } from './ReportErrorDialog'
 interface Vocabulary {
   _id: string
   word: string
-  pronunciation: string
+  pinyin: string
+  zhuyin?: string
   meaning: string
   partOfSpeech: string
   level: number
@@ -24,6 +26,7 @@ interface Vocabulary {
   examples: string[]
   synonyms: string[]
   antonyms: string[]
+  imageUrl?: string
   audio?: string
   audioUrl?: string
   questions?: QuizQuestion[]
@@ -57,17 +60,67 @@ export const VocabularyStudyCard = ({
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
   const [showReport, setShowReport] = useState(false)
+  
+  // Audio state
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const handlePlayAudio = async () => {
-    if (vocabulary.audioUrl) {
-      try {
-        const audio = new Audio(vocabulary.audioUrl)
-        await audio.play()
-      } catch (error) {
-        console.error('Error playing audio:', error)
+  // Audio control functions
+  const handlePlayPause = async () => {
+    if (!vocabulary.audioUrl) return
+
+    if (!audioRef.current) {
+      audioRef.current = new Audio(vocabulary.audioUrl)
+      audioRef.current.addEventListener('loadedmetadata', () => {
+        setDuration(audioRef.current?.duration || 0)
+      })
+      audioRef.current.addEventListener('timeupdate', () => {
+        setCurrentTime(audioRef.current?.currentTime || 0)
+      })
+      audioRef.current.addEventListener('ended', () => {
+        setIsPlaying(false)
+        setCurrentTime(0)
+      })
+    }
+
+    try {
+      if (isPlaying) {
+        audioRef.current.pause()
+        setIsPlaying(false)
+      } else {
+        await audioRef.current.play()
+        setIsPlaying(true)
       }
+    } catch (error) {
+      console.error('Error playing audio:', error)
     }
   }
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (audioRef.current) {
+      const newTime = parseFloat(e.target.value)
+      audioRef.current.currentTime = newTime
+      setCurrentTime(newTime)
+    }
+  }
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  // Cleanup audio when component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
 
   const handleStatusChange = (status: 'learned' | 'studying' | 'skipped') => {
     if (status === 'learned' && vocabulary.questions && vocabulary.questions.length > 0) {
@@ -150,18 +203,47 @@ export const VocabularyStudyCard = ({
           </CardTitle>
 
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-lg text-purple-100">{vocabulary.pronunciation}</span>
-            {vocabulary.audioUrl && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handlePlayAudio}
-                className="h-7 px-2 bg-white/20 hover:bg-white/30 text-white border-white/30"
-              >
-                <Play className="w-4 h-4" />
-              </Button>
+            <span className="text-lg text-purple-100">{vocabulary.pinyin}</span>
+            {vocabulary.zhuyin && (
+              <span className="text-sm text-purple-200">({vocabulary.zhuyin})</span>
             )}
           </div>
+
+          {/* Audio Player */}
+          {vocabulary.audioUrl && (
+            <div className="mt-3 bg-white/10 rounded-lg p-3">
+              <div className="flex items-center gap-3">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handlePlayPause}
+                  className="h-8 w-8 p-0 bg-white/20 hover:bg-white/30 text-white border-white/30 rounded-full"
+                >
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </Button>
+                
+                <div className="flex-1">
+                  <input
+                    type="range"
+                    min="0"
+                    max={duration || 0}
+                    value={currentTime}
+                    onChange={handleSeek}
+                    className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #ffffff 0%, #ffffff ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) 100%)`,
+                      WebkitAppearance: 'none',
+                      appearance: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div className="text-xs text-white/80 font-mono min-w-[40px]">
+                  {formatTime(currentTime)} / {formatTime(duration)}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-1 text-sm text-purple-100">
             {vocabulary.partOfSpeech} • {vocabulary.meaning}
@@ -169,6 +251,17 @@ export const VocabularyStudyCard = ({
         </CardHeader>
 
         <CardContent className="p-4 space-y-4">
+          {/* Image Display */}
+          {vocabulary.imageUrl && (
+            <div className="flex justify-center">
+              <img 
+                src={vocabulary.imageUrl} 
+                alt={vocabulary.word}
+                className="max-w-full h-48 object-contain rounded-lg border border-gray-200"
+              />
+            </div>
+          )}
+
           {/* Study / Report */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -230,7 +323,7 @@ export const VocabularyStudyCard = ({
           <DialogHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-t-lg p-6 -m-6 mb-6">
             <DialogTitle className="text-3xl font-bold text-white">{vocabulary.word}</DialogTitle>
             <DialogDescription className="text-blue-100 text-lg">
-              {vocabulary.pronunciation} • {vocabulary.partOfSpeech}
+              {vocabulary.pinyin} {vocabulary.zhuyin && `• ${vocabulary.zhuyin}`} • {vocabulary.partOfSpeech}
             </DialogDescription>
           </DialogHeader>
           

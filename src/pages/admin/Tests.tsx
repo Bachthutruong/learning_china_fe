@@ -6,7 +6,7 @@ import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Textarea } from '../../components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { Plus, Edit, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Edit, Trash2, Loader2, Download, Upload, CheckCircle, AlertCircle, FileSpreadsheet, BookOpen } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../../services/api'
 
@@ -19,6 +19,14 @@ interface QuestionItem {
   question: string
   options?: string[]
   explanation?: string
+  passage?: string
+  sentences?: string[]
+  correctOrder?: number[]
+  subQuestions?: Array<{
+    question: string
+    options: string[]
+    correctAnswer: number
+  }>
 }
 
 interface QuestionFormData {
@@ -26,8 +34,16 @@ interface QuestionFormData {
   questionType: QuestionType
   question: string
   options: string[]
-  correctAnswer: number | number[]
+  correctAnswer: number | number[] | string
   explanation?: string
+  passage?: string
+  sentences?: string[]
+  blanks?: { position: number; correctAnswer: string }[]
+  subQuestions?: Array<{
+    question: string
+    options: string[]
+    correctAnswer: number
+  }>
 }
 
 export const AdminTests = () => {
@@ -44,6 +60,14 @@ export const AdminTests = () => {
   const [editing, setEditing] = useState<QuestionItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [importing, setImporting] = useState<boolean>(false)
+  const [showImportDialog, setShowImportDialog] = useState<boolean>(false)
+  const [importProgress, setImportProgress] = useState<{
+    total: number
+    processed: number
+    created: number
+    updated: number
+    errors: Array<{ row: number; message: string }>
+  } | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [levels, setLevels] = useState<Array<{ _id: string; number: number; name: string }>>([])
   const [form, setForm] = useState<QuestionFormData>({
@@ -91,7 +115,18 @@ export const AdminTests = () => {
   }
 
   const resetForm = () => {
-    setForm({ level: 1, questionType: 'multiple-choice', question: '', options: ['', ''], correctAnswer: 0, explanation: '' })
+    setForm({ 
+      level: 1, 
+      questionType: 'multiple-choice', 
+      question: '', 
+      options: ['', ''], 
+      correctAnswer: 0, 
+      explanation: '',
+      passage: '',
+      sentences: [],
+      blanks: [],
+      subQuestions: []
+    })
   }
 
   const openCreate = () => { resetForm(); setShowCreate(true) }
@@ -111,19 +146,51 @@ export const AdminTests = () => {
     }
   }
 
-  const triggerImport = () => fileRef.current?.click()
+  const triggerImport = () => {
+    setShowImportDialog(true)
+    setImportProgress(null)
+  }
+  
   const onImportSelected = async (ev: React.ChangeEvent<HTMLInputElement>) => {
     const file = ev.target.files?.[0]
     if (!file) return
+    
+    setImporting(true)
+    setImportProgress({ total: 0, processed: 0, created: 0, updated: 0, errors: [] })
+    
     try {
-      setImporting(true)
       const form = new FormData()
       form.append('file', file)
-      const res = await api.post('/questions/import', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+      
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setImportProgress(prev => prev ? { ...prev, processed: Math.min(prev.processed + 1, prev.total) } : null)
+      }, 100)
+      
+      const res = await api.post('/questions/import', form, { 
+        headers: { 'Content-Type': 'multipart/form-data' } 
+      })
+      
+      clearInterval(progressInterval)
+      
       const { created = 0, updated = 0, errors = [] } = res.data || {}
-      toast.success(`Import xong: +${created} mới, cập nhật ${updated}${errors.length ? `, lỗi ${errors.length}` : ''}`)
-      fetchQuestions()
+      
+      setImportProgress({
+        total: created + updated + errors.length,
+        processed: created + updated + errors.length,
+        created,
+        updated,
+        errors
+      })
+      
+      if (errors.length === 0) {
+        toast.success(`Import thành công: +${created} mới, cập nhật ${updated}`)
+        fetchQuestions()
+      } else {
+        toast.error(`Import hoàn tất với ${errors.length} lỗi: +${created} mới, cập nhật ${updated}`)
+      }
     } catch (e: any) {
+      setImportProgress(prev => prev ? { ...prev, errors: [{ row: 0, message: e?.response?.data?.message || 'Import thất bại' }] } : null)
       toast.error(e?.response?.data?.message || 'Import thất bại')
     } finally {
       setImporting(false)
@@ -134,13 +201,31 @@ export const AdminTests = () => {
   const openEdit = (q: QuestionItem) => {
     setEditing(q)
     const correct = (q as any).correctAnswer
+    const correctOrder = (q as any).correctOrder
+    const sentences = (q as any).sentences || []
+    const passage = (q as any).passage || ''
+    
+    // Determine correct answer based on question type
+    let correctAnswerValue: any
+    if (q.questionType === 'fill-blank') {
+      correctAnswerValue = correct || ''
+    } else if (q.questionType === 'sentence-order') {
+      correctAnswerValue = correctOrder || []
+    } else {
+      correctAnswerValue = correct !== undefined ? correct : 0
+    }
+    
     setForm({ 
       level: q.level, 
       questionType: q.questionType, 
       question: q.question, 
       options: q.options || ['', ''], 
-      correctAnswer: correct !== undefined ? correct : 0, 
-      explanation: q.explanation || '' 
+      correctAnswer: correctAnswerValue, 
+      explanation: q.explanation || '',
+      passage: passage,
+      sentences: sentences,
+      blanks: (q as any).blanks || [],
+      subQuestions: (q as any).subQuestions || []
     })
     setShowEdit(true)
   }
@@ -148,6 +233,7 @@ export const AdminTests = () => {
   const validateForm = (): string | null => {
     if (!form.question.trim()) return 'Vui lòng nhập nội dung câu hỏi'
     if (!form.level) return 'Cấp độ không hợp lệ'
+    
     if (form.questionType === 'multiple-choice') {
       const nonEmpty = form.options.map(o => o.trim()).filter(Boolean)
       if (nonEmpty.length < 2) return 'Cần ít nhất 2 đáp án'
@@ -155,11 +241,13 @@ export const AdminTests = () => {
       // Kiểm tra đáp án đúng
       if (Array.isArray(form.correctAnswer)) {
         if (form.correctAnswer.length === 0) return 'Chưa chọn đáp án đúng'
-        if (form.correctAnswer.some(idx => idx < 0 || idx >= form.options.length)) return 'Đáp án đúng không hợp lệ'
-        const correctTexts = form.correctAnswer.map(idx => form.options[idx]?.trim()).filter(Boolean)
+        if (form.correctAnswer.some((idx: any) => typeof idx !== 'number' || idx < 0 || idx >= form.options.length)) return 'Đáp án đúng không hợp lệ'
+        const correctTexts = form.correctAnswer.map((idx: number) => form.options[idx]?.trim()).filter(Boolean)
         if (correctTexts.length !== form.correctAnswer.length) return 'Đáp án đúng không được để trống'
-      } else {
-        if (form.correctAnswer < 0 || form.correctAnswer >= form.options.length) return 'Chưa chọn đáp án đúng'
+      } else if (typeof form.correctAnswer === 'number') {
+        if (form.correctAnswer < 0 || form.correctAnswer >= form.options.length) {
+          return 'Chưa chọn đáp án đúng'
+        }
         const correctText = form.options[form.correctAnswer]?.trim()
         if (!correctText) return 'Đáp án đúng không được để trống'
       }
@@ -168,6 +256,30 @@ export const AdminTests = () => {
       const uniqueOptions = [...new Set(nonEmpty)]
       if (uniqueOptions.length !== nonEmpty.length) return 'Không được có đáp án trùng lặp'
     }
+    
+    if (form.questionType === 'reading-comprehension') {
+      if (!form.passage?.trim()) return 'Vui lòng nhập đoạn văn cho câu hỏi đọc hiểu'
+      if (!form.subQuestions || form.subQuestions.length === 0) return 'Vui lòng thêm ít nhất 1 câu hỏi đọc hiểu'
+      for (let i = 0; i < form.subQuestions.length; i++) {
+        const subQ = form.subQuestions[i]
+        if (!subQ.question.trim()) return `Vui lòng nhập câu hỏi ${i + 1}`
+        if (!subQ.options || subQ.options.length < 2) return `Câu hỏi ${i + 1} cần ít nhất 2 đáp án`
+        if (subQ.correctAnswer < 0 || subQ.correctAnswer >= subQ.options.length) return `Câu hỏi ${i + 1} chưa chọn đáp án đúng`
+      }
+    }
+    
+    if (form.questionType === 'sentence-order') {
+      if (!form.sentences || form.sentences.length < 2) return 'Cần ít nhất 2 câu/từ để sắp xếp'
+      if (!Array.isArray(form.correctAnswer) || form.correctAnswer.length === 0) return 'Vui lòng nhập thứ tự đúng'
+      if (form.correctAnswer.some((idx: number) => idx < 0 || idx >= (form.sentences?.length || 0))) return 'Thứ tự đúng không hợp lệ'
+    }
+    
+    if (form.questionType === 'fill-blank') {
+      if (!form.correctAnswer || (typeof form.correctAnswer === 'string' && !form.correctAnswer.trim())) {
+        return 'Vui lòng nhập đáp án đúng cho câu hỏi điền từ'
+      }
+    }
+    
     return null
   }
 
@@ -178,10 +290,26 @@ export const AdminTests = () => {
     try {
       setFormLoading(true)
       const payload: any = { level: form.level, questionType: form.questionType, question: form.question, explanation: form.explanation }
-      if (form.questionType === 'multiple-choice') {
+      
+      if (form.questionType === 'multiple-choice' || form.questionType === 'reading-comprehension') {
         payload.options = form.options
         payload.correctAnswer = form.correctAnswer
       }
+      
+      if (form.questionType === 'reading-comprehension') {
+        payload.passage = form.passage
+        payload.subQuestions = form.subQuestions
+      }
+      
+      if (form.questionType === 'sentence-order') {
+        payload.sentences = form.sentences
+        payload.correctOrder = form.correctAnswer
+      }
+      
+      if (form.questionType === 'fill-blank') {
+        payload.correctAnswer = form.correctAnswer
+      }
+      
       await api.post('/questions', payload)
       toast.success('Tạo câu hỏi thành công')
       setShowCreate(false)
@@ -202,10 +330,26 @@ export const AdminTests = () => {
     try {
       setFormLoading(true)
       const payload: any = { level: form.level, questionType: form.questionType, question: form.question, explanation: form.explanation }
-      if (form.questionType === 'multiple-choice') {
+      
+      if (form.questionType === 'multiple-choice' || form.questionType === 'reading-comprehension') {
         payload.options = form.options
         payload.correctAnswer = form.correctAnswer
       }
+      
+      if (form.questionType === 'reading-comprehension') {
+        payload.passage = form.passage
+        payload.subQuestions = form.subQuestions
+      }
+      
+      if (form.questionType === 'sentence-order') {
+        payload.sentences = form.sentences
+        payload.correctOrder = form.correctAnswer
+      }
+      
+      if (form.questionType === 'fill-blank') {
+        payload.correctAnswer = form.correctAnswer
+      }
+      
       await api.put(`/questions/${editing._id}`, payload)
       toast.success('Cập nhật câu hỏi thành công')
       setShowEdit(false)
@@ -237,19 +381,20 @@ export const AdminTests = () => {
   const addOption = () => setForm(prev => ({ ...prev, options: [...prev.options, ''] }))
   const removeOption = (idx: number) => setForm(prev => {
     const newOptions = prev.options.filter((_, i) => i !== idx)
-    let newCorrectAnswer: number | number[] = prev.correctAnswer
+    let newCorrectAnswer: number | number[] | string = prev.correctAnswer
     
     if (Array.isArray(prev.correctAnswer)) {
       newCorrectAnswer = prev.correctAnswer
-        .filter(v => v !== idx)
-        .map(v => v > idx ? v - 1 : v)
-    } else {
+        .filter((v: number) => v !== idx)
+        .map((v: number) => v > idx ? v - 1 : v)
+    } else if (typeof prev.correctAnswer === 'number') {
       if (prev.correctAnswer === idx) {
         newCorrectAnswer = 0 // Reset to first option
       } else if (prev.correctAnswer > idx) {
         newCorrectAnswer = prev.correctAnswer - 1
       }
     }
+    // For string type (fill-blank), keep as is
     
     return {
       ...prev,
@@ -260,7 +405,7 @@ export const AdminTests = () => {
 
   if (showCreate) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-h-screen overflow-y-auto">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Tạo câu hỏi</h1>
@@ -365,7 +510,7 @@ export const AdminTests = () => {
                   {Array.isArray(form.correctAnswer) ? (
                     form.correctAnswer.length > 0 ? (
                       <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
-                        ✓ Đã chọn {form.correctAnswer.length} đáp án đúng: {form.correctAnswer.map(idx => form.options[idx]).join(', ')}
+                        ✓ Đã chọn {form.correctAnswer.length} đáp án đúng: {(form.correctAnswer as number[]).map(idx => form.options[idx]).join(', ')}
                       </div>
                     ) : (
                       <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
@@ -373,7 +518,7 @@ export const AdminTests = () => {
                       </div>
                     )
                   ) : (
-                    form.correctAnswer >= 0 ? (
+                    typeof form.correctAnswer === 'number' ? (
                       <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
                         ✓ Đã chọn đáp án đúng: {form.options[form.correctAnswer]}
                       </div>
@@ -386,6 +531,239 @@ export const AdminTests = () => {
                 </div>
               </div>
             )}
+            
+            {/* Fill Blank Question */}
+            {form.questionType === 'fill-blank' && (
+              <div className="space-y-2">
+                <Label>Đáp án đúng *</Label>
+                <Input 
+                  value={form.correctAnswer as string} 
+                  onChange={(e) => setForm(p => ({ ...p, correctAnswer: e.target.value }))} 
+                  placeholder="Nhập đáp án đúng"
+                />
+              </div>
+            )}
+
+            {/* Sentence Order Question */}
+            {form.questionType === 'sentence-order' && (
+              <div className="space-y-2">
+                <Label>Các câu/từ cần sắp xếp *</Label>
+                <div className="space-y-2">
+                  {form.sentences?.map((sentence, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-600 w-8">{idx + 1}.</span>
+                      <Input 
+                        value={sentence} 
+                        onChange={(e) => {
+                          const sentences = [...(form.sentences || [])];
+                          sentences[idx] = e.target.value;
+                          setForm(p => ({ ...p, sentences }));
+                        }} 
+                        placeholder={`Câu/từ ${idx + 1}`}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const sentences = form.sentences?.filter((_, i) => i !== idx) || [];
+                          setForm(p => ({ ...p, sentences }));
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    onClick={() => setForm(p => ({ ...p, sentences: [...(p.sentences || []), ''] }))}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Thêm câu/từ
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label>Thứ tự đúng *</Label>
+                  <div className="space-y-2">
+                    <div className="text-sm text-gray-600 mb-2">
+                      Kéo thả để sắp xếp thứ tự đúng (hoặc click để chọn):
+                    </div>
+                    <div className="space-y-2">
+                      {form.sentences?.map((sentence, idx) => (
+                        <div key={idx} className="flex items-center gap-2 p-2 border rounded-lg">
+                          <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
+                            {Array.isArray(form.correctAnswer) ? (form.correctAnswer as number[]).indexOf(idx) + 1 : '?'}
+                          </div>
+                          <div className="flex-1 text-sm">{sentence}</div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (!Array.isArray(form.correctAnswer)) {
+                                setForm(p => ({ ...p, correctAnswer: [idx] }));
+                              } else if (form.correctAnswer.includes(idx)) {
+                                setForm(p => ({ ...p, correctAnswer: (p.correctAnswer as number[]).filter((i: number) => i !== idx) }));
+                              } else {
+                                setForm(p => ({ ...p, correctAnswer: [...(p.correctAnswer as number[]), idx] }));
+                              }
+                            }}
+                            className={Array.isArray(form.correctAnswer) && form.correctAnswer.includes(idx) ? 'bg-blue-500 text-white' : ''}
+                          >
+                            {Array.isArray(form.correctAnswer) && form.correctAnswer.includes(idx) ? 'Đã chọn' : 'Chọn'}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Thứ tự hiện tại: {Array.isArray(form.correctAnswer) ? `[${(form.correctAnswer as number[]).join(', ')}]` : 'Chưa chọn'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reading Comprehension Question */}
+            {form.questionType === 'reading-comprehension' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Đoạn văn *</Label>
+                  <Textarea 
+                    rows={6} 
+                    value={form.passage || ''} 
+                    onChange={(e) => setForm(p => ({ ...p, passage: e.target.value }))} 
+                    placeholder="Nhập đoạn văn cần đọc hiểu..."
+                    className="text-sm"
+                  />
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Câu hỏi đọc hiểu:</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newQuestions = [...(form.subQuestions || []), {
+                          question: '',
+                          options: ['', ''],
+                          correctAnswer: 0
+                        }]
+                        setForm(p => ({ ...p, subQuestions: newQuestions }))
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Thêm câu hỏi
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {(form.subQuestions || []).map((subQ: any, qIdx: number) => (
+                      <div key={qIdx} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-medium text-gray-700">Câu hỏi {qIdx + 1}</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newQuestions = (form.subQuestions || []).filter((_: any, i: number) => i !== qIdx)
+                              setForm(p => ({ ...p, subQuestions: newQuestions }))
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div>
+                            <Label>Câu hỏi *</Label>
+                            <Input
+                              value={subQ.question}
+                              onChange={(e) => {
+                                const newQuestions = [...(form.subQuestions || [])]
+                                newQuestions[qIdx].question = e.target.value
+                                setForm(p => ({ ...p, subQuestions: newQuestions }))
+                              }}
+                              placeholder="Nhập câu hỏi..."
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label>Đáp án *</Label>
+                            <div className="space-y-2">
+                              {subQ.options.map((opt: string, oIdx: number) => (
+                                <div key={oIdx} className="flex items-center gap-3">
+                                  <input
+                                    type="radio"
+                                    name={`subQ_${qIdx}`}
+                                    checked={subQ.correctAnswer === oIdx}
+                                    onChange={() => {
+                                      const newQuestions = [...(form.subQuestions || [])]
+                                      newQuestions[qIdx].correctAnswer = oIdx
+                                      setForm(p => ({ ...p, subQuestions: newQuestions }))
+                                    }}
+                                    className="w-4 h-4 text-blue-600"
+                                  />
+                                  <Input
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const newQuestions = [...(form.subQuestions || [])]
+                                      newQuestions[qIdx].options[oIdx] = e.target.value
+                                      setForm(p => ({ ...p, subQuestions: newQuestions }))
+                                    }}
+                                    placeholder={`Đáp án ${String.fromCharCode(65 + oIdx)}`}
+                                    className="flex-1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newQuestions = [...(form.subQuestions || [])]
+                                      newQuestions[qIdx].options = newQuestions[qIdx].options.filter((_: string, i: number) => i !== oIdx)
+                                      if (newQuestions[qIdx].correctAnswer >= oIdx) {
+                                        newQuestions[qIdx].correctAnswer = Math.max(0, newQuestions[qIdx].correctAnswer - 1)
+                                      }
+                                      setForm(p => ({ ...p, subQuestions: newQuestions }))
+                                    }}
+                                    disabled={subQ.options.length <= 2}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                  const newQuestions = [...(form.subQuestions || [])]
+                                  newQuestions[qIdx].options = [...newQuestions[qIdx].options, '']
+                                  setForm(p => ({ ...p, subQuestions: newQuestions }))
+                                }}
+                                className="w-full"
+                              >
+                                <Plus className="h-4 w-4 mr-2" /> Thêm đáp án
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {(!form.subQuestions || form.subQuestions.length === 0) && (
+                      <div className="text-center py-8 text-gray-500">
+                        <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Chưa có câu hỏi nào. Click "Thêm câu hỏi" để bắt đầu.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Giải thích</Label>
               <Textarea rows={2} value={form.explanation} onChange={(e) => setForm(p => ({ ...p, explanation: e.target.value }))} />
@@ -404,13 +782,17 @@ export const AdminTests = () => {
           <p className="text-gray-600">Quản lý câu hỏi theo cấp độ</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={downloadTemplate}>Tải template</Button>
+          <Button variant="outline" onClick={downloadTemplate}>
+            <Download className="mr-2 h-4 w-4" />
+            Tải template
+          </Button>
           <Button variant="outline" onClick={triggerImport} disabled={importing}>
-            {importing ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang import...</>) : 'Import Excel'}
+            <Upload className="mr-2 h-4 w-4" />
+            {importing ? 'Đang import...' : 'Import Excel'}
           </Button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onImportSelected} />
           <Button onClick={openCreate} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-          <Plus className="mr-2 h-4 w-4" /> Thêm câu hỏi
+            <Plus className="mr-2 h-4 w-4" /> Thêm câu hỏi
           </Button>
         </div>
       </div>
@@ -453,16 +835,34 @@ export const AdminTests = () => {
                       <td className="px-4 py-3">{q.questionType}</td>
                       <td className="px-4 py-3"><Badge variant="secondary">Cấp {q.level}</Badge></td>
                       <td className="px-4 py-3">
-                        {q.options ? (
+                        {q.questionType === 'multiple-choice' && q.options ? (
                           <div className="text-sm">
                             <div>{q.options.length} đáp án</div>
-                            {q.questionType === 'multiple-choice' && (q as any).correctAnswer !== undefined && (
+                            {(q as any).correctAnswer !== undefined && (
                               <div className="text-green-600 text-xs">
                                 ✓ Đúng: {Array.isArray((q as any).correctAnswer) 
                                   ? (q as any).correctAnswer.map((idx: number) => q.options?.[idx]).join(', ')
-                                  : q.options?.[(q as any).correctAnswer]
+                                  : typeof (q as any).correctAnswer === 'number' ? q.options?.[(q as any).correctAnswer] : (q as any).correctAnswer
                                 }
                               </div>
+                            )}
+                          </div>
+                        ) : q.questionType === 'fill-blank' ? (
+                          <div className="text-sm text-blue-600">
+                            ✓ Đáp án: {(q as any).correctAnswer || 'Chưa có'}
+                          </div>
+                        ) : q.questionType === 'sentence-order' ? (
+                          <div className="text-sm text-purple-600">
+                            ✓ Thứ tự: {Array.isArray((q as any).correctOrder) 
+                              ? `[${(q as any).correctOrder.join(', ')}]` 
+                              : 'Chưa có'
+                            }
+                          </div>
+                        ) : q.questionType === 'reading-comprehension' ? (
+                          <div className="text-sm text-orange-600">
+                            ✓ Đọc hiểu: {(q as any).passage ? 'Có đoạn văn' : 'Chưa có đoạn văn'}
+                            {(q as any).subQuestions && (q as any).subQuestions.length > 0 && (
+                              <div className="text-xs">+ {(q as any).subQuestions.length} câu hỏi con</div>
                             )}
                           </div>
                         ) : '-'}
@@ -497,7 +897,7 @@ export const AdminTests = () => {
 
       {/* Edit Dialog */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa câu hỏi</DialogTitle>
             <DialogDescription>Cập nhật nội dung câu hỏi</DialogDescription>
@@ -592,7 +992,7 @@ export const AdminTests = () => {
                   {Array.isArray(form.correctAnswer) ? (
                     form.correctAnswer.length > 0 ? (
                       <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
-                        ✓ Đã chọn {form.correctAnswer.length} đáp án đúng: {form.correctAnswer.map(idx => form.options[idx]).join(', ')}
+                        ✓ Đã chọn {form.correctAnswer.length} đáp án đúng: {(form.correctAnswer as number[]).map(idx => form.options[idx]).join(', ')}
                       </div>
                     ) : (
                       <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
@@ -600,7 +1000,7 @@ export const AdminTests = () => {
                       </div>
                     )
                   ) : (
-                    form.correctAnswer >= 0 ? (
+                    typeof form.correctAnswer === 'number' ? (
                       <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
                         ✓ Đã chọn đáp án đúng: {form.options[form.correctAnswer]}
                       </div>
@@ -613,6 +1013,239 @@ export const AdminTests = () => {
                 </div>
               </div>
             )}
+            
+            {/* Fill Blank Question */}
+            {form.questionType === 'fill-blank' && (
+              <div className="space-y-2">
+                <Label>Đáp án đúng *</Label>
+                <Input 
+                  value={form.correctAnswer as string} 
+                  onChange={(e) => setForm(p => ({ ...p, correctAnswer: e.target.value }))} 
+                  placeholder="Nhập đáp án đúng"
+                />
+              </div>
+            )}
+
+            {/* Sentence Order Question */}
+            {form.questionType === 'sentence-order' && (
+              <div className="space-y-2">
+                <Label>Các câu/từ cần sắp xếp *</Label>
+                <div className="space-y-2">
+                  {form.sentences?.map((sentence, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-600 w-8">{idx + 1}.</span>
+                      <Input 
+                        value={sentence} 
+                        onChange={(e) => {
+                          const sentences = [...(form.sentences || [])];
+                          sentences[idx] = e.target.value;
+                          setForm(p => ({ ...p, sentences }));
+                        }} 
+                        placeholder={`Câu/từ ${idx + 1}`}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const sentences = form.sentences?.filter((_, i) => i !== idx) || [];
+                          setForm(p => ({ ...p, sentences }));
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    onClick={() => setForm(p => ({ ...p, sentences: [...(p.sentences || []), ''] }))}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Thêm câu/từ
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label>Thứ tự đúng *</Label>
+                  <div className="space-y-2">
+                    <div className="text-sm text-gray-600 mb-2">
+                      Kéo thả để sắp xếp thứ tự đúng (hoặc click để chọn):
+                    </div>
+                    <div className="space-y-2">
+                      {form.sentences?.map((sentence, idx) => (
+                        <div key={idx} className="flex items-center gap-2 p-2 border rounded-lg">
+                          <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
+                            {Array.isArray(form.correctAnswer) ? (form.correctAnswer as number[]).indexOf(idx) + 1 : '?'}
+                          </div>
+                          <div className="flex-1 text-sm">{sentence}</div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (!Array.isArray(form.correctAnswer)) {
+                                setForm(p => ({ ...p, correctAnswer: [idx] }));
+                              } else if (form.correctAnswer.includes(idx)) {
+                                setForm(p => ({ ...p, correctAnswer: (p.correctAnswer as number[]).filter((i: number) => i !== idx) }));
+                              } else {
+                                setForm(p => ({ ...p, correctAnswer: [...(p.correctAnswer as number[]), idx] }));
+                              }
+                            }}
+                            className={Array.isArray(form.correctAnswer) && form.correctAnswer.includes(idx) ? 'bg-blue-500 text-white' : ''}
+                          >
+                            {Array.isArray(form.correctAnswer) && form.correctAnswer.includes(idx) ? 'Đã chọn' : 'Chọn'}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Thứ tự hiện tại: {Array.isArray(form.correctAnswer) ? `[${(form.correctAnswer as number[]).join(', ')}]` : 'Chưa chọn'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reading Comprehension Question */}
+            {form.questionType === 'reading-comprehension' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Đoạn văn *</Label>
+                  <Textarea 
+                    rows={6} 
+                    value={form.passage || ''} 
+                    onChange={(e) => setForm(p => ({ ...p, passage: e.target.value }))} 
+                    placeholder="Nhập đoạn văn cần đọc hiểu..."
+                    className="text-sm"
+                  />
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Câu hỏi đọc hiểu:</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newQuestions = [...(form.subQuestions || []), {
+                          question: '',
+                          options: ['', ''],
+                          correctAnswer: 0
+                        }]
+                        setForm(p => ({ ...p, subQuestions: newQuestions }))
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Thêm câu hỏi
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {(form.subQuestions || []).map((subQ: any, qIdx: number) => (
+                      <div key={qIdx} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-medium text-gray-700">Câu hỏi {qIdx + 1}</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newQuestions = (form.subQuestions || []).filter((_: any, i: number) => i !== qIdx)
+                              setForm(p => ({ ...p, subQuestions: newQuestions }))
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div>
+                            <Label>Câu hỏi *</Label>
+                            <Input
+                              value={subQ.question}
+                              onChange={(e) => {
+                                const newQuestions = [...(form.subQuestions || [])]
+                                newQuestions[qIdx].question = e.target.value
+                                setForm(p => ({ ...p, subQuestions: newQuestions }))
+                              }}
+                              placeholder="Nhập câu hỏi..."
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label>Đáp án *</Label>
+                            <div className="space-y-2">
+                              {subQ.options.map((opt: string, oIdx: number) => (
+                                <div key={oIdx} className="flex items-center gap-3">
+                                  <input
+                                    type="radio"
+                                    name={`subQ_${qIdx}`}
+                                    checked={subQ.correctAnswer === oIdx}
+                                    onChange={() => {
+                                      const newQuestions = [...(form.subQuestions || [])]
+                                      newQuestions[qIdx].correctAnswer = oIdx
+                                      setForm(p => ({ ...p, subQuestions: newQuestions }))
+                                    }}
+                                    className="w-4 h-4 text-blue-600"
+                                  />
+                                  <Input
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const newQuestions = [...(form.subQuestions || [])]
+                                      newQuestions[qIdx].options[oIdx] = e.target.value
+                                      setForm(p => ({ ...p, subQuestions: newQuestions }))
+                                    }}
+                                    placeholder={`Đáp án ${String.fromCharCode(65 + oIdx)}`}
+                                    className="flex-1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newQuestions = [...(form.subQuestions || [])]
+                                      newQuestions[qIdx].options = newQuestions[qIdx].options.filter((_: string, i: number) => i !== oIdx)
+                                      if (newQuestions[qIdx].correctAnswer >= oIdx) {
+                                        newQuestions[qIdx].correctAnswer = Math.max(0, newQuestions[qIdx].correctAnswer - 1)
+                                      }
+                                      setForm(p => ({ ...p, subQuestions: newQuestions }))
+                                    }}
+                                    disabled={subQ.options.length <= 2}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                  const newQuestions = [...(form.subQuestions || [])]
+                                  newQuestions[qIdx].options = [...newQuestions[qIdx].options, '']
+                                  setForm(p => ({ ...p, subQuestions: newQuestions }))
+                                }}
+                                className="w-full"
+                              >
+                                <Plus className="h-4 w-4 mr-2" /> Thêm đáp án
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {(!form.subQuestions || form.subQuestions.length === 0) && (
+                      <div className="text-center py-8 text-gray-500">
+                        <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Chưa có câu hỏi nào. Click "Thêm câu hỏi" để bắt đầu.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Giải thích</Label>
               <Textarea rows={2} value={form.explanation} onChange={(e) => setForm(p => ({ ...p, explanation: e.target.value }))} />
@@ -623,6 +1256,105 @@ export const AdminTests = () => {
               <Button type="submit" disabled={formLoading}>{formLoading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang lưu...</>) : 'Cập nhật câu hỏi'}</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Import câu hỏi từ Excel
+            </DialogTitle>
+            <DialogDescription>
+              Tải lên file Excel để import nhiều câu hỏi cùng lúc. Hỗ trợ câu hỏi 1 đáp án đúng và nhiều đáp án đúng.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {!importProgress ? (
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Chọn file Excel để import</h3>
+                <p className="text-gray-500 mb-4">
+                  Hỗ trợ file .xlsx, .xls. Tải template mẫu để xem định dạng.
+                </p>
+                <Button onClick={() => fileRef.current?.click()} disabled={importing}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Chọn file
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Progress Bar */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Tiến độ import</span>
+                    <span>{importProgress.processed}/{importProgress.total}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${importProgress.total > 0 ? (importProgress.processed / importProgress.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Results */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-green-600">{importProgress.created}</div>
+                    <div className="text-sm text-green-700">Tạo mới</div>
+                  </div>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <CheckCircle className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-blue-600">{importProgress.updated}</div>
+                    <div className="text-sm text-blue-700">Cập nhật</div>
+                  </div>
+                  <div className="text-center p-4 bg-red-50 rounded-lg">
+                    <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-red-600">{importProgress.errors.length}</div>
+                    <div className="text-sm text-red-700">Lỗi</div>
+                  </div>
+                </div>
+
+                {/* Errors */}
+                {importProgress.errors.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-red-800">Chi tiết lỗi:</h4>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {importProgress.errors.map((error, index) => (
+                        <div key={index} className="text-sm text-red-700 bg-red-50 p-2 rounded">
+                          <span className="font-medium">Dòng {error.row}:</span> {error.message}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex justify-end space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowImportDialog(false)
+                      setImportProgress(null)
+                      fetchQuestions()
+                    }}
+                  >
+                    Đóng
+                  </Button>
+                  {importProgress.errors.length > 0 && (
+                    <Button onClick={() => setImportProgress(null)}>
+                      Import lại
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

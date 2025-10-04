@@ -41,6 +41,15 @@ interface Question {
   options?: string[]
   correctAnswer?: any
   explanation?: string
+  passage?: string
+  sentences?: string[]
+  correctOrder?: number[]
+  blanks?: { position: number; correctAnswer: string }[]
+  subQuestions?: Array<{
+    question: string
+    options: string[]
+    correctAnswer: number
+  }>
 }
 
 interface TestReport {
@@ -106,7 +115,7 @@ export const NewTestPage = () => {
       await api.post('/tests/start')
       
       // Get all questions for user's level
-      const response = await api.get(`/tests/questions/random?level=${userLevel}`)
+      const response = await api.get(`/questions/all?level=${userLevel}`)
       setQuestions(response.data.questions)
       setTestStarted(true)
       setCurrentIndex(0)
@@ -117,7 +126,7 @@ export const NewTestPage = () => {
       const newSession = { id: `${Date.now()}`, startedAt: Date.now(), total: 0, correct: 0, wrong: 0, xp: 0, coins: 0, items: [] as Array<{question: string; correct: boolean; explanation?: string}> }
       setSessions(prev => { const updated = [newSession, ...prev]; localStorage.setItem('newtest.sessions', JSON.stringify(updated)); return updated })
       
-      toast.success('Bắt đầu làm bài test!')
+      toast.success(`Bắt đầu làm bài test! Có ${response.data.questions.length} câu hỏi để làm.`)
     } catch (error: any) {
       console.error('Error starting test:', error)
       if (error.response?.data?.insufficientCoins) {
@@ -160,29 +169,42 @@ export const NewTestPage = () => {
     })
   }
 
+  const handleReadingComprehensionSelect = (subQIdx: number, optionIndex: number) => {
+    const currentAnswer = answers[currentIndex]
+    let newAnswer: any[]
+    
+    if (Array.isArray(currentAnswer)) {
+      newAnswer = [...currentAnswer]
+    } else {
+      newAnswer = []
+    }
+    
+    // Ensure the array is long enough for all sub-questions
+    const currentQuestion = questions[currentIndex]
+    const subQuestionsCount = currentQuestion?.subQuestions?.length || 0
+    while (newAnswer.length < subQuestionsCount) {
+      newAnswer.push(null)
+    }
+    
+    newAnswer[subQIdx] = optionIndex
+    
+    
+    setAnswers({
+      ...answers,
+      [currentIndex]: newAnswer
+    })
+  }
+
   const handleNextQuestion = () => {
     setShowResult(false)
     setLastCorrect(null)
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1)
     } else {
-      // Unlimited: fetch more and continue
-      api.get(`/tests/questions/random?level=${userLevel}`).then(res => {
-        const more = res.data.questions || []
-        const prev = questions[questions.length - 1]
-        const isSameSingle = more.length === 1 && questions.length === 1 && prev && more[0]?._id === (prev as any)?._id
-        if (more.length > 0 && !isSameSingle) {
-          // Start a fresh batch to avoid repeating the same question
-          setQuestions(more)
-          setCurrentIndex(0)
-          setAnswers({})
-          setShowResult(false)
-        } else {
-          toast('Hết câu hỏi mới phù hợp')
-          // Stop the test gracefully to avoid looping on the same question
-          setTestStarted(false)
-        }
-      }).catch(() => toast.error('Không tải được thêm câu hỏi'))
+      // User has completed all available questions
+      toast.success('🎉 Bạn đã hoàn thành tất cả câu hỏi!')
+      // Optionally: show completion summary or restart
+      setTestStarted(false)
     }
   }
 
@@ -194,13 +216,13 @@ export const NewTestPage = () => {
 
   // Deprecated batch submit kept for compatibility; no longer used in immediate mode
 
-  const checkCurrentAnswer = () => {
+  const checkCurrentAnswer = async () => {
     const q = questions[currentIndex]
     const userAns = answers[currentIndex]
     if (!q) return
     // Determine correctness based on question type
     let isCorrect = false
-    if (q.questionType === 'multiple-choice' || q.questionType === 'reading-comprehension') {
+    if (q.questionType === 'multiple-choice') {
       if (Array.isArray(q.correctAnswer)) {
         const a = Array.isArray(userAns) ? [...userAns].sort() : []
         const b = [...q.correctAnswer].sort()
@@ -213,21 +235,71 @@ export const NewTestPage = () => {
       isCorrect = String(userAns || '').trim().toLowerCase() === ca.trim().toLowerCase()
     } else if (q.questionType === 'sentence-order') {
       const a = Array.isArray(userAns) ? userAns : []
-      const b = Array.isArray(q.correctAnswer) ? q.correctAnswer : []
+      const b = Array.isArray(q.correctOrder) ? q.correctOrder : []
       isCorrect = a.length === b.length && a.every((v, i) => v === b[i])
+    } else if (q.questionType === 'reading-comprehension') {
+      if (q.subQuestions && Array.isArray(userAns)) {
+        // Check if all sub-questions are answered
+        const allAnswered = q.subQuestions.every((_, idx) => userAns[idx] !== null && userAns[idx] !== undefined)
+        if (!allAnswered) {
+          toast.error('Vui lòng trả lời tất cả câu hỏi con')
+          return
+        }
+        
+        // Check correctness for each sub-question
+        const subResults = q.subQuestions.map((subQ, idx) => {
+          const subQUserAns = userAns[idx]
+          const isSubCorrect = subQ.correctAnswer === subQUserAns
+          return { subQ, idx, isSubCorrect, userAnswer: subQUserAns }
+        })
+        
+        // All sub-questions must be correct for the main question to be correct
+        isCorrect = subResults.every(result => result.isSubCorrect)
+        
+        // Show detailed results for each sub-question
+        subResults.forEach((result, idx) => {
+          if (result.isSubCorrect) {
+            toast.success(`✅ Câu hỏi ${idx + 1}: Đúng!`)
+          } else {
+            toast.error(`❌ Câu hỏi ${idx + 1}: Sai! Đáp án đúng là ${String.fromCharCode(65 + result.subQ.correctAnswer)}`)
+          }
+        })
+      } else {
+        isCorrect = false
+      }
     }
     setShowResult(true)
     setLastCorrect(isCorrect)
     setTotalAnswered(v => v + 1)
+    
     if (isCorrect) {
       setTotalCorrect(v => v + 1)
       setEarnedXp(v => v + 100)
       setEarnedCoins(v => v + 100)
-      toast.success('Chính xác! +100 XP, +100 xu')
+      
+      // Gửi API để cập nhật điểm và xu thực tế
+      try {
+        const response = await api.post('/questions/submit', {
+          questionId: q._id,
+          answer: userAns
+        })
+        
+        // Cập nhật user data từ response
+        if (response.data.user) {
+          // Có thể cập nhật user context ở đây nếu cần
+          console.log('Updated user data:', response.data.user)
+        }
+        
+        toast.success('Chính xác! +100 XP, +100 xu')
+      } catch (error) {
+        console.error('Error updating score:', error)
+        toast.error('Cập nhật điểm thất bại')
+      }
     } else {
       setTotalWrong(v => v + 1)
       toast.error('Chưa chính xác')
     }
+    
     setSessions(prev => {
       if (prev.length === 0) return prev
       const [head, ...tail] = prev
@@ -558,6 +630,9 @@ export const NewTestPage = () => {
                         {Math.round(progress)}%
                       </div>
                     </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      📚 Tổng cộng có {questions.length} câu hỏi - Bạn có thể làm hết tất cả!
+                    </div>
                   </div>
                   <div className="relative">
                     <Progress value={progress} className="h-4 bg-blue-100 rounded-full" />
@@ -587,10 +662,10 @@ export const NewTestPage = () => {
                       <Brain className="h-6 w-6" />
                     </div>
                     <div>
-                      <span>Câu hỏi {currentIndex + 1}</span>
+                      <span>Câu hỏi {currentIndex + 1} / {questions.length}</span>
                       <div className="flex items-center gap-2 mt-1">
                         <BookOpen className="h-4 w-4 text-purple-200" />
-                        <span className="text-sm text-purple-100">Kiểm tra kiến thức</span>
+                        <span className="text-sm text-purple-100">Kiểm tra kiến thức - Cấp {userLevel}</span>
                       </div>
                     </div>
                   </CardTitle>
@@ -680,59 +755,76 @@ export const NewTestPage = () => {
                 )}
 
                 {/* Reading Comprehension */}
-                {currentQuestion.questionType === 'reading-comprehension' && currentQuestion.options && (
+                {currentQuestion.questionType === 'reading-comprehension' && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Target className="h-5 w-5 text-purple-500" />
-                      <span className="font-semibold text-purple-700">
-                        {Array.isArray(currentQuestion.correctAnswer) && currentQuestion.correctAnswer.length > 1 
-                          ? 'Chọn tất cả đáp án đúng (có thể chọn nhiều):'
-                          : 'Chọn đáp án đúng:'
-                        }
-                      </span>
-                    </div>
-                    {currentQuestion.options.map((option, index) => {
-                      const currentAnswer = answers[currentIndex] || []
-                      const isSelected = Array.isArray(currentAnswer) ? currentAnswer.includes(index) : currentAnswer === index
-                      
-                      return (
-                        <Button
-                          key={index}
-                          variant={isSelected ? 'default' : 'outline'}
-                          className={`w-full justify-start h-auto py-6 text-left transition-all duration-200 transform hover:scale-[1.02] ${
-                            isSelected 
-                              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
-                              : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-2 hover:border-purple-300'
-                          }`}
-                          onClick={() => handleMultipleChoiceSelect(index)}
-                        >
-                          <div className="flex items-center w-full">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 font-bold ${
-                              isSelected 
-                                ? 'bg-white/20 text-white' 
-                                : 'bg-purple-100 text-purple-600'
-                            }`}>
-                              {String.fromCharCode(65 + index)}
-                            </div>
-                            <span className="text-base">{option}</span>
-                            {isSelected && (
-                              <CheckCircle className="h-5 w-5 ml-auto text-white" />
-                            )}
-                          </div>
-                        </Button>
-                      )
-                    })}
+                    {/* Passage */}
+                    {currentQuestion.passage && (
+                      <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <BookOpen className="h-5 w-5 text-blue-600" />
+                          <span className="font-semibold text-blue-700">Đoạn văn:</span>
+                        </div>
+                        <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                          {currentQuestion.passage}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sub-questions */}
+                    {(currentQuestion.subQuestions || []).map((subQ, subQIdx) => (
+                      <div key={subQIdx} className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center gap-2">
+                          <Target className="h-5 w-5 text-purple-500" />
+                          <span className="font-semibold text-purple-700">
+                            Câu hỏi {subQIdx + 1}: {subQ.question}
+                          </span>
+                        </div>
+                        {subQ.options.map((option, index) => {
+                          const currentAnswer = answers[currentIndex]
+                          const subAnswer = Array.isArray(currentAnswer) ? currentAnswer[subQIdx] : null
+                          const isSelected = subAnswer === index
+                          
+
+                          return (
+                            <Button
+                              key={index}
+                              variant={isSelected ? 'default' : 'outline'}
+                              className={`w-full justify-start h-auto py-6 text-left transition-all duration-200 transform hover:scale-[1.02] ${
+                                isSelected
+                                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                                  : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-2 hover:border-purple-300'
+                              }`}
+                              onClick={() => handleReadingComprehensionSelect(subQIdx, index)}
+                            >
+                              <div className="flex items-center w-full">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 font-bold ${
+                                  isSelected
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-purple-100 text-purple-600'
+                                }`}>
+                                  {String.fromCharCode(65 + index)}
+                                </div>
+                                <span className="text-base">{option}</span>
+                                {isSelected && (
+                                  <CheckCircle className="h-5 w-5 ml-auto text-white" />
+                                )}
+                              </div>
+                            </Button>
+                          )
+                        })}
+                      </div>
+                    ))}
                   </div>
                 )}
 
                 {/* Sentence Order */}
-                {currentQuestion.questionType === 'sentence-order' && currentQuestion.options && (
+                {currentQuestion.questionType === 'sentence-order' && currentQuestion.sentences && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 mb-4">
                       <Target className="h-5 w-5 text-purple-500" />
                       <span className="font-semibold text-purple-700">Sắp xếp các câu theo thứ tự đúng:</span>
                     </div>
-                    {currentQuestion.options.map((option, index) => (
+                    {currentQuestion.sentences.map((sentence, index) => (
                       <div
                         key={index}
                         className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-[1.02] ${
@@ -756,7 +848,7 @@ export const NewTestPage = () => {
                           }`}>
                             {index + 1}
                           </div>
-                          <span className="text-base">{option}</span>
+                          <span className="text-base">{sentence}</span>
                         </div>
                       </div>
                     ))}
@@ -765,9 +857,45 @@ export const NewTestPage = () => {
 
                 {showResult && (
                   <div className={`p-4 rounded border ${lastCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                    <div className="text-sm font-semibold">{lastCorrect ? 'Đúng! +100 XP, +100 xu' : 'Sai. Hãy thử câu tiếp theo.'}</div>
-                    {currentQuestion.explanation && (
-                      <div className="mt-1 text-sm text-gray-700"><strong>Giải thích:</strong> {currentQuestion.explanation}</div>
+                    {currentQuestion.questionType === 'reading-comprehension' ? (
+                      <div className="space-y-3">
+                        <div className="text-sm font-semibold">
+                          {lastCorrect ? '🎉 Tất cả câu hỏi đúng! +100 XP, +100 xu' : '❌ Có câu hỏi sai. Hãy xem chi tiết bên dưới.'}
+                        </div>
+                        {currentQuestion.subQuestions && Array.isArray(answers[currentIndex]) && (
+                          <div className="space-y-2">
+                            {currentQuestion.subQuestions.map((subQ, idx) => {
+                              const userAnswer = answers[currentIndex][idx]
+                              const isSubCorrect = subQ.correctAnswer === userAnswer
+                              return (
+                                <div key={idx} className={`p-3 rounded-lg border-l-4 ${
+                                  isSubCorrect ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400'
+                                }`}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="font-semibold text-sm">Câu hỏi {idx + 1}:</span>
+                                    <span className={`text-sm ${isSubCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                      {isSubCorrect ? '✅ Đúng' : '❌ Sai'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-600 mb-1">
+                                    <strong>Đáp án của bạn:</strong> {userAnswer !== null ? String.fromCharCode(65 + userAnswer) : 'Chưa chọn'} ({subQ.options[userAnswer] || 'N/A'})
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    <strong>Đáp án đúng:</strong> {String.fromCharCode(65 + subQ.correctAnswer)} ({subQ.options[subQ.correctAnswer]})
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-sm font-semibold">{lastCorrect ? 'Đúng! +100 XP, +100 xu' : 'Sai. Hãy thử câu tiếp theo.'}</div>
+                        {currentQuestion.explanation && (
+                          <div className="mt-1 text-sm text-gray-700"><strong>Giải thích:</strong> {currentQuestion.explanation}</div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -799,7 +927,7 @@ export const NewTestPage = () => {
                         className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
                       >
                         <Zap className="mr-3 h-5 w-5" />
-                        Câu tiếp
+                        {currentIndex < questions.length - 1 ? 'Câu tiếp' : 'Hoàn thành'}
                         <ChevronRight className="ml-3 h-5 w-5" />
                       </Button>
                     )}
