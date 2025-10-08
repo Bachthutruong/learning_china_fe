@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { 
-  ArrowLeft,
+  // ArrowLeft,
   Plus, 
   Search,
   BookOpen,
   Tag,
-  CheckCircle,
-  Play,
+  
   Loader2
 } from 'lucide-react'
 import { api } from '../services/api'
@@ -50,7 +49,13 @@ interface Vocabulary {
   audioUrl?: string
 }
 
-export const AddVocabulary = () => {
+interface AddVocabularyProps {
+  inDialog?: boolean
+  onClose?: () => void
+  initialSelectedPersonalTopics?: string[]
+}
+
+export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVocabularyProps) => {
   const [personalTopics, setPersonalTopics] = useState<PersonalTopic[]>([])
   const [systemCategories, setSystemCategories] = useState<SystemCategory[]>([])
   const [selectedPersonalTopics, setSelectedPersonalTopics] = useState<string[]>([])
@@ -67,6 +72,13 @@ export const AddVocabulary = () => {
     fetchPersonalTopics()
     fetchSystemCategories()
   }, [])
+
+  // Preselect personal topics when provided (e.g., opened from VocabularyLearning with a chosen topic)
+  useEffect(() => {
+    if (initialSelectedPersonalTopics && initialSelectedPersonalTopics.length > 0) {
+      setSelectedPersonalTopics(initialSelectedPersonalTopics)
+    }
+  }, [initialSelectedPersonalTopics])
 
   useEffect(() => {
     if (selectedCategories.length > 0) {
@@ -230,30 +242,28 @@ export const AddVocabulary = () => {
     }
   }
 
-  const handlePlayAudio = async (audioUrl: string) => {
-    try {
-      const audio = new Audio(audioUrl)
-      await audio.play()
-    } catch (error) {
-      console.error('Error playing audio:', error)
-      toast.error('Không thể phát âm thanh')
-    }
-  }
+  // Removed audio play helper in compact UI
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-6">
+    <div className={`${inDialog ? '' : 'min-h-screen'} bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-6`}>
       <div className="max-w-6xl mx-auto">
         {/* Enhanced Header */}
         <div className="mb-8 text-center">
           <div className="relative inline-block">
-            <Button
+            {/* <Button
               variant="outline"
-              onClick={() => window.history.back()}
+              onClick={() => {
+                if (onClose) {
+                  onClose()
+                } else {
+                  try { window.history.back() } catch {}
+                }
+              }}
               className="absolute -left-32 top-0 bg-white/50 border-white/30 text-gray-700 hover:bg-white/70 hover:text-gray-900"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Quay lại
-            </Button>
+              {inDialog ? 'Đóng' : 'Quay lại'}
+            </Button> */}
             <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4">
               📚 Thêm từ vựng
             </h1>
@@ -267,324 +277,130 @@ export const AddVocabulary = () => {
           <p className="text-xl text-gray-700 font-medium">
             Chọn chủ đề và thêm từ vựng từ danh mục hệ thống
           </p>
-          <div className="flex justify-center mt-4">
-            <div className="flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full">
-              <Plus className="h-5 w-5 text-green-500" />
-              <span className="text-sm font-semibold text-green-700">Tạo bộ sưu tập từ vựng</span>
-            </div>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Topic Selection */}
-          <div className="space-y-6">
-            {/* Personal Topic Selection */}
-            <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-purple-50">
-              <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <div className="p-2 bg-white/20 rounded-full">
-                    <Tag className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <span>Chọn chủ đề</span>
-                    <div className="flex items-center gap-1 mt-1">
-                      <BookOpen className="h-4 w-4 text-purple-200" />
-                      <span className="text-sm text-purple-100">Tổ chức từ vựng</span>
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                {personalTopics.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label>Chủ đề của bạn:</Label>
-                      <Badge variant="outline" className="text-xs">
-                        Có thể chọn nhiều chủ đề
-                      </Badge>
-                    </div>
-                    <div className="space-y-2">
-                      {personalTopics.map((topic) => (
-                        <div
-                          key={topic._id}
-                          className={`p-4 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-105 ${
-                            selectedPersonalTopics.includes(topic._id)
-                              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                              : 'bg-white hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-2 hover:border-purple-300'
-                          }`}
-                          onClick={() => handleTopicSelect(topic._id)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-bold text-lg">{topic.name}</h4>
-                              <p className={`text-sm ${
-                                selectedPersonalTopics.includes(topic._id) ? 'text-purple-100' : 'text-gray-600'
-                              }`}>{topic.description}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant="secondary"
-                                className={`${
-                                  selectedPersonalTopics.includes(topic._id)
-                                    ? 'bg-white/20 text-white border-white/30'
-                                    : 'bg-purple-100 text-purple-700 border-purple-200'
-                                }`}
-                              >
-                                {topic.vocabularyCount}
-                              </Badge>
-                              {selectedPersonalTopics.includes(topic._id) && (
-                                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                                  <div className="w-2 h-2 rounded-full bg-white"></div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <Button
-                  onClick={() => setShowCreateTopicDialog(true)}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Tạo chủ đề mới
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* System Categories */}
-            <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50">
-              <CardHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <div className="p-2 bg-white/20 rounded-full">
-                    <BookOpen className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <span>Danh mục hệ thống</span>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Tag className="h-4 w-4 text-blue-200" />
-                      <span className="text-sm text-blue-100">Chọn danh mục</span>
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="flex flex-wrap gap-3">
-                  {systemCategories.map((category) => (
-                    <div
-                      key={category._id}
-                      className={`px-4 py-2 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-105 ${
-                        selectedCategories.includes(category.name)
-                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
-                          : 'bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 border-2 hover:border-blue-300 text-gray-700'
-                      }`}
-                      onClick={() => handleCategorySelect(category._id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{category.name}</span>
-                        <Badge 
-                          variant="secondary"
-                          className={`text-xs ${
-                            selectedCategories.includes(category.name)
-                              ? 'bg-white/20 text-white border-white/30'
-                              : 'bg-blue-100 text-blue-700 border-blue-200'
-                          }`}
-                        >
-                          {category.vocabularyCount}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+        <div className="space-y-6">
+          {/* 1) Personal topics - compact badges */}
+          <Card className="border-0 shadow bg-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-purple-600" />
+                  <span className="font-semibold">Chủ đề của bạn</span>
+                  <Badge variant="outline" className="text-xs">Có thể chọn nhiều</Badge>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <Button size="sm" onClick={() => setShowCreateTopicDialog(true)} className="h-8 px-3"> 
+                  <Plus className="w-3 h-3 mr-1" /> Tạo chủ đề
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {personalTopics.map((topic) => (
+                  <button
+                    key={topic._id}
+                    onClick={() => handleTopicSelect(topic._id)}
+                    className={`px-3 py-1 rounded-full border text-sm transition ${
+                      selectedPersonalTopics.includes(topic._id)
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {topic.name}
+                    <span className={`ml-2 inline-flex items-center justify-center text-[10px] px-1.5 py-0.5 rounded-full border ${
+                      selectedPersonalTopics.includes(topic._id) ? 'border-white/40' : 'border-gray-300 text-gray-500'
+                    }`}>{topic.vocabularyCount}</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Right Column - Vocabulary Selection */}
-          <div className="lg:col-span-2">
-            {selectedCategories.length > 0 ? (
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-pink-50">
-                <CardHeader className="bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-t-lg">
-                  <CardTitle className="flex items-center gap-3 text-xl">
-                    <div className="p-2 bg-white/20 rounded-full">
-                      <BookOpen className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <span>Từ vựng theo danh mục đã chọn</span>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Tag className="h-4 w-4 text-pink-200" />
-                        <span className="text-sm text-pink-100">Chọn từ vựng để thêm</span>
-                      </div>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {/* Search */}
-                  <div className="mb-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        placeholder="Tìm kiếm từ vựng..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
+          {/* 2) System categories - compact badges */}
+          <Card className="border-0 shadow bg-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="w-4 h-4 text-blue-600" />
+                <span className="font-semibold">Danh mục hệ thống</span>
+                <Badge variant="outline" className="text-xs">Chọn để xem từ vựng</Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {systemCategories.map((category) => (
+                  <button
+                    key={category._id}
+                    onClick={() => handleCategorySelect(category._id)}
+                    className={`px-3 py-1 rounded-full border text-sm transition ${
+                      selectedCategories.includes(category.name)
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {category.name}
+                    <span className={`ml-2 inline-flex items-center justify-center text-[10px] px-1.5 py-0.5 rounded-full border ${
+                      selectedCategories.includes(category.name) ? 'border-white/40' : 'border-gray-300 text-gray-500'
+                    }`}>{category.vocabularyCount}</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 3) Vocabulary list for selected categories */}
+          <Card className="border-0 shadow bg-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Tag className="w-4 h-4 text-rose-600" />
+                <span className="font-semibold">Từ vựng</span>
+                <span className="text-sm text-gray-500">{selectedCategories.length > 0 ? 'Theo danh mục đã chọn' : 'Chọn danh mục để hiển thị'}</span>
+              </div>
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Tìm kiếm từ vựng..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+              ) : selectedCategories.length === 0 ? (
+                <div className="text-sm text-gray-600 py-6 text-center">Hãy chọn danh mục hệ thống ở trên để xem từ vựng.</div>
+              ) : availableVocabularies.length > 0 ? (
+                <>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {availableVocabularies.map((vocabulary) => (
+                      <button
+                        key={vocabulary._id}
+                        onClick={() => handleVocabularySelect(vocabulary._id)}
+                        className={`px-3 py-1 rounded-full border text-sm transition ${
+                          selectedVocabularies.includes(vocabulary._id)
+                            ? 'bg-rose-600 text-white border-rose-600'
+                            : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                        }`}
+                        title={vocabulary.examples[0] || ''}
+                      >
+                        {vocabulary.word}
+                        <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full border ${
+                          selectedVocabularies.includes(vocabulary._id) ? 'border-white/40' : 'border-gray-300 text-gray-500'
+                        }`}>L{vocabulary.level}</span>
+                      </button>
+                    ))}
                   </div>
-
-                  {/* Vocabulary Table */}
-                  {loading ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                    </div>
-                  ) : availableVocabularies && availableVocabularies.length > 0 ? (
-                    <div className="space-y-4">
-                      {/* Add Button */}
-                      {selectedPersonalTopics.length > 0 && selectedVocabularies.length > 0 && (
-                        <div className="text-center mb-6">
-                          <Button
-                            onClick={handleAddVocabularies}
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                          >
-                            <Plus className="w-5 h-5 mr-3" />
-                            Thêm {selectedVocabularies.length} từ vựng vào {selectedPersonalTopics.length} chủ đề
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Vocabulary List */}
-                      <div className="flex flex-wrap gap-3">
-                        {availableVocabularies.map((vocabulary) => (
-                          <div
-                            key={vocabulary._id}
-                            className="relative group"
-                            onClick={() => handleVocabularySelect(vocabulary._id)}
-                          >
-                            <div
-                              className={`px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-105 ${
-                                selectedVocabularies.includes(vocabulary._id)
-                                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                                  : 'bg-white text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-2 hover:border-purple-300'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="text-center">
-                                  <div className="font-bold text-lg">{vocabulary.word}</div>
-                                </div>
-                                <Badge 
-                                  variant="secondary" 
-                                  className={`text-xs px-2 py-1 ${
-                                    selectedVocabularies.includes(vocabulary._id)
-                                      ? 'bg-white/20 text-white border-white/30'
-                                      : 'bg-purple-100 text-purple-700 border-purple-200'
-                                  }`}
-                                >
-                                  L{vocabulary.level}
-                                </Badge>
-                                {vocabulary.audioUrl && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className={`h-7 w-7 p-0 ${
-                                      selectedVocabularies.includes(vocabulary._id)
-                                        ? 'hover:bg-white/20 text-white'
-                                        : 'hover:bg-purple-100 text-purple-600'
-                                    }`}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handlePlayAudio(vocabulary.audioUrl!)
-                                    }}
-                                  >
-                                    <Play className="w-3 h-3" />
-                                  </Button>
-                                )}
-                                {selectedVocabularies.includes(vocabulary._id) && (
-                                  <CheckCircle className="w-5 h-5 text-white" />
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Tooltip with example */}
-                            {vocabulary.examples.length > 0 && (
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 shadow-xl">
-                                VD: {vocabulary.examples[0]}
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <div className="relative inline-block mb-6">
-                        <div className="p-6 bg-gradient-to-r from-pink-100 to-rose-100 rounded-full">
-                          <BookOpen className="h-16 w-16 text-pink-500" />
-                        </div>
-                        <div className="absolute -top-2 -right-2">
-                          <Search className="h-8 w-8 text-yellow-400 animate-bounce" />
-                        </div>
-                        <div className="absolute -bottom-2 -left-2">
-                          <Tag className="h-6 w-6 text-purple-400 animate-pulse" />
-                        </div>
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-800 mb-3">
-                        🔍 Không tìm thấy từ vựng phù hợp
-                      </h3>
-                      <p className="text-lg text-gray-600 mb-6">
-                        Thử thay đổi từ khóa tìm kiếm hoặc chọn danh mục khác
-                      </p>
-                      <div className="flex justify-center gap-4">
-                        <div className="flex items-center gap-2 bg-pink-100 text-pink-700 px-4 py-2 rounded-full">
-                          <Search className="h-5 w-5" />
-                          <span className="font-semibold">Tìm kiếm thông minh</span>
-                        </div>
-                        <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full">
-                          <Tag className="h-5 w-5" />
-                          <span className="font-semibold">Chọn danh mục</span>
-                        </div>
-                      </div>
+                  {selectedPersonalTopics.length > 0 && selectedVocabularies.length > 0 && (
+                    <div className="flex justify-center">
+                      <Button onClick={handleAddVocabularies} className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                        <Plus className="w-4 h-4 mr-2" /> Thêm {selectedVocabularies.length} từ vào {selectedPersonalTopics.length} chủ đề
+                      </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-indigo-50">
-                <CardContent className="text-center py-16">
-                  <div className="relative inline-block mb-6">
-                    <div className="p-6 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full">
-                      <BookOpen className="h-16 w-16 text-indigo-500" />
-                    </div>
-                    <div className="absolute -top-2 -right-2">
-                      <Tag className="h-8 w-8 text-yellow-400 animate-bounce" />
-                    </div>
-                    <div className="absolute -bottom-2 -left-2">
-                      <Search className="h-6 w-6 text-purple-400 animate-pulse" />
-                    </div>
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-3">
-                    🎯 Chọn danh mục để xem từ vựng
-                  </h3>
-                  <p className="text-lg text-gray-600 mb-6">
-                    Hãy chọn một hoặc nhiều danh mục ở bên trái để xem từ vựng có sẵn
-                  </p>
-                  <div className="flex justify-center gap-4">
-                    <div className="flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full">
-                      <BookOpen className="h-5 w-5" />
-                      <span className="font-semibold">Danh mục phong phú</span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full">
-                      <Tag className="h-5 w-5" />
-                      <span className="font-semibold">Tổ chức dễ dàng</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                </>
+              ) : (
+                <div className="text-sm text-gray-600 py-6 text-center">Không có từ vựng phù hợp.</div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Create Topic Dialog */}

@@ -29,6 +29,7 @@ interface Vocabulary {
   imageUrl?: string
   audio?: string
   audioUrl?: string
+  videoUrl?: string
   questions?: QuizQuestion[]
 }
 
@@ -44,13 +45,15 @@ interface VocabularyStudyCardProps {
   onStatusChange: any
   currentIndex: number
   totalCount: number
+  status?: 'learned' | 'studying' | 'skipped'
 }
 
 export const VocabularyStudyCard = ({
   vocabulary,
   onStatusChange,
   currentIndex,
-  totalCount
+  totalCount,
+  status
 }: VocabularyStudyCardProps) => {
   const [showDetails, setShowDetails] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
@@ -123,16 +126,17 @@ export const VocabularyStudyCard = ({
   }, [])
 
   const handleStatusChange = (status: 'learned' | 'studying' | 'skipped') => {
-    if (status === 'learned' && vocabulary.questions && vocabulary.questions.length > 0) {
+    if (status === 'learned') {
+      // Luôn yêu cầu khảo bài khi đánh dấu đã thuộc/học tiếp
       setShowQuiz(true)
       setQuizAnswers([])
       setQuizCompleted(false)
       setQuizScore(0)
       setCurrentQuizIndex(0)
       setShowAnswer(false)
-    } else {
-      onStatusChange(status)
+      return
     }
+    onStatusChange(status)
   }
 
   const handleQuizAnswer = (answerIndex: number) => {
@@ -183,8 +187,8 @@ export const VocabularyStudyCard = ({
 
   return (
     <>
-      <Card className="w-full max-w-3xl mx-auto border shadow-md bg-white">
-        <CardHeader className="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-md">
+      <Card className="w-full max-w-5xl mx-auto border shadow-lg bg-white">
+        <CardHeader className="px-6 py-5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-md">
           <div className="flex items-center justify-between">
             <div className="flex flex-wrap items-center gap-1">
               <Badge className="bg-white/20 text-white border-white/30">Cấp {vocabulary.level}</Badge>
@@ -198,14 +202,14 @@ export const VocabularyStudyCard = ({
             </div>
           </div>
 
-          <CardTitle className="mt-2 text-4xl font-bold text-white">
+          <CardTitle className="mt-2 text-5xl font-extrabold text-white text-center">
             {vocabulary.word}
           </CardTitle>
 
-          <div className="mt-1 flex items-center gap-2">
-            <span className="text-lg text-purple-100">{vocabulary.pinyin}</span>
+          <div className="mt-1 flex items-center gap-2 justify-center">
+            <span className="text-2xl text-purple-100">{vocabulary.pinyin}</span>
             {vocabulary.zhuyin && (
-              <span className="text-sm text-purple-200">({vocabulary.zhuyin})</span>
+              <span className="text-base text-purple-200">({vocabulary.zhuyin})</span>
             )}
           </div>
 
@@ -245,69 +249,87 @@ export const VocabularyStudyCard = ({
             </div>
           )}
 
-          <div className="mt-1 text-sm text-purple-100">
+          <div className="mt-2 text-base text-purple-100 text-center">
             {vocabulary.partOfSpeech} • {vocabulary.meaning}
           </div>
         </CardHeader>
 
-        <CardContent className="p-4 space-y-4">
+        <CardContent className="p-6 space-y-5 relative">
+          {/* Compact actions at a corner */}
+          <div className="absolute top-3 right-3 flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => setShowDetails(true)}
+              className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <BookOpen className="w-4 h-4 mr-1" />
+              Học
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowReport(true)}
+              className="h-8 px-3 border-orange-300 text-orange-700 hover:bg-orange-50"
+            >
+              Báo lỗi
+            </Button>
+          </div>
+
           {/* Image Display */}
           {vocabulary.imageUrl && (
             <div className="flex justify-center">
               <img 
                 src={vocabulary.imageUrl} 
                 alt={vocabulary.word}
-                className="max-w-full h-48 object-contain rounded-lg border border-gray-200"
+                className="max-w-full h-80 object-contain rounded-lg border border-gray-200"
               />
             </div>
           )}
 
-          {/* Study / Report */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setShowDetails(true)}
-                className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <BookOpen className="w-4 h-4 mr-2" />
-                Học từ này
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowReport(true)}
-                className="h-9 px-3 border-orange-300 text-orange-700 hover:bg-orange-50"
-              >
-                Báo lỗi
-              </Button>
+          {/* Video Display */}
+          {(vocabulary.videoUrl || (vocabulary as any).videoUrl) && (
+            <div className="flex justify-center">
+              <video
+                controls
+                src={(vocabulary.videoUrl || (vocabulary as any).videoUrl) as string}
+                className="w-full max-w-3xl rounded-lg border border-gray-200"
+              />
             </div>
+          )}
+
+          {/* Centered meaning/examples block */}
+          <div className="text-center">
+            {vocabulary.examples.length > 0 && (
+              <div className="text-sm text-gray-600">VD: {vocabulary.examples[0]}</div>
+            )}
           </div>
 
           {/* Actions */}
           <div>
-            <div className="text-center text-sm font-semibold text-gray-700 mb-2">
+            <div className="text-center text-base font-semibold text-gray-700 mb-3">
               Bạn đã thuộc từ này chưa?
             </div>
-            <div className="grid grid-cols-1 gap-2">
-              <Button
-                onClick={() => handleStatusChange('learned')}
-                className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white"
-                disabled={!vocabulary.questions || vocabulary.questions.length === 0}
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Đã thuộc {vocabulary.questions && vocabulary.questions.length > 0 && (
-                  <span className="ml-1 text-xs">(Có khảo bài)</span>
-                )}
-              </Button>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="flex justify-center">
+              <div className="flex items-center gap-3">
                 <Button
+                  size="sm"
+                  onClick={() => handleStatusChange('learned')}
+                  className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <CheckCircle className="w-5 h-5 mr-1" />
+                  {status === 'learned' ? 'Học tiếp' : 'Đã thuộc'}
+                </Button>
+                <Button
+                  size="sm"
                   onClick={() => handleStatusChange('studying')}
-                  className="h-10 bg-orange-500 hover:bg-orange-600 text-white"
+                  className="h-10 px-4 bg-orange-500 hover:bg-orange-600 text-white"
                 >
                   Cần học thêm
                 </Button>
                 <Button
+                  size="sm"
                   onClick={() => handleStatusChange('skipped')}
-                  className="h-10 bg-gray-500 hover:bg-gray-600 text-white"
+                  className="h-10 px-4 bg-gray-500 hover:bg-gray-600 text-white"
                 >
                   Bỏ qua
                 </Button>
@@ -401,12 +423,26 @@ export const VocabularyStudyCard = ({
         <DialogContent className="max-w-2xl">
           <DialogHeader className="text-center pb-4">
             <DialogTitle className="text-2xl font-bold text-gray-800">Khảo bài: {vocabulary.word}</DialogTitle>
-            <DialogDescription className="text-gray-600">
-              Câu {currentQuizIndex + 1}/{vocabulary.questions!.length}
-            </DialogDescription>
+            {vocabulary.questions && vocabulary.questions.length > 0 && (
+              <DialogDescription className="text-gray-600">
+                Câu {currentQuizIndex + 1}/{vocabulary.questions.length}
+              </DialogDescription>
+            )}
           </DialogHeader>
 
-          {!quizCompleted ? (
+          {/* No-questions state: không cộng điểm, chỉ thông báo */}
+          {(!vocabulary.questions || vocabulary.questions.length === 0) ? (
+            <div className="text-center space-y-4 py-6">
+              <div className="text-4xl">ℹ️</div>
+              <div className="text-lg text-gray-700">
+                Chưa có câu hỏi khảo bài cho từ này. Không thể cộng điểm khi học lại.
+              </div>
+              <Button onClick={() => setShowQuiz(false)} className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white">
+                Đóng
+              </Button>
+            </div>
+          ) : (
+          !quizCompleted ? (
             <div className="space-y-4">
               {/* Question */}
               <div className="p-4 bg-gray-50 rounded-lg border">
@@ -540,6 +576,7 @@ export const VocabularyStudyCard = ({
                 {quizScore === 100 ? 'Hoàn thành' : 'Tiếp tục học'}
               </Button>
             </div>
+          )
           )}
         </DialogContent>
       </Dialog>

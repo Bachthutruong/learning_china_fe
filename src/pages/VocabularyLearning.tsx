@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { VocabularyStudyCard } from '../components/VocabularyStudyCard'
 import { TopicQuiz } from '../components/TopicQuiz'
+import { AddVocabulary } from './AddVocabulary'
 import { 
   Plus, 
   Loader2,
@@ -60,14 +61,14 @@ export const VocabularyLearning = () => {
   const [personalTopics, setPersonalTopics] = useState<PersonalTopic[]>([])
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [availableVocabularies, setAvailableVocabularies] = useState<Vocabulary[]>([])
-  const [selectedVocabularies, setSelectedVocabularies] = useState<string[]>([])
+  // Removed add-to-topic local selection; handled in AddVocabulary dialog
   const [loading, setLoading] = useState(true)
   const [showCreateTopicDialog, setShowCreateTopicDialog] = useState(false)
   const [showAddVocabularyDialog, setShowAddVocabularyDialog] = useState(false)
   const [newTopicName, setNewTopicName] = useState('')
   const [newTopicDescription, setNewTopicDescription] = useState('')
   const [searchTerm] = useState('')
-  const [selectedPersonalTopic, setSelectedPersonalTopic] = useState('')
+  // No longer used after moving add flow to dialog page
   
   // Study mode states
   const [studyMode, setStudyMode] = useState(false)
@@ -78,6 +79,9 @@ export const VocabularyLearning = () => {
   const [vocabularyStatuses, setVocabularyStatuses] = useState<Record<string, 'learned' | 'studying' | 'skipped'>>({})
   const [activeTab, setActiveTab] = useState<'studying' | 'learned'>('studying')
   const [isSingleWordMode, setIsSingleWordMode] = useState(false)
+  const vocabListAnchorRef = useRef<HTMLDivElement | null>(null)
+  const [selectedInlineVocabulary, setSelectedInlineVocabulary] = useState<Vocabulary | null>(null)
+  const studyTopRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     fetchPersonalTopics()
@@ -96,10 +100,10 @@ export const VocabularyLearning = () => {
     }
   }
 
-  const fetchAvailableVocabularies = async () => {
+  const fetchAvailableVocabularies = async (): Promise<Vocabulary[]> => {
     if (selectedTopics.length === 0) {
       setAvailableVocabularies([])
-      return
+      return []
     }
 
     try {
@@ -111,14 +115,17 @@ export const VocabularyLearning = () => {
           limit: 20
         }
       })
-      setAvailableVocabularies(response.data.vocabularies || response.data)
+      const list: Vocabulary[] = response.data.vocabularies || response.data
+      setAvailableVocabularies(list)
       // nhận trạng thái từ server (nếu có) để hiển thị lại sau reload
       if (response.data.statuses) {
         setVocabularyStatuses(response.data.statuses)
       }
+      return list
     } catch (error) {
       console.error('Error fetching vocabularies:', error)
       toast.error('Không thể tải danh sách từ vựng')
+      return []
     } finally {
       setLoading(false)
     }
@@ -148,32 +155,7 @@ export const VocabularyLearning = () => {
     }
   }
 
-  const handleAddVocabularies = async () => {
-    if (selectedVocabularies.length === 0) {
-      toast.error('Vui lòng chọn từ vựng để thêm')
-      return
-    }
-
-    if (!selectedPersonalTopic) {
-      toast.error('Vui lòng chọn chủ đề')
-      return
-    }
-
-    try {
-      await api.post('/vocabulary-learning/personal-topics/add-vocabularies', {
-        topicId: selectedPersonalTopic,
-        vocabularyIds: selectedVocabularies
-      })
-      
-      toast.success('Thêm từ vựng thành công!')
-      setSelectedVocabularies([])
-      setShowAddVocabularyDialog(false)
-      fetchPersonalTopics()
-    } catch (error: any) {
-      console.error('Error adding vocabularies:', error)
-      toast.error(error.response?.data?.message || 'Không thể thêm từ vựng')
-    }
-  }
+  // Removed legacy inline add handler; handled inside AddVocabulary
 
   const handleTopicSelect = (topicId: string) => {
     setSelectedTopics(prev => 
@@ -185,11 +167,18 @@ export const VocabularyLearning = () => {
 
 
 
-  const startStudyMode = (vocabularies: Vocabulary[], singleWord = false) => {
-    setStudyVocabularies(vocabularies)
-    setCurrentStudyIndex(0)
+  const startStudyMode = async (vocabularies: Vocabulary[], singleWord = false, initialIndex = 0) => {
+    // Bắt đầu học: luôn vào giao diện học đầy đủ
+    setSelectedInlineVocabulary(null)
+    let listToUse = vocabularies
+    if (!listToUse || listToUse.length === 0) {
+      listToUse = await fetchAvailableVocabularies()
+    }
+    setStudyVocabularies(listToUse)
+    setCurrentStudyIndex(Math.min(Math.max(initialIndex, 0), Math.max(0, listToUse.length - 1)))
     setStudyMode(true)
     setIsSingleWordMode(singleWord)
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch {}
   }
 
   const handleStudyStatusChange = async (status: 'learned' | 'studying' | 'skipped'): Promise<void> => {
@@ -212,18 +201,13 @@ export const VocabularyLearning = () => {
         return
       }
 
-      setStudyVocabularies(prev => {
-        const next = [...prev]
-        const [item] = next.splice(currentStudyIndex, 1)
-        next.push(item)
-        return next
+      // Chuyển ngay sang từ tiếp theo, không thay đổi thứ tự danh sách
+      setCurrentStudyIndex(prev => {
+        const nextIndex = prev + 1
+        if (nextIndex < studyVocabularies.length) return nextIndex
+        return 0
       })
-
-      // giữ nguyên currentStudyIndex để đi tiếp sang phần tử kế tiếp sau khi đã đẩy phần tử hiện tại xuống cuối
-      if (currentStudyIndex === studyVocabularies.length - 1) {
-        setCurrentStudyIndex(currentStudyIndex) // sẽ trỏ tới phần tử mới cuối hàng, vòng tiếp theo sẽ reset nếu cần
-      }
-      toast('Đã bỏ qua tạm thời. Sẽ ôn lại ở vòng sau.')
+      toast('Đã bỏ qua. Chuyển sang từ kế tiếp.')
       return
     }
 
@@ -309,17 +293,64 @@ export const VocabularyLearning = () => {
   }
 
   const handleVocabularyClick = (vocabulary: Vocabulary) => {
-    startStudyMode([vocabulary], true)
+    const index = availableVocabularies.findIndex(v => v._id === vocabulary._id)
+    setSelectedInlineVocabulary(null)
+    startStudyMode(availableVocabularies, false, index >= 0 ? index : 0)
   }
 
   useEffect(() => {
     fetchAvailableVocabularies()
   }, [selectedTopics, searchTerm])
 
+  // Scroll to vocab list when a topic gets selected
+  useEffect(() => {
+    if (selectedTopics.length > 0) {
+      // Ensure DOM is ready
+      requestAnimationFrame(() => {
+        vocabListAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+  }, [selectedTopics])
+
+  // Reset inline study card and study states when switching topics
+  useEffect(() => {
+    if (selectedTopics.length > 0) {
+      setSelectedInlineVocabulary(null)
+      setIsSingleWordMode(false)
+      setStudyVocabularies([])
+      setCurrentStudyIndex(0)
+    }
+  }, [selectedTopics])
+
+  // Khi bắt đầu học, tự động cuộn lên đầu phần học
+  useEffect(() => {
+    if (studyMode) {
+      requestAnimationFrame(() => {
+        // Cuộn hẳn lên đầu trang
+        try {
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        } catch {}
+        try {
+          // Fallback cho một số trình duyệt/webview
+          document.documentElement.scrollTop = 0
+          document.body.scrollTop = 0
+        } catch {}
+        // Đồng thời đảm bảo scroll đến anchor đầu phần học
+        studyTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        setTimeout(() => {
+          try {
+            window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+          } catch {}
+        }, 50)
+      })
+    }
+  }, [studyMode])
+
   // Study mode render
   if (studyMode && studyVocabularies.length > 0) {
   return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-6">
+        <div ref={studyTopRef} />
         <div className="max-w-4xl mx-auto">
           {/* Enhanced Header */}
           <div className="mb-8 text-center">
@@ -341,9 +372,32 @@ export const VocabularyLearning = () => {
                 <Tag className="h-6 w-6 text-purple-400 animate-pulse" />
           </div>
           </div>
-            <p className="text-xl text-gray-700 font-medium">
-              Học từng từ một cách có hệ thống
-            </p>
+            {/* Topic name and word list */}
+            {selectedTopics.length > 0 && (
+              <div className="mt-4">
+                <div className="flex justify-center mb-3">
+                  <span className="inline-flex items-center px-5 py-2 rounded-full bg-purple-600 text-white text-lg font-semibold shadow">
+                    Chủ đề: {personalTopics.find(t => t._id === selectedTopics[0])?.name || '—'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap justify-center gap-3 max-h-28 overflow-y-auto px-2">
+                  {availableVocabularies.map((v, idx) => (
+                    <button
+                      key={v._id}
+                      onClick={() => setCurrentStudyIndex(idx)}
+                      className={`px-4 py-2 rounded-2xl text-sm border transition-colors shadow-sm ${
+                        idx === currentStudyIndex
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      {v.word}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Removed helper subtitle to keep header compact */}
             <div className="flex justify-center mt-4">
               <div className="flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full">
                 <Play className="h-5 w-5 text-green-500" />
@@ -359,6 +413,7 @@ export const VocabularyLearning = () => {
             onStatusChange={handleStudyStatusChange}
             currentIndex={currentStudyIndex}
             totalCount={studyVocabularies.length}
+            status={vocabularyStatuses[studyVocabularies[currentStudyIndex]._id]}
           />
                   </div>
       </div>
@@ -401,8 +456,8 @@ export const VocabularyLearning = () => {
             <Plus className="w-5 h-5 mr-2" />
             Tạo chủ đề mới
                 </Button>
-                      <Button
-            onClick={() => window.location.href = '/vocabulary-learning/add'}
+                <Button
+            onClick={() => setShowAddVocabularyDialog(true)}
             className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 >
             <BookOpen className="w-5 h-5 mr-2" />
@@ -515,6 +570,9 @@ export const VocabularyLearning = () => {
             </Card>
         )}
 
+        {/* Anchor for smooth scroll to vocab list */}
+        <div ref={vocabListAnchorRef} />
+
         {/* Selected Topic Vocabularies */}
         {selectedTopics.length > 0 && (
           <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-pink-50">
@@ -543,7 +601,7 @@ export const VocabularyLearning = () => {
                   <div className="text-center mb-6">
                     <div className="flex justify-center gap-4 mb-4">
                       <Button
-                        onClick={() => window.location.href = '/vocabulary-learning/add'}
+                        onClick={() => setShowAddVocabularyDialog(true)}
                         className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                       >
                         <BookOpen className="w-5 h-5 mr-2" />
@@ -561,6 +619,19 @@ export const VocabularyLearning = () => {
                       Học từng từ một cách có hệ thống
                     </p>
                   </div>
+
+                  {/* Inline selected vocabulary details */}
+                  {selectedInlineVocabulary && studyVocabularies.length > 0 && (
+                    <div className="mb-8">
+                      <VocabularyStudyCard
+                        vocabulary={studyVocabularies[currentStudyIndex]}
+                        onStatusChange={handleStudyStatusChange}
+                        currentIndex={currentStudyIndex}
+                        totalCount={studyVocabularies.length}
+                        status={vocabularyStatuses[studyVocabularies[currentStudyIndex]._id]}
+                      />
+                    </div>
+                  )}
 
                   {/* Tabs */}
                   <div className="flex justify-center mb-6">
@@ -643,7 +714,7 @@ export const VocabularyLearning = () => {
                   </p>
                   <div className="flex justify-center gap-4">
                     <Button
-                      onClick={() => window.location.href = '/vocabulary-learning/add'}
+                      onClick={() => setShowAddVocabularyDialog(true)}
                       className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                     >
                       <BookOpen className="w-5 h-5 mr-2" />
@@ -748,52 +819,20 @@ export const VocabularyLearning = () => {
       </Dialog>
 
         {/* Add Vocabulary Dialog */}
-      <Dialog open={showAddVocabularyDialog} onOpenChange={setShowAddVocabularyDialog}>
-          <DialogContent className="max-w-4xl">
-          <DialogHeader>
-              <DialogTitle>Thêm từ vựng vào chủ đề</DialogTitle>
-          </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Chọn chủ đề *</Label>
-              <select
-                value={selectedPersonalTopic}
-                onChange={(e) => setSelectedPersonalTopic(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  required
-              >
-                  <option value="">Chọn chủ đề</option>
-                {personalTopics.map((topic) => (
-                  <option key={topic._id} value={topic._id}>
-                    {topic.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectedVocabularies.length > 0 && (
-                <div className="bg-blue-50 p-3 rounded-md">
-                  <p className="text-sm text-blue-800">
-                Đã chọn {selectedVocabularies.length} từ vựng
-                  </p>
-              </div>
-            )}
-
-              <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                  onClick={() => setShowAddVocabularyDialog(false)}
-              >
-                Hủy
-              </Button>
-              <Button
-                  onClick={handleAddVocabularies}
-                  disabled={selectedVocabularies.length === 0 || !selectedPersonalTopic}
-              >
-                  Thêm từ vựng
-              </Button>
-            </div>
-          </div>
+      <Dialog open={showAddVocabularyDialog} onOpenChange={(open) => {
+        setShowAddVocabularyDialog(open)
+        if (!open) {
+          // Refresh lists when dialog closes
+          fetchPersonalTopics()
+          fetchAvailableVocabularies()
+        }
+      }}>
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto p-0">
+          <AddVocabulary 
+            inDialog 
+            onClose={() => setShowAddVocabularyDialog(false)} 
+            initialSelectedPersonalTopics={selectedTopics}
+          />
         </DialogContent>
       </Dialog>
 
