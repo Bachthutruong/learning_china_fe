@@ -1,15 +1,14 @@
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { 
-  Play, 
-  Pause,
   CheckCircle, 
   BookOpen, 
   ArrowLeft,
   ArrowRight,
-  // HelpCircle
+  Play,
+  Pause,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
 import { ReportErrorDialog } from './ReportErrorDialog'
@@ -43,16 +42,12 @@ interface QuizQuestion {
 interface VocabularyStudyCardProps {
   vocabulary: Vocabulary
   onStatusChange: any
-  currentIndex: number
-  totalCount: number
   status?: 'learned' | 'studying' | 'skipped'
 }
 
 export const VocabularyStudyCard = ({
   vocabulary,
   onStatusChange,
-  currentIndex,
-  totalCount,
   status
 }: VocabularyStudyCardProps) => {
   const [showDetails, setShowDetails] = useState(false)
@@ -63,31 +58,14 @@ export const VocabularyStudyCard = ({
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
   const [showReport, setShowReport] = useState(false)
-  
-  // Audio state
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const progressBarRef = useRef<HTMLDivElement | null>(null)
+  const [duration, setDuration] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
 
-  // Audio control functions
   const handlePlayPause = async () => {
-    if (!vocabulary.audioUrl) return
-
-    if (!audioRef.current) {
-      audioRef.current = new Audio(vocabulary.audioUrl)
-      audioRef.current.addEventListener('loadedmetadata', () => {
-        setDuration(audioRef.current?.duration || 0)
-      })
-      audioRef.current.addEventListener('timeupdate', () => {
-        setCurrentTime(audioRef.current?.currentTime || 0)
-      })
-      audioRef.current.addEventListener('ended', () => {
-        setIsPlaying(false)
-        setCurrentTime(0)
-      })
-    }
-
+    if (!audioRef.current) return
     try {
       if (isPlaying) {
         audioRef.current.pause()
@@ -96,34 +74,45 @@ export const VocabularyStudyCard = ({
         await audioRef.current.play()
         setIsPlaying(true)
       }
-    } catch (error) {
-      console.error('Error playing audio:', error)
-    }
+    } catch {}
   }
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (audioRef.current) {
-      const newTime = parseFloat(e.target.value)
-      audioRef.current.currentTime = newTime
-      setCurrentTime(newTime)
+  useEffect(() => {
+    if (!showDetails && audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setIsPlaying(false)
     }
-  }
+  }, [showDetails])
+  
+  useEffect(() => {
+    const audioEl = audioRef.current
+    if (!audioEl) return
+    // In case metadata already loaded before handlers bind
+    if (isFinite(audioEl.duration)) setDuration(audioEl.duration)
+  }, [vocabulary.audioUrl])
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
+  const formatTime = (timeSec: number) => {
+    if (!isFinite(timeSec)) return '0:00'
+    const minutes = Math.floor(timeSec / 60)
+    const seconds = Math.floor(timeSec % 60)
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
-  // Cleanup audio when component unmounts
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
-    }
-  }, [])
+  const handleSeekAtClientX = (clientX: number) => {
+    if (!progressBarRef.current || !audioRef.current || duration === 0) return
+    const rect = progressBarRef.current.getBoundingClientRect()
+    const clamped = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    const newTime = clamped * duration
+    audioRef.current.currentTime = newTime
+    setCurrentTime(newTime)
+  }
+
+  const handleSeekClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    handleSeekAtClientX(e.clientX)
+  }
+  
+  // No audio controls; simplified view
 
   const handleStatusChange = (status: 'learned' | 'studying' | 'skipped') => {
     if (status === 'learned') {
@@ -187,153 +176,55 @@ export const VocabularyStudyCard = ({
 
   return (
     <>
-      <Card className="w-full max-w-5xl mx-auto border shadow-lg bg-white">
-        <CardHeader className="px-6 py-5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-md">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-wrap items-center gap-1">
-              <Badge className="bg-white/20 text-white border-white/30">Cấp {vocabulary.level}</Badge>
-              {vocabulary.topics.map((topic, index) => (
-                <Badge key={index} className="bg-white/20 text-white border-white/30">{topic}</Badge>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-              <Play className="w-3 h-3" />
-              <span className="font-semibold">{currentIndex + 1}/{totalCount}</span>
-            </div>
-          </div>
-
-          <CardTitle className="mt-2 text-5xl font-extrabold text-white text-center">
+      <Card className="w-full max-w-5xl mx-auto border shadow-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+        <CardHeader className="px-6 py-10">
+          <CardTitle className="text-6xl font-extrabold text-white text-center">
             {vocabulary.word}
           </CardTitle>
-
-          <div className="mt-1 flex items-center gap-2 justify-center">
-            <span className="text-2xl text-purple-100">{vocabulary.pinyin}</span>
-            {vocabulary.zhuyin && (
-              <span className="text-base text-purple-200">({vocabulary.zhuyin})</span>
-            )}
-          </div>
-
-          {/* Audio Player */}
-          {vocabulary.audioUrl && (
-            <div className="mt-3 bg-white/10 rounded-lg p-3">
-              <div className="flex items-center gap-3">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handlePlayPause}
-                  className="h-8 w-8 p-0 bg-white/20 hover:bg-white/30 text-white border-white/30 rounded-full"
-                >
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                </Button>
-                
-                <div className="flex-1">
-                  <input
-                    type="range"
-                    min="0"
-                    max={duration || 0}
-                    value={currentTime}
-                    onChange={handleSeek}
-                    className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
-                    style={{
-                      background: `linear-gradient(to right, #ffffff 0%, #ffffff ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) 100%)`,
-                      WebkitAppearance: 'none',
-                      appearance: 'none'
-                    }}
-                  />
-                </div>
-                
-                <div className="text-xs text-white/80 font-mono min-w-[40px]">
-                  {formatTime(currentTime)} / {formatTime(duration)}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-2 text-base text-purple-100 text-center">
-            {vocabulary.partOfSpeech} • {vocabulary.meaning}
-          </div>
         </CardHeader>
 
-        <CardContent className="p-6 space-y-5 relative">
-          {/* Compact actions at a corner */}
-          <div className="absolute top-3 right-3 flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => setShowDetails(true)}
-              className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <BookOpen className="w-4 h-4 mr-1" />
-              Học
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowReport(true)}
-              className="h-8 px-3 border-orange-300 text-orange-700 hover:bg-orange-50"
-            >
-              Báo lỗi
-            </Button>
-          </div>
-
-          {/* Image Display */}
-          {vocabulary.imageUrl && (
-            <div className="flex justify-center">
-              <img 
-                src={vocabulary.imageUrl} 
-                alt={vocabulary.word}
-                className="max-w-full h-80 object-contain rounded-lg border border-gray-200"
-              />
-            </div>
-          )}
-
-          {/* Video Display */}
-          {(vocabulary.videoUrl || (vocabulary as any).videoUrl) && (
-            <div className="flex justify-center">
-              <video
-                controls
-                src={(vocabulary.videoUrl || (vocabulary as any).videoUrl) as string}
-                className="w-full max-w-3xl rounded-lg border border-gray-200"
-              />
-            </div>
-          )}
-
-          {/* Centered meaning/examples block */}
-          <div className="text-center">
-            {vocabulary.examples.length > 0 && (
-              <div className="text-sm text-gray-600">VD: {vocabulary.examples[0]}</div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div>
-            <div className="text-center text-base font-semibold text-gray-700 mb-3">
-              Bạn đã thuộc từ này chưa?
-            </div>
-            <div className="flex justify-center">
-              <div className="flex items-center gap-3">
-                <Button
-                  size="sm"
-                  onClick={() => handleStatusChange('learned')}
-                  className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <CheckCircle className="w-5 h-5 mr-1" />
-                  {status === 'learned' ? 'Học tiếp' : 'Đã thuộc'}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleStatusChange('studying')}
-                  className="h-10 px-4 bg-orange-500 hover:bg-orange-600 text-white"
-                >
-                  Cần học thêm
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleStatusChange('skipped')}
-                  className="h-10 px-4 bg-gray-500 hover:bg-gray-600 text-white"
-                >
-                  Bỏ qua
-                </Button>
-              </div>
+        <CardContent className="p-6 bg-transparent">
+          {/* Actions: Học, Đã thuộc, Cần học thêm, Bỏ qua, Báo lỗi */}
+          <div className="flex justify-center">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                size="sm"
+                onClick={() => setShowDetails(true)}
+                className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <BookOpen className="w-5 h-5 mr-1" />
+                Học
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleStatusChange('learned')}
+                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <CheckCircle className="w-5 h-5 mr-1" />
+                {status === 'learned' ? 'Học tiếp' : 'Đã thuộc'}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleStatusChange('studying')}
+                className="h-10 px-4 bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                Cần học thêm
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleStatusChange('skipped')}
+                className="h-10 px-4 bg-gray-500 hover:bg-gray-600 text-white"
+              >
+                Bỏ qua
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowReport(true)}
+                className="h-10 px-4 border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                Báo lỗi
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -341,15 +232,81 @@ export const VocabularyStudyCard = ({
 
       {/* Vocabulary Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-4xl border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50">
-          <DialogHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-t-lg p-6 -m-6 mb-6">
-            <DialogTitle className="text-3xl font-bold text-white">{vocabulary.word}</DialogTitle>
-            <DialogDescription className="text-blue-100 text-lg">
-              {vocabulary.pinyin} {vocabulary.zhuyin && `• ${vocabulary.zhuyin}`} • {vocabulary.partOfSpeech}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6 p-6">
+        <DialogContent className="max-w-4xl border-0 shadow-2xl bg-white">
+          <div className="space-y-6 p-1">
+            {/* Title card */}
+            <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-blue-200">
+              <div className="text-3xl font-bold text-gray-900">{vocabulary.word}</div>
+              <div className="text-blue-700/80 mt-1">
+                {vocabulary.pinyin} {vocabulary.zhuyin && `• ${vocabulary.zhuyin}`} • {vocabulary.partOfSpeech}
+              </div>
+            </div>
+
+            {/* Media section: show image/video and audio if available */}
+            {(vocabulary.imageUrl || (vocabulary as any).videoUrl) && (
+              <div className="flex justify-center">
+                {((vocabulary as any).videoUrl) ? (
+                  <video
+                    controls
+                    src={(vocabulary as any).videoUrl as string}
+                    className="w-full max-w-3xl rounded-lg border border-gray-200"
+                  />
+                ) : (
+                  <img
+                    src={vocabulary.imageUrl!}
+                    alt={vocabulary.word}
+                    className="max-w-full h-80 object-contain rounded-lg border border-gray-200"
+                  />
+                )}
+              </div>
+            )}
+
+            {vocabulary.audioUrl && (
+              <div className="flex flex-col items-center gap-3">
+                <audio
+                  ref={audioRef}
+                  src={vocabulary.audioUrl}
+                  preload="metadata"
+                  onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
+                  onDurationChange={() => setDuration(audioRef.current?.duration || 0)}
+                  onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
+                  onEnded={() => setIsPlaying(false)}
+                  className="hidden"
+                />
+                <div className="w-full max-w-3xl">
+                  <div className="p-1 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500">
+                    <div className="flex items-center gap-4 rounded-xl px-4 py-3 bg-gradient-to-r from-purple-400 to-pink-400">
+                      <button
+                        onClick={handlePlayPause}
+                        className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center bg-white/30 hover:bg-white/40 text-white"
+                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                      >
+                        {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                      </button>
+                      <div className="flex-1 flex items-center gap-4">
+                        <div
+                          ref={progressBarRef}
+                          className="relative h-3 w-full rounded-full bg-white/30 cursor-pointer"
+                          onClick={handleSeekClick}
+                        >
+                          <div
+                            className="absolute left-0 top-0 h-3 rounded-full bg-white/60"
+                            style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                          />
+                          <div
+                            className="absolute -top-1.5 h-6 w-6 rounded-full bg-blue-500 shadow border border-white"
+                            style={{ left: `calc(${duration ? (currentTime / duration) * 100 : 0}% - 12px)` }}
+                          />
+                        </div>
+                        <div className="shrink-0 text-white font-semibold tracking-wide">
+                          {`${formatTime(currentTime)} / ${formatTime(duration)}`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200">
               <h4 className="font-bold text-lg text-blue-800 mb-3">📖 Nghĩa:</h4>
               <p className="text-xl text-gray-800">{vocabulary.meaning}</p>
@@ -389,7 +346,7 @@ export const VocabularyStudyCard = ({
             )}
           </div>
 
-          <div className="flex justify-end gap-4 p-6">
+          <div className="flex justify-end gap-4 p-1 pt-4">
             <Button 
               variant="outline" 
               onClick={() => setShowDetails(false)}

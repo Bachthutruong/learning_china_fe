@@ -136,6 +136,10 @@ export const Navbar = () => {
                       <CalendarCheck className="mr-2 h-4 w-4" />
                       <span>Điểm danh</span>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/coin-history')}>
+                      <Coins className="mr-2 h-4 w-4" />
+                      <span>Lịch sử XU</span>
+                    </DropdownMenuItem>
                     {user?.role === 'admin' && (
                       <DropdownMenuItem onClick={() => navigate('/admin')}>
                         <Settings className="mr-2 h-4 w-4" />

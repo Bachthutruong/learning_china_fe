@@ -397,22 +397,12 @@ export const VocabularyLearning = () => {
                 </div>
               </div>
             )}
-            {/* Removed helper subtitle to keep header compact */}
-            <div className="flex justify-center mt-4">
-              <div className="flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full">
-                <Play className="h-5 w-5 text-green-500" />
-                <span className="text-sm font-semibold text-green-700">
-                  Câu {currentStudyIndex + 1} / {studyVocabularies.length}
-                </span>
-        </div>
-                          </div>
+            {/* Removed helper subtitle and counter to keep header compact */}
                     </div>
           
           <VocabularyStudyCard
             vocabulary={studyVocabularies[currentStudyIndex]}
             onStatusChange={handleStudyStatusChange}
-            currentIndex={currentStudyIndex}
-            totalCount={studyVocabularies.length}
             status={vocabularyStatuses[studyVocabularies[currentStudyIndex]._id]}
           />
                   </div>
@@ -626,8 +616,6 @@ export const VocabularyLearning = () => {
                       <VocabularyStudyCard
                         vocabulary={studyVocabularies[currentStudyIndex]}
                         onStatusChange={handleStudyStatusChange}
-                        currentIndex={currentStudyIndex}
-                        totalCount={studyVocabularies.length}
                         status={vocabularyStatuses[studyVocabularies[currentStudyIndex]._id]}
                       />
                     </div>

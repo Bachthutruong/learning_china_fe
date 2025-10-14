@@ -139,6 +139,12 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
       badge: stats.tests > 0 ? stats.tests.toString() : null
     },
     {
+      title: 'Lịch sử làm bài test',
+      icon: TestTube,
+      href: '/admin/test-histories',
+      badge: null
+    },
+    {
       title: 'Test năng lực',
       icon: Brain,
       href: '/admin/proficiency',
@@ -181,6 +187,12 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
       icon: Coins,
       href: '/admin/coin-purchases',
       badge: stats.coinPurchases > 0 ? stats.coinPurchases.toString() : null
+    },
+    {
+      title: 'Giao dịch XU',
+      icon: Coins,
+      href: '/admin/coin-transactions',
+      badge: null
     },
     {
       title: 'Cấu hình thanh toán',

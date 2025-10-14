@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -133,7 +133,12 @@ export const Profile = () => {
   const fetchPersonalTopics = async () => {
     try {
       const response = await api.get('/vocabulary-learning/user/personal-topics')
-      setPersonalTopics(response.data.topics || response.data)
+      const topics = Array.isArray(response.data?.topics)
+        ? response.data.topics
+        : Array.isArray(response.data)
+          ? response.data
+          : []
+      setPersonalTopics(topics)
     } catch (error) {
       console.error('Failed to fetch personal topics:', error)
     }
@@ -142,7 +147,12 @@ export const Profile = () => {
   const fetchUserVocabularies = async () => {
     try {
       const response = await api.get('/vocabulary-learning/user/vocabularies')
-      setUserVocabularies(response.data.vocabularies || response.data)
+      const items = Array.isArray(response.data?.vocabularies)
+        ? response.data.vocabularies
+        : Array.isArray(response.data)
+          ? response.data
+          : []
+      setUserVocabularies(items)
     } catch (error) {
       console.error('Failed to fetch user vocabularies:', error)
     }
@@ -359,7 +369,7 @@ export const Profile = () => {
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4">
                   {achievements.map((achievement, index) => {
-                    const Icon = achievement.icon
+                    const RawIcon: any = (achievement as any).icon
                     return (
                       <div
                         key={index}
@@ -372,9 +382,17 @@ export const Profile = () => {
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                           achievement.completed ? 'bg-green-500' : 'bg-gray-300'
                         }`}>
-                          <Icon className={`h-5 w-5 ${
-                            achievement.completed ? 'text-white' : 'text-gray-500'
-                          }`} />
+                          {typeof RawIcon === 'function' ? (
+                            <RawIcon className={`h-5 w-5 ${
+                              achievement.completed ? 'text-white' : 'text-gray-500'
+                            }`} />
+                          ) : React.isValidElement(RawIcon) ? (
+                            RawIcon
+                          ) : (
+                            <span className={`text-lg ${
+                              achievement.completed ? 'text-white' : 'text-gray-700'
+                            }`}>{typeof RawIcon === 'string' ? RawIcon : '🏅'}</span>
+                          )}
                         </div>
                         <div className="flex-1">
                           <h4 className={`font-medium ${
@@ -459,8 +477,8 @@ export const Profile = () => {
 
                     {/* Vocabularies List */}
                     <div className="space-y-3">
-                      {userVocabularies
-                        .filter(vocab => selectedTopic === 'all' || vocab.personalTopicId._id === selectedTopic)
+                      {(Array.isArray(userVocabularies) ? userVocabularies : [])
+                        .filter((vocab) => selectedTopic === 'all' || vocab.personalTopicId?._id === selectedTopic)
                         .map((userVocab) => (
                           <div key={userVocab._id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                             <div className="flex-1">
@@ -480,7 +498,7 @@ export const Profile = () => {
                                 {userVocab.vocabularyId.pronunciation} - {userVocab.vocabularyId.meaning}
                               </p>
                               <p className="text-xs text-gray-500">
-                                Chủ đề: {userVocab.personalTopicId.name}
+                                Chủ đề: {userVocab.personalTopicId?.name}
                               </p>
                             </div>
                             {userVocab.vocabularyId.audioUrl && (
@@ -501,7 +519,7 @@ export const Profile = () => {
                         ))}
                     </div>
 
-                    {userVocabularies.filter(vocab => selectedTopic === 'all' || vocab.personalTopicId._id === selectedTopic).length === 0 && (
+                    {(Array.isArray(userVocabularies) ? userVocabularies : []).filter((vocab) => selectedTopic === 'all' || vocab.personalTopicId?._id === selectedTopic).length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                         <p>Chưa có từ vựng nào trong chủ đề này</p>

@@ -3,12 +3,13 @@ import { useAuth } from '../contexts/AuthContext'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Progress } from '../components/ui/progress'
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
+import { Input } from '../components/ui/input'
 import { 
   TestTube, 
-  Coins, 
   Star, 
   Loader2,
-  AlertCircle,
   CheckCircle,
   XCircle,
   ArrowLeft,
@@ -22,7 +23,6 @@ import {
   Award,
   BookOpen,
   Lightbulb,
-  Diamond,
   Flame,
   Shield,
   Flag,
@@ -77,6 +77,12 @@ export const NewTestPage = () => {
   const [testReport, setTestReport] = useState<TestReport | null>(null)
   const [userLevel, setUserLevel] = useState(1)
   const [showReportDialog, setShowReportDialog] = useState(false)
+  const [questionCount, setQuestionCount] = useState<number>(10)
+  const [countDialogOpen, setCountDialogOpen] = useState(false)
+  const [tempCount, setTempCount] = useState<string>('10')
+  const [lockedIndexes, setLockedIndexes] = useState<Set<number>>(new Set())
+  const [answeredIndexes, setAnsweredIndexes] = useState<Set<number>>(new Set())
+  const [checkingAnswer] = useState(false)
   // Immediate mode states
   const [activeTab, _setActiveTab] = useState<'test' | 'history'>('test')
   const [showResult, setShowResult] = useState(false)
@@ -102,7 +108,7 @@ export const NewTestPage = () => {
     }
   }
 
-  const startTest = async () => {
+  const startTest = async (overrideCount?: number) => {
     if (!user) {
       toast.error('Vui lòng đăng nhập để làm test')
       return
@@ -110,36 +116,32 @@ export const NewTestPage = () => {
 
     try {
       setLoading(true)
-      
-      // Start test session (deduct 10,000 coins)
-      await api.post('/tests/start')
-      
-      // Get all questions for user's level
-      const response = await api.get(`/questions/all?level=${userLevel}`)
-      setQuestions(response.data.questions)
+      // Get next questions prioritizing unseen and then wrong ones
+      const chosen = Math.min(Math.max(overrideCount ?? questionCount, 1), 20)
+      const response = await api.get(`/questions/next?limit=${chosen}`)
+      setQuestions(response.data.questions || [])
       setTestStarted(true)
       setCurrentIndex(0)
       setAnswers({})
+      setLockedIndexes(new Set())
       setShowResult(false)
       setLastCorrect(null)
       setTotalAnswered(0); setTotalCorrect(0); setTotalWrong(0); setEarnedXp(0); setEarnedCoins(0)
       const newSession = { id: `${Date.now()}`, startedAt: Date.now(), total: 0, correct: 0, wrong: 0, xp: 0, coins: 0, items: [] as Array<{question: string; correct: boolean; explanation?: string}> }
       setSessions(prev => { const updated = [newSession, ...prev]; localStorage.setItem('newtest.sessions', JSON.stringify(updated)); return updated })
       
-      toast.success(`Bắt đầu làm bài test! Có ${response.data.questions.length} câu hỏi để làm.`)
+      toast.success(`Bắt đầu làm bài test! Có ${response.data.questions?.length || 0} câu hỏi.`)
     } catch (error: any) {
       console.error('Error starting test:', error)
-      if (error.response?.data?.insufficientCoins) {
-        toast.error('Không đủ xu! Hãy học thêm từ vựng để nhận xu miễn phí!')
-      } else {
-        toast.error(error.response?.data?.message || 'Không thể bắt đầu test')
-      }
+      toast.error(error.response?.data?.message || 'Không thể bắt đầu test')
     } finally {
       setLoading(false)
     }
   }
 
   const handleAnswerSelect = (answer: any) => {
+    if (lockedIndexes.has(currentIndex)) return
+    if (answeredIndexes.has(currentIndex)) return
     setAnswers({
       ...answers,
       [currentIndex]: answer
@@ -147,20 +149,20 @@ export const NewTestPage = () => {
   }
 
   const handleMultipleChoiceSelect = (optionIndex: number) => {
+    // If navigating back to previous question, view-only
+    if (lockedIndexes.has(currentIndex)) return
+    if (answeredIndexes.has(currentIndex)) return
     const currentAnswer = answers[currentIndex] || []
     const isSelected = Array.isArray(currentAnswer) ? currentAnswer.includes(optionIndex) : currentAnswer === optionIndex
     
     let newAnswer
-    if (Array.isArray(currentAnswer)) {
-      // Already an array, toggle the option
-      newAnswer = isSelected 
-        ? currentAnswer.filter((i: number) => i !== optionIndex)
-        : [...currentAnswer, optionIndex]
+    const q = questions[currentIndex]
+    const isMulti = Array.isArray(q?.correctAnswer)
+    if (isMulti) {
+      const arr = Array.isArray(currentAnswer) ? currentAnswer : (Number.isFinite(currentAnswer) ? [currentAnswer] : [])
+      newAnswer = isSelected ? arr.filter((i: number) => i !== optionIndex) : [...arr, optionIndex]
     } else {
-      // Single selection, convert to array
-      newAnswer = isSelected 
-        ? currentAnswer.filter((i: number) => i !== optionIndex)
-        : [optionIndex]
+      newAnswer = optionIndex
     }
     
     setAnswers({
@@ -170,6 +172,8 @@ export const NewTestPage = () => {
   }
 
   const handleReadingComprehensionSelect = (subQIdx: number, optionIndex: number) => {
+    if (lockedIndexes.has(currentIndex)) return
+    if (answeredIndexes.has(currentIndex)) return
     const currentAnswer = answers[currentIndex]
     let newAnswer: any[]
     
@@ -199,24 +203,21 @@ export const NewTestPage = () => {
     setShowResult(false)
     setLastCorrect(null)
     if (currentIndex < questions.length - 1) {
+      // Lock the just-answered question when moving forward
+      setLockedIndexes(prev => new Set(prev).add(currentIndex))
       setCurrentIndex(currentIndex + 1)
     } else {
-      // User has completed all available questions
-      toast.success('🎉 Bạn đã hoàn thành tất cả câu hỏi!')
-      // Optionally: show completion summary or restart
-      setTestStarted(false)
+      toast.success('Bạn đã ở câu cuối cùng, hãy bấm Kết thúc để nộp bài.')
     }
   }
 
-  const handlePrevQuestion = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
-    }
-  }
+  // Removed back navigation by requirement
 
   // Deprecated batch submit kept for compatibility; no longer used in immediate mode
 
   const checkCurrentAnswer = async () => {
+    if (checkingAnswer) return
+    if (answeredIndexes.has(currentIndex)) return
     const q = questions[currentIndex]
     const userAns = answers[currentIndex]
     if (!q) return
@@ -271,30 +272,14 @@ export const NewTestPage = () => {
     setShowResult(true)
     setLastCorrect(isCorrect)
     setTotalAnswered(v => v + 1)
+    setAnsweredIndexes(prev => new Set(prev).add(currentIndex))
+    setLockedIndexes(prev => new Set(prev).add(currentIndex))
     
     if (isCorrect) {
       setTotalCorrect(v => v + 1)
-      setEarnedXp(v => v + 100)
-      setEarnedCoins(v => v + 100)
-      
-      // Gửi API để cập nhật điểm và xu thực tế
-      try {
-        const response = await api.post('/questions/submit', {
-          questionId: q._id,
-          answer: userAns
-        })
-        
-        // Cập nhật user data từ response
-        if (response.data.user) {
-          // Có thể cập nhật user context ở đây nếu cần
-          console.log('Updated user data:', response.data.user)
-        }
-        
-        toast.success('Chính xác! +100 XP, +100 xu')
-      } catch (error) {
-        console.error('Error updating score:', error)
-        toast.error('Cập nhật điểm thất bại')
-      }
+      setEarnedXp(v => v + 10)
+      setEarnedCoins(v => v + 10)
+      toast.success('Chính xác! +10 XP, +10 xu')
     } else {
       setTotalWrong(v => v + 1)
       toast.error('Chưa chính xác')
@@ -306,13 +291,44 @@ export const NewTestPage = () => {
       head.total += 1
       head.correct += isCorrect ? 1 : 0
       head.wrong += isCorrect ? 0 : 1
-      head.xp += isCorrect ? 100 : 0
-      head.coins += isCorrect ? 100 : 0
+      head.xp += isCorrect ? 10 : 0
+      head.coins += isCorrect ? 10 : 0
       head.items.push({ question: q.question, correct: isCorrect, explanation: q.explanation })
       const updated = [head, ...tail]
       localStorage.setItem('newtest.sessions', JSON.stringify(updated))
       return updated
     })
+  }
+
+  const finishTest = async () => {
+    if (!testStarted || questions.length === 0) return
+    try {
+      setLoading(true)
+      const questionIds = questions.map(q => q._id)
+      // Build answers aligned with questions order
+      const preparedAnswers = questions.map((q, idx) => {
+        const a = answers[idx]
+        if (q.questionType === 'multiple-choice') {
+          return Array.isArray(q.correctAnswer) ? (Array.isArray(a) ? a : Number.isFinite(a) ? [a] : []) : (Number.isFinite(a) ? a : null)
+        }
+        if (q.questionType === 'fill-blank') return typeof a === 'string' ? a : ''
+        if (q.questionType === 'reading-comprehension') return Array.isArray(a) ? a : []
+        if (q.questionType === 'sentence-order') return Array.isArray(a) ? a : []
+        return a ?? null
+      })
+      const resp = await api.post('/tests/submit', { answers: preparedAnswers, questionIds })
+      const report: TestReport = resp.data.report
+      setTestReport(report)
+      setEarnedCoins(report.rewards.coins)
+      setEarnedXp(report.rewards.experience)
+      setTestCompleted(true)
+      setTestStarted(false)
+    } catch (e) {
+      console.error('Finish test error:', e)
+      toast.error('Nộp bài thất bại')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const resetTest = () => {
@@ -458,7 +474,7 @@ export const NewTestPage = () => {
                             </div>
                             <div className="bg-green-100 p-3 rounded-lg">
                               <div className="text-sm text-green-700 font-semibold mb-1">
-                                ✅ Đáp án của bạn: {JSON.stringify(item.userAnswer)}
+                                ✅ Đáp án của bạn: {renderAnswerPretty(item.userAnswer, item.options)}
                               </div>
                               {item.explanation && (
                                 <div className="text-sm text-green-600 mt-2">
@@ -513,12 +529,12 @@ export const NewTestPage = () => {
                             <div className="space-y-2">
                               <div className="bg-red-100 p-3 rounded-lg">
                                 <div className="text-sm text-red-700 font-semibold">
-                                  ❌ Đáp án của bạn: {JSON.stringify(item.userAnswer)}
+                                  ❌ Đáp án của bạn: {renderAnswerPretty(item.userAnswer, item.options)}
                                 </div>
                               </div>
                               <div className="bg-green-100 p-3 rounded-lg">
                                 <div className="text-sm text-green-700 font-semibold">
-                                  ✅ Đáp án đúng: {JSON.stringify(item.correctAnswer)}
+                                  ✅ Đáp án đúng: {renderAnswerPretty(item.correctAnswer, item.options)}
                                 </div>
                               </div>
                               {item.explanation && (
@@ -597,12 +613,6 @@ export const NewTestPage = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="bg-gradient-to-r from-blue-100 to-cyan-100 px-4 py-2 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <Coins className="h-5 w-5 text-blue-500" />
-                      <span className="font-semibold text-blue-700">{user?.coins || 0} xu</span>
-                    </div>
-                  </div>
                   <div className="bg-gradient-to-r from-green-100 to-emerald-100 px-4 py-2 rounded-xl">
                     <div className="flex items-center gap-2">
                       <Star className="h-5 w-5 text-green-500" />
@@ -701,7 +711,7 @@ export const NewTestPage = () => {
                       </span>
                     </div>
                     {currentQuestion.options.map((option, index) => {
-                      const currentAnswer = answers[currentIndex] || []
+                      const currentAnswer = answers[currentIndex]
                       const isSelected = Array.isArray(currentAnswer) ? currentAnswer.includes(index) : currentAnswer === index
                       
                       const isCorrect = Array.isArray(currentQuestion.correctAnswer)
@@ -833,6 +843,7 @@ export const NewTestPage = () => {
                             : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-purple-300'
                         }`}
                         onClick={() => {
+                          if (lockedIndexes.has(currentIndex) || answeredIndexes.has(currentIndex)) return
                           const currentAnswer = answers[currentIndex] || []
                           const newAnswer = currentAnswer.includes(index)
                             ? currentAnswer.filter((i: number) => i !== index)
@@ -860,7 +871,7 @@ export const NewTestPage = () => {
                     {currentQuestion.questionType === 'reading-comprehension' ? (
                       <div className="space-y-3">
                         <div className="text-sm font-semibold">
-                          {lastCorrect ? '🎉 Tất cả câu hỏi đúng! +100 XP, +100 xu' : '❌ Có câu hỏi sai. Hãy xem chi tiết bên dưới.'}
+                          {lastCorrect ? '🎉 Tất cả câu hỏi đúng! +10 XP, +10 xu' : '❌ Có câu hỏi sai. Hãy xem chi tiết bên dưới.'}
                         </div>
                         {currentQuestion.subQuestions && Array.isArray(answers[currentIndex]) && (
                           <div className="space-y-2">
@@ -891,7 +902,7 @@ export const NewTestPage = () => {
                       </div>
                     ) : (
                       <>
-                        <div className="text-sm font-semibold">{lastCorrect ? 'Đúng! +100 XP, +100 xu' : 'Sai. Hãy thử câu tiếp theo.'}</div>
+                        <div className="text-sm font-semibold">{lastCorrect ? 'Đúng! +100 XP, +10 xu' : 'Sai. Hãy thử câu tiếp theo.'}</div>
                         {currentQuestion.explanation && (
                           <div className="mt-1 text-sm text-gray-700"><strong>Giải thích:</strong> {currentQuestion.explanation}</div>
                         )}
@@ -900,21 +911,11 @@ export const NewTestPage = () => {
                   </div>
                 )}
                 {/* Enhanced Navigation */}
-                <div className="flex justify-between gap-4 pt-6 border-t-2 border-purple-200">
-                  <Button
-                    variant="outline"
-                    onClick={handlePrevQuestion}
-                    disabled={currentIndex === 0}
-                    className="flex-1 py-6 text-lg font-semibold border-2 border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400 transition-all duration-200"
-                  >
-                    <ArrowLeft className="mr-3 h-5 w-5" />
-                    Câu trước
-                  </Button>
-                  
-                  <div className="flex gap-4">
+                <div className="flex justify-end gap-4 pt-6 border-t-2 border-purple-200">
                     {!showResult ? (
                       <Button 
                         onClick={checkCurrentAnswer}
+                        disabled={checkingAnswer || answeredIndexes.has(currentIndex)}
                         className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
                       >
                         <Rocket className="mr-3 h-5 w-5" />
@@ -931,7 +932,13 @@ export const NewTestPage = () => {
                         <ChevronRight className="ml-3 h-5 w-5" />
                       </Button>
                     )}
-                  </div>
+                    <Button 
+                      onClick={finishTest}
+                      disabled={loading}
+                      className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                    >
+                      Kết thúc
+                    </Button>
                 </div>
               </CardContent>
             </Card>
@@ -1000,22 +1007,16 @@ export const NewTestPage = () => {
                 <h3 className="font-bold text-blue-900 mb-4 text-lg">📋 Quy tắc mới:</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500 rounded-full">
-                      <Coins className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="text-blue-800 font-semibold">Chi phí: 10,000 xu</span>
-                  </div>
-                  <div className="flex items-center gap-3">
                     <div className="p-2 bg-green-500 rounded-full">
                       <Target className="h-5 w-5 text-white" />
                     </div>
-                    <span className="text-green-800 font-semibold">Tất cả câu hỏi cấp {userLevel}</span>
+                    <span className="text-green-800 font-semibold">Ưu tiên câu chưa làm, tối đa 20 câu</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-purple-500 rounded-full">
                       <Award className="h-5 w-5 text-white" />
                     </div>
-                    <span className="text-purple-800 font-semibold">100 xu + 100 XP/câu đúng</span>
+                    <span className="text-purple-800 font-semibold">10 xu + 10 XP/câu đúng</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-orange-500 rounded-full">
@@ -1028,19 +1029,6 @@ export const NewTestPage = () => {
               
               {user && (
                 <div className="flex flex-wrap justify-center gap-6">
-                  <div className="bg-gradient-to-r from-blue-100 to-cyan-100 px-6 py-4 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <Coins className="h-6 w-6 text-blue-500" />
-                      <div>
-                        <span className="font-bold text-blue-800 text-lg">Xu: {user.coins.toLocaleString()}</span>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Diamond className="h-4 w-4 text-blue-500" />
-                          <span className="text-sm text-blue-600">Tiền tệ</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
                   <div className="bg-gradient-to-r from-green-100 to-emerald-100 px-6 py-4 rounded-xl">
                     <div className="flex items-center gap-3">
                       <Star className="h-6 w-6 text-green-500" />
@@ -1057,31 +1045,14 @@ export const NewTestPage = () => {
                 </div>
               )}
 
-            {user && user.coins < 10000 && (
-              <div className="bg-gradient-to-r from-red-50 to-pink-100 p-6 rounded-xl border-l-4 border-red-400">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-6 w-6 text-red-500 mt-1 flex-shrink-0" />
-                  <div>
-                    <div className="font-bold text-red-800 text-lg mb-2">⚠️ Không đủ xu!</div>
-                    <p className="text-red-700">
-                      Bạn cần 10,000 xu nhưng chỉ có {user.coins.toLocaleString()} xu. 
-                      Hãy học thêm từ vựng để nhận xu miễn phí!
-                    </p>
-                    <div className="flex items-center gap-2 mt-3">
-                      <BookOpen className="h-4 w-4 text-red-500" />
-                      <span className="text-sm text-red-600 font-semibold">Gợi ý: Học từ vựng để kiếm xu</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Question count will be chosen in a dialog when starting */}
 
             <div className="text-center">
               <Button
-                onClick={startTest}
-                disabled={!user || user.coins < 10000 || loading}
+                onClick={() => { setTempCount(String(questionCount)); setCountDialogOpen(true) }}
+                disabled={!user || loading}
                 className={`text-2xl px-12 py-6 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 ${
-                  !user || user.coins < 10000
+                  !user
                     ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-not-allowed'
                     : 'bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 hover:from-purple-600 hover:via-pink-600 hover:to-blue-600 text-white'
                 }`}
@@ -1097,11 +1068,6 @@ export const NewTestPage = () => {
                       <Shield className="h-8 w-8" />
                       <span>Đăng nhập để làm test</span>
                     </>
-                  ) : user.coins < 10000 ? (
-                    <>
-                      <Target className="h-8 w-8" />
-                      <span>Không đủ xu (cần 10,000)</span>
-                    </>
                   ) : (
                     <>
                       <Rocket className="h-8 w-8 mr-2" />
@@ -1114,8 +1080,59 @@ export const NewTestPage = () => {
             </div>
           </CardContent>
         </Card>
+        {/* Select question count dialog */}
+        <Dialog open={countDialogOpen} onOpenChange={setCountDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Chọn số câu hỏi</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">Nhập số câu bạn muốn làm (1 - 20)</p>
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={tempCount}
+                onChange={(e) => setTempCount(e.target.value)}
+                className="h-12 text-base"
+              />
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => setCountDialogOpen(false)}>Hủy</Button>
+                <Button
+                  onClick={() => {
+                    const parsed = parseInt(tempCount, 10)
+                    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 20) {
+                      toast.error('Vui lòng nhập số từ 1 đến 20')
+                      return
+                    }
+                    setQuestionCount(parsed)
+                    setCountDialogOpen(false)
+                    startTest(parsed)
+                  }}
+                >Bắt đầu</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
         </div>
       </div>
     </div>
   )
+}
+
+function renderAnswerPretty(value: any, options?: string[]) {
+  if (Array.isArray(value)) {
+    if (options && options.length) {
+      return value.map((idx: number) => `${String.fromCharCode(65 + idx)} (${options[idx] ?? ''})`).join(', ')
+    }
+    return value.join(', ')
+  }
+  if (typeof value === 'number') {
+    if (options && options.length) {
+      return `${String.fromCharCode(65 + value)} (${options[value] ?? ''})`
+    }
+    return String(value)
+  }
+  if (typeof value === 'string') return value
+  return JSON.stringify(value)
 }

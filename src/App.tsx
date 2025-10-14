@@ -30,13 +30,16 @@ import { AdminCompetitionEdit } from './pages/admin/CompetitionEdit'
 import { AdminCompetitionStats } from './pages/admin/CompetitionStats'
 import { AdminUsers } from './pages/admin/Users'
 import { AdminAnalytics } from './pages/admin/Analytics'
+import { AdminTestHistories } from './pages/admin/TestHistories'
 import { AdminProficiencyConfig } from './pages/admin/ProficiencyConfig'
 import { ProficiencyConfigPage } from './pages/admin/ProficiencyConfigPage'
 import { ProficiencyConfigForm } from './pages/admin/ProficiencyConfigForm'
 import { AdminProficiencyQuestions } from './pages/admin/ProficiencyQuestions'
 import { AdminSettings } from './pages/admin/Settings'
 import { CoinPurchase } from './pages/CoinPurchase'
+import { UserCoinHistory } from './pages/UserCoinHistory'
 import { AdminCoinPurchases } from './pages/admin/CoinPurchases'
+import { AdminCoinTransactions } from './pages/admin/CoinTransactions'
 import { PaymentConfigPage } from './pages/admin/PaymentConfig'
 import { TestList } from './pages/TestList'
 import { TestDetail } from './pages/TestDetail'
@@ -140,6 +143,11 @@ function App() {
                   <CoinPurchase />
                 </ProtectedRoute>
               } />
+              <Route path="/coin-history" element={
+                <ProtectedRoute>
+                  <UserCoinHistory />
+                </ProtectedRoute>
+              } />
               <Route path="/admin" element={
                 <ProtectedRoute requireAdmin>
                   <Admin />
@@ -177,6 +185,13 @@ function App() {
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
                     <AdminTestsPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/test-histories" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminTestHistories />
                   </AdminLayout>
                 </ProtectedRoute>
               } />
@@ -268,6 +283,13 @@ function App() {
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
                     <PaymentConfigPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/coin-transactions" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminCoinTransactions />
                   </AdminLayout>
                 </ProtectedRoute>
               } />

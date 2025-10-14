@@ -70,10 +70,19 @@ export const AdminReports = () => {
   const updateReport = async (id: string, status: 'approved' | 'rejected') => {
     try {
       // Default rewards: 0.5 XP and 0.5 coins for approved reports
-      const defaultXp = 5
-      const defaultCoins = 5
-      const xp = status === 'approved' ? (rewardXp[id] || defaultXp) : 0
-      const coins = status === 'approved' ? (rewardCoins[id] || defaultCoins) : 0
+      const defaultXp = 0.5
+      const defaultCoins = 0.5
+      const rawXp = rewardXp[id]
+      const rawCoins = rewardCoins[id]
+      const xp = status === 'approved'
+        ? (typeof rawXp === 'number' && !Number.isNaN(rawXp) ? rawXp : defaultXp)
+        : 0
+      const coins = status === 'approved'
+        ? (typeof rawCoins === 'number' && !Number.isNaN(rawCoins) ? rawCoins : defaultCoins)
+        : 0
+      // Round half up to integer as requested (e.g., 4.5 => 5)
+      // const roundedXp = Math.round(xp)
+      // const roundedCoins = Math.round(coins)
       
       await api.put(`/reports/admin/${id}`, {
         status,
