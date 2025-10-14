@@ -46,6 +46,16 @@ import { TestDetail } from './pages/TestDetail'
 import { NewTestPage } from './pages/NewTestPage'
 import { Checkin } from './pages/Checkin'
 
+// User Competition pages
+import {
+  UserCompetitionList,
+  CreateUserCompetition,
+  UserCompetitionDetail,
+  UserCompetitionPlay,
+  UserCompetitionResults,
+  UserCompetitionStats
+} from './pages/user-competitions'
+
 // Help pages
 import { HelpCenter } from './pages/HelpCenter'
 import { FAQ } from './pages/FAQ'
@@ -148,6 +158,39 @@ function App() {
                   <UserCoinHistory />
                 </ProtectedRoute>
               } />
+              
+              {/* User Competition routes */}
+              <Route path="/user-competitions" element={
+                <ProtectedRoute>
+                  <UserCompetitionList />
+                </ProtectedRoute>
+              } />
+              <Route path="/user-competitions/create" element={
+                <ProtectedRoute>
+                  <CreateUserCompetition />
+                </ProtectedRoute>
+              } />
+              <Route path="/user-competitions/:id" element={
+                <ProtectedRoute>
+                  <UserCompetitionDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/user-competitions/:id/play" element={
+                <ProtectedRoute>
+                  <UserCompetitionPlay />
+                </ProtectedRoute>
+              } />
+                  <Route path="/user-competitions/:id/results" element={
+                    <ProtectedRoute>
+                      <UserCompetitionResults />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/user-competitions/:id/stats" element={
+                    <ProtectedRoute>
+                      <UserCompetitionStats />
+                    </ProtectedRoute>
+                  } />
+              
               <Route path="/admin" element={
                 <ProtectedRoute requireAdmin>
                   <Admin />
