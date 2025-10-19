@@ -83,6 +83,7 @@ export const NewTestPage = () => {
   const [lockedIndexes, setLockedIndexes] = useState<Set<number>>(new Set())
   const [answeredIndexes, setAnsweredIndexes] = useState<Set<number>>(new Set())
   const [checkingAnswer] = useState(false)
+  const [showFinishConfirmation, setShowFinishConfirmation] = useState(false)
   // Immediate mode states
   const [activeTab, _setActiveTab] = useState<'test' | 'history'>('test')
   const [showResult, setShowResult] = useState(false)
@@ -666,35 +667,35 @@ export const NewTestPage = () => {
             {/* Enhanced Question Card */}
             <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
               <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-3 text-2xl">
-                    <div className="p-2 bg-white/20 rounded-full">
-                      <Brain className="h-6 w-6" />
+                <CardTitle className="flex items-center gap-3 text-2xl">
+                  <div className="p-2 bg-white/20 rounded-full">
+                    <Brain className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <span>Câu hỏi {currentIndex + 1} / {questions.length}</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <BookOpen className="h-4 w-4 text-purple-200" />
+                      <span className="text-sm text-purple-100">Kiểm tra kiến thức - Cấp {userLevel}</span>
                     </div>
-                    <div>
-                      <span>Câu hỏi {currentIndex + 1} / {questions.length}</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <BookOpen className="h-4 w-4 text-purple-200" />
-                        <span className="text-sm text-purple-100">Kiểm tra kiến thức - Cấp {userLevel}</span>
-                      </div>
-                    </div>
-                  </CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowReportDialog(true)}
-                    className="bg-white/20 border-white/30 text-white hover:bg-white/30 hover:text-white"
-                  >
-                    <Flag className="h-4 w-4 mr-1" />
-                    Báo lỗi
-                  </Button>
-                </div>
+                  </div>
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-8 space-y-6">
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-l-4 border-purple-400">
-                  <div className="flex items-start gap-3">
-                    <Lightbulb className="h-6 w-6 text-yellow-500 mt-1 flex-shrink-0" />
-                    <p className="text-lg font-medium text-gray-800 leading-relaxed">{currentQuestion.question}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Lightbulb className="h-6 w-6 text-yellow-500 mt-1 flex-shrink-0" />
+                      <p className="text-lg font-medium text-gray-800 leading-relaxed">{currentQuestion.question}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowReportDialog(true)}
+                      className="bg-white/50 border-purple-300 text-purple-700 hover:bg-white/70 hover:text-purple-800 flex-shrink-0"
+                    >
+                      <Flag className="h-4 w-4 mr-1" />
+                      Báo lỗi
+                    </Button>
                   </div>
                 </div>
               
@@ -933,7 +934,7 @@ export const NewTestPage = () => {
                       </Button>
                     )}
                     <Button 
-                      onClick={finishTest}
+                      onClick={() => setShowFinishConfirmation(true)}
                       disabled={loading}
                       className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
                     >
@@ -952,6 +953,57 @@ export const NewTestPage = () => {
         itemId={(questions[currentIndex] as any)?._id || ''}
         itemContent={(questions[currentIndex] as any)?.question || ''}
       />
+      
+      {/* Finish confirmation dialog */}
+      <Dialog open={showFinishConfirmation} onOpenChange={setShowFinishConfirmation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full">
+                <Flag className="h-6 w-6 text-white" />
+              </div>
+              Xác nhận kết thúc bài test
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl border-l-4 border-blue-400">
+              <div className="flex items-start gap-3">
+                <Lightbulb className="h-5 w-5 text-blue-500 mt-1 flex-shrink-0" />
+                <div>
+                  <p className="text-gray-800 font-medium mb-2">Bạn có chắc chắn muốn kết thúc bài test?</p>
+                  {/* <div className="text-sm text-gray-600 space-y-1">
+                    <p>• Đã làm: <span className="font-semibold text-green-600">{totalAnswered}</span> câu</p>
+                    <p>• Đúng: <span className="font-semibold text-green-600">{totalCorrect}</span> câu</p>
+                    <p>• Sai: <span className="font-semibold text-red-600">{totalWrong}</span> câu</p>
+                    <p>• Tổng câu: <span className="font-semibold text-blue-600">{questions.length}</span> câu</p>
+                  </div> */}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowFinishConfirmation(false)}
+                className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Quay lại làm bài
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowFinishConfirmation(false)
+                  finishTest()
+                }}
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Xác nhận kết thúc
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       </div>
     )
   }

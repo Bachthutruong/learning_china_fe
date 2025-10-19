@@ -16,7 +16,8 @@ import {
   Loader2,
   UserPlus,
   Crown,
-  GraduationCap
+  GraduationCap,
+  Filter
 } from 'lucide-react'
 
 interface UserCompetition {
@@ -37,14 +38,27 @@ interface UserCompetition {
   isStarted: boolean
 }
 
+interface Level {
+  _id: string
+  name: string
+  number: number
+  description: string
+  requiredExperience: number
+  color: string
+  icon: string
+}
+
 export const UserCompetitionList = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [competitions, setCompetitions] = useState<UserCompetition[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('all')
+  const [activeTab, setActiveTab] = useState('pending')
+  const [levels, setLevels] = useState<Level[]>([])
+  const [selectedLevel, setSelectedLevel] = useState<number | null>(null)
 
   useEffect(() => {
+    fetchLevels()
     fetchCompetitions()
     
     // Auto refresh every 30 seconds to update status
@@ -53,7 +67,16 @@ export const UserCompetitionList = () => {
     }, 30000)
     
     return () => clearInterval(interval)
-  }, [activeTab])
+  }, [activeTab, selectedLevel])
+
+  const fetchLevels = async () => {
+    try {
+      const response = await api.get('/admin/levels')
+      setLevels(response.data)
+    } catch (error) {
+      console.error('Error fetching levels:', error)
+    }
+  }
 
   const fetchCompetitions = async () => {
     setLoading(true)
@@ -68,7 +91,7 @@ export const UserCompetitionList = () => {
       let competitions = response.data.competitions
       
       // Filter by real-time status on frontend
-      if (activeTab !== 'all' && activeTab !== 'my') {
+      if (activeTab !== 'my') {
         const now = new Date()
         competitions = competitions.filter((competition: UserCompetition) => {
           const start = new Date(competition.startTime)
@@ -85,6 +108,13 @@ export const UserCompetitionList = () => {
               return true
           }
         })
+      }
+      
+      // Filter by level if selected
+      if (selectedLevel !== null) {
+        competitions = competitions.filter((competition: UserCompetition) => 
+          competition.creator.level === selectedLevel
+        )
       }
       
       setCompetitions(competitions)
@@ -120,7 +150,8 @@ export const UserCompetitionList = () => {
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
       })
     }
 
@@ -143,6 +174,11 @@ export const UserCompetitionList = () => {
     } else {
       return `Đã kết thúc (${formatTime(end)})`
     }
+  }
+
+  const getLevelName = (levelNumber: number) => {
+    const level = levels.find(l => l.number === levelNumber)
+    return level ? level.name : `Cấp ${levelNumber}`
   }
 
   const handleJoinRequest = async (competitionId: string) => {
@@ -176,14 +212,8 @@ export const UserCompetitionList = () => {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-          <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-1">
-            <TabsTrigger 
-              value="all" 
-              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
-            >
-              Tất cả
-            </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList className="grid w-full grid-cols-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-1">
             <TabsTrigger 
               value="pending"
               className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
@@ -191,19 +221,55 @@ export const UserCompetitionList = () => {
               Chờ bắt đầu
             </TabsTrigger>
             <TabsTrigger 
-              value="active"
+              value="completed"
               className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
             >
-              Đang diễn ra
+              Đã kết thúc
             </TabsTrigger>
             <TabsTrigger 
               value="my"
               className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
             >
-              Cuộc thi của tôi
+              Cuộc thi của bạn
             </TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* Level Filter Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Filter className="w-5 h-5 text-gray-600" />
+            <h3 className="text-lg font-semibold text-gray-800">Theo cấp độ</h3>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant={selectedLevel === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedLevel(null)}
+              className={selectedLevel === null 
+                ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white" 
+                : "border-gray-300 text-gray-700 hover:bg-gray-50"
+              }
+            >
+              Tất cả cấp độ
+            </Button>
+            {levels.map((level) => (
+              <Button
+                key={level._id}
+                variant={selectedLevel === level.number ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedLevel(level.number)}
+                className={selectedLevel === level.number 
+                  ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white" 
+                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                }
+                style={selectedLevel === level.number ? {} : { borderColor: level.color }}
+              >
+                {level.name}
+              </Button>
+            ))}
+          </div>
+        </div>
 
         {loading ? (
           <div className="flex justify-center py-12">
@@ -274,7 +340,7 @@ export const UserCompetitionList = () => {
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Cấp độ</p>
-                        <p className="font-semibold text-gray-800">HSK {competition.creator.level}</p>
+                        <p className="font-semibold text-gray-800">{getLevelName(competition.creator.level)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-lg">

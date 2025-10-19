@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { Avatar, AvatarFallback } from '../../components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -21,7 +20,8 @@ import {
   Check,
   X,
   Play,
-  AlertTriangle
+  AlertTriangle,
+  ArrowUpDown
 } from 'lucide-react'
 
 interface Competition {
@@ -76,6 +76,7 @@ export const UserCompetitionDetail = () => {
   const [requests, setRequests] = useState<JoinRequest[]>([])
   const [processingRequest, setProcessingRequest] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<string>('')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
     type: 'approve' | 'reject' | null
@@ -137,6 +138,7 @@ export const UserCompetitionDetail = () => {
     if (!data?.competition) return
 
     const now = new Date()
+    // Parse dates as UTC and convert to local timezone
     const start = new Date(data.competition.startTime)
     const end = new Date(data.competition.endTime)
 
@@ -202,6 +204,10 @@ export const UserCompetitionDetail = () => {
     })
   }
 
+  const handleSort = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+  }
+
   const handleConfirmAction = async () => {
     if (!confirmDialog.request || !confirmDialog.type) return
 
@@ -224,6 +230,15 @@ export const UserCompetitionDetail = () => {
       setProcessingRequest(null)
     }
   }
+
+  // Sort participants by name
+  const sortedParticipants = data?.competition.participants.sort((a, b) => {
+    if (sortOrder === 'asc') {
+      return a.name.localeCompare(b.name)
+    } else {
+      return b.name.localeCompare(a.name)
+    }
+  }) || []
 
   if (loading) {
     return (
@@ -311,10 +326,16 @@ export const UserCompetitionDetail = () => {
             <div className="text-center">
               <Calendar className="w-8 h-8 mx-auto mb-2 text-purple-600" />
               <p className="text-2xl font-bold">
-                {new Date(competition.startTime).toLocaleDateString('vi-VN')}
+                {new Date(competition.startTime).toLocaleDateString('vi-VN', { 
+                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone 
+                })}
               </p>
               <p className="text-sm text-muted-foreground">
-                {new Date(competition.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                {new Date(competition.startTime).toLocaleTimeString('vi-VN', { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone 
+                })}
               </p>
             </div>
           </div>
@@ -349,105 +370,109 @@ export const UserCompetitionDetail = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="participants">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="participants">
-            Người tham gia ({competition.participants.length})
-          </TabsTrigger>
-          {isCreator && (
-            <TabsTrigger value="requests">
-              Yêu cầu tham gia ({requests.length})
-            </TabsTrigger>
-          )}
-        </TabsList>
-
-        <TabsContent value="participants">
-          <Card>
-            <CardContent className="pt-6">
-              {competition.participants.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-600">Chưa có người tham gia</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {competition.participants.map((participant) => (
-                    <div key={participant._id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarFallback>{participant.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{participant.name}</p>
-                          <p className="text-sm text-muted-foreground">HSK {participant.level}</p>
-                        </div>
-                      </div>
-                      {participant._id === competition.creator._id && (
-                        <Badge variant="secondary">
-                          <Crown className="w-3 h-3 mr-1" />
-                          Người tạo
-                        </Badge>
-                      )}
+      {/* Participants Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Người tham gia ({competition.participants.length})</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSort}
+              className="flex items-center gap-2"
+            >
+              <ArrowUpDown className="w-4 h-4" />
+              Sắp xếp {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {competition.participants.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <p className="text-gray-600">Chưa có người tham gia</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {sortedParticipants.map((participant) => (
+                <div key={participant._id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarFallback>{participant.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{participant.name}</p>
+                      <p className="text-sm text-muted-foreground">HSK {participant.level}</p>
                     </div>
-                  ))}
+                  </div>
+                  {participant._id === competition.creator._id && (
+                    <Badge variant="secondary">
+                      <Crown className="w-3 h-3 mr-1" />
+                      Người tạo
+                    </Badge>
+                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {isCreator && (
-          <TabsContent value="requests">
-            <Card>
-              <CardContent className="pt-6">
-                {requests.length === 0 ? (
-                  <div className="text-center py-8">
-                    <UserPlus className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-600">Chưa có yêu cầu tham gia</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {requests.map((request) => (
-                      <div key={request._id} className="flex items-center justify-between p-4 rounded-lg border">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback>{request.requester.name[0]}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{request.requester.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              HSK {request.requester.level} • {new Date(request.requestedAt).toLocaleString('vi-VN')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            className="bg-green-500 hover:bg-green-600 text-white"
-                            onClick={() => openConfirmDialog('approve', request)}
-                            disabled={processingRequest === request._id}
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-red-500 text-red-500 hover:bg-red-50"
-                            onClick={() => openConfirmDialog('reject', request)}
-                            disabled={processingRequest === request._id}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
+      {/* Join Requests Section - Only for creators */}
+      {isCreator && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Yêu cầu tham gia ({requests.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {requests.length === 0 ? (
+              <div className="text-center py-8">
+                <UserPlus className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600">Chưa có yêu cầu tham gia</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {requests.map((request) => (
+                  <div key={request._id} className="flex items-center justify-between p-4 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarFallback>{request.requester.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{request.requester.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          HSK {request.requester.level} • {new Date(request.requestedAt).toLocaleString('vi-VN', {
+                            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                          })}
+                        </p>
                       </div>
-                    ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-green-500 hover:bg-green-600 text-white"
+                        onClick={() => openConfirmDialog('approve', request)}
+                        disabled={processingRequest === request._id}
+                      >
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-500 text-red-500 hover:bg-red-50"
+                        onClick={() => openConfirmDialog('reject', request)}
+                        disabled={processingRequest === request._id}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Confirmation Dialog */}
       <Dialog open={confirmDialog.isOpen} onOpenChange={closeConfirmDialog}>
