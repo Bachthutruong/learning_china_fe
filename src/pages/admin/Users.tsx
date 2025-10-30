@@ -5,14 +5,23 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Dialog, DialogContent, DialogFooter, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle } from '../../components/ui/dialog'
 import { api } from '../../services/api'
+import toast from 'react-hot-toast'
 
 interface UserItem {
   _id: string
   name: string
   email: string
   level: number
+  experience?: number
   coins: number
   role?: string
+}
+
+interface ExperienceRange {
+  level: number
+  minExperience: number
+  maxExperience?: number
+  range: string
 }
 
 export const AdminUsers = () => {
@@ -23,6 +32,9 @@ export const AdminUsers = () => {
   const [editing, setEditing] = useState<UserItem | null>(null)
   const [password, setPassword] = useState('')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [experienceRange, setExperienceRange] = useState<ExperienceRange | null>(null)
+  const [loadingRange, setLoadingRange] = useState(false)
+  const [originalLevel, setOriginalLevel] = useState<number | null>(null)
 
   useEffect(() => {
     fetchUsers()
@@ -44,7 +56,12 @@ export const AdminUsers = () => {
         <h1 className="text-2xl font-bold">Quản lý người dùng</h1>
         <div className="flex items-center gap-2">
           <Input placeholder="Tìm tên/email" value={search} onChange={e => { setPage(1); setSearch(e.target.value) }} className="w-64" />
-          <Button onClick={() => { setEditing({ _id: '', name: '', email: '', level: 1, coins: 0, role: 'user' }); setPassword('') }}>Thêm</Button>
+          <Button onClick={() => { 
+            setEditing({ _id: '', name: '', email: '', level: 1, coins: 0, role: 'user' }); 
+            setPassword('')
+            setOriginalLevel(null)
+            setExperienceRange(null)
+          }}>Thêm</Button>
         </div>
       </div>
       <Card>
@@ -74,7 +91,12 @@ export const AdminUsers = () => {
                     <td className="py-2 pr-4">{u.role || 'user'}</td>
                     <td className="py-2">
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => { setEditing(u); setPassword('') }}>Sửa</Button>
+                        <Button variant="outline" size="sm" onClick={() => { 
+                          setEditing({ ...u, experience: (u as any).experience }); 
+                          setPassword('')
+                          setOriginalLevel(u.level)
+                          setExperienceRange(null)
+                        }}>Sửa</Button>
                         <Button variant="outline" size="sm" className="text-red-600" onClick={() => setDeleteId(u._id)}>Xóa</Button>
                       </div>
                     </td>
@@ -106,7 +128,14 @@ export const AdminUsers = () => {
       </Card>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={!!editing} onOpenChange={(open) => { if (!open) setEditing(null) }}>
+      <Dialog open={!!editing} onOpenChange={(open) => { 
+        if (!open) {
+          setEditing(null)
+          setPassword('')
+          setExperienceRange(null)
+          setOriginalLevel(null)
+        }
+      }}>
         <DialogContent className="max-w-md">
           <UIDialogHeader><UIDialogTitle>{editing?._id ? 'Sửa người dùng' : 'Thêm người dùng'}</UIDialogTitle></UIDialogHeader>
           {editing && (
@@ -122,13 +151,62 @@ export const AdminUsers = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs text-gray-500">Cấp</label>
-                  <Input type="number" value={editing.level} onChange={e => setEditing({ ...(editing as any), level: parseInt(e.target.value || '1') })} />
+                  <Input 
+                    type="number" 
+                    value={editing.level} 
+                    onChange={async (e) => {
+                      const newLevel = parseInt(e.target.value || '1')
+                      const updatedEditing = { ...(editing as any), level: newLevel }
+                      setEditing(updatedEditing)
+                      
+                      // If editing existing user and level changed, fetch experience range
+                      if (editing._id && (originalLevel === null || originalLevel !== newLevel)) {
+                        setLoadingRange(true)
+                        try {
+                          const response = await api.get(`/admin/level/${newLevel}/experience-range`)
+                          setExperienceRange(response.data)
+                          // Set experience to min if level changed
+                          if (originalLevel !== null && originalLevel !== newLevel) {
+                            setEditing({ ...updatedEditing, experience: response.data.minExperience })
+                          }
+                        } catch (error: any) {
+                          toast.error(error.response?.data?.message || 'Không thể lấy khoảng experience')
+                        } finally {
+                          setLoadingRange(false)
+                        }
+                      }
+                    }} 
+                  />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500">Xu</label>
                   <Input type="number" value={editing.coins} onChange={e => setEditing({ ...(editing as any), coins: parseInt(e.target.value || '0') })} />
                 </div>
               </div>
+              {(editing._id && (originalLevel === null || originalLevel !== editing.level)) && experienceRange && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                  <p className="text-xs text-blue-800 font-medium mb-2">
+                    Khoảng Experience cho Level {editing.level}: {experienceRange.range}
+                  </p>
+                  <div>
+                    <label className="text-xs text-gray-500">Experience *</label>
+                    <Input 
+                      type="number" 
+                      min={experienceRange.minExperience}
+                      max={experienceRange.maxExperience}
+                      value={editing.experience || experienceRange.minExperience} 
+                      onChange={e => {
+                        const exp = parseInt(e.target.value || String(experienceRange.minExperience))
+                        setEditing({ ...(editing as any), experience: exp })
+                      }} 
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Tối thiểu: {experienceRange.minExperience}
+                      {experienceRange.maxExperience !== undefined && `, Tối đa: ${experienceRange.maxExperience}`}
+                    </p>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="text-xs text-gray-500">Quyền</label>
                 <select className="border rounded px-2 py-2 w-full" value={editing.role || 'user'} onChange={e => setEditing({ ...(editing as any), role: e.target.value })}>
@@ -143,18 +221,56 @@ export const AdminUsers = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Hủy</Button>
+            <Button variant="outline" onClick={() => {
+              setEditing(null)
+              setPassword('')
+              setExperienceRange(null)
+              setOriginalLevel(null)
+            }}>Hủy</Button>
             <Button onClick={async () => {
               if (!editing) return
+              
+              // Validate experience if level changed
+              if (editing._id && originalLevel !== null && originalLevel !== editing.level) {
+                if (!experienceRange) {
+                  toast.error('Vui lòng chờ hệ thống lấy khoảng experience')
+                  return
+                }
+                const exp = editing.experience || experienceRange.minExperience
+                if (exp < experienceRange.minExperience) {
+                  toast.error(`Experience phải tối thiểu ${experienceRange.minExperience}`)
+                  return
+                }
+                if (experienceRange.maxExperience !== undefined && exp > experienceRange.maxExperience) {
+                  toast.error(`Experience phải tối đa ${experienceRange.maxExperience}`)
+                  return
+                }
+              }
+              
               const payload: any = { ...editing }
               if (!editing._id) payload.password = password
               else if (password) payload.password = password
+              
+              // If editing and level changed, include experience
+              if (editing._id && originalLevel !== null && originalLevel !== editing.level) {
+                payload.experience = editing.experience || experienceRange?.minExperience
+              }
+              
               try {
                 if (editing._id) await api.put(`/admin/users/${editing._id}`, payload)
                 else await api.post('/admin/users', payload)
-                setEditing(null); setPassword(''); fetchUsers()
-              } catch {}
-            }}>Lưu</Button>
+                toast.success(editing._id ? 'Cập nhật người dùng thành công' : 'Tạo người dùng thành công')
+                setEditing(null)
+                setPassword('')
+                setExperienceRange(null)
+                setOriginalLevel(null)
+                fetchUsers()
+              } catch (error: any) {
+                toast.error(error.response?.data?.message || 'Có lỗi xảy ra')
+              }
+            }} disabled={loadingRange}>
+              {loadingRange ? 'Đang tải...' : 'Lưu'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

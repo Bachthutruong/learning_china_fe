@@ -41,6 +41,8 @@ import { UserCoinHistory } from './pages/UserCoinHistory'
 import { AdminCoinPurchases } from './pages/admin/CoinPurchases'
 import { AdminCoinTransactions } from './pages/admin/CoinTransactions'
 import { PaymentConfigPage } from './pages/admin/PaymentConfig'
+import { CompetitionScoringConfigPage } from './pages/admin/CompetitionScoringConfig'
+import { CompetitionRewardsConfigPage } from './pages/admin/CompetitionRewardsConfig'
 import { TestList } from './pages/TestList'
 import { TestDetail } from './pages/TestDetail'
 import { NewTestPage } from './pages/NewTestPage'
@@ -333,6 +335,20 @@ function App() {
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
                     <AdminCoinTransactions />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/competition-scoring-config" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <CompetitionScoringConfigPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/competition-rewards-config" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <CompetitionRewardsConfigPage />
                   </AdminLayout>
                 </ProtectedRoute>
               } />
