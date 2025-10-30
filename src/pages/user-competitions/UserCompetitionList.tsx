@@ -17,7 +17,11 @@ import {
   UserPlus,
   Crown,
   GraduationCap,
-  Filter
+  Filter,
+  Medal,
+  Star,
+  Award,
+  TrendingUp
 } from 'lucide-react'
 
 interface UserCompetition {
@@ -36,6 +40,7 @@ interface UserCompetition {
   pendingRequests: any[]
   status: 'pending' | 'active' | 'completed'
   isStarted: boolean
+  level: number // Level of competition at time of creation
 }
 
 interface Level {
@@ -48,6 +53,19 @@ interface Level {
   icon: string
 }
 
+interface GlobalRanking {
+  _id: string
+  user: {
+    _id: string
+    name: string
+    level: number
+    email: string
+  }
+  totalPoints: number
+  competitionsParticipated: number
+  rank?: number
+}
+
 export const UserCompetitionList = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -56,18 +74,54 @@ export const UserCompetitionList = () => {
   const [activeTab, setActiveTab] = useState('pending')
   const [levels, setLevels] = useState<Level[]>([])
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null)
+  const [globalRankings, setGlobalRankings] = useState<GlobalRanking[]>([])
+  const [rankingLoading, setRankingLoading] = useState(false)
+  const [scoringConfigs, setScoringConfigs] = useState<any[]>([])
 
   useEffect(() => {
     fetchLevels()
-    fetchCompetitions()
+    if (activeTab === 'ranking') {
+      fetchGlobalRanking()
+      fetchScoringConfigs()
+    } else {
+      fetchCompetitions()
+    }
     
     // Auto refresh every 30 seconds to update status
     const interval = setInterval(() => {
-      fetchCompetitions()
+      if (activeTab === 'ranking') {
+        fetchGlobalRanking()
+      } else {
+        fetchCompetitions()
+      }
     }, 30000)
     
     return () => clearInterval(interval)
   }, [activeTab, selectedLevel])
+
+  const fetchGlobalRanking = async () => {
+    setRankingLoading(true)
+    try {
+      const response = await api.get('/competition-ranking/global-ranking', {
+        params: { limit: 100, page: 1 }
+      })
+      setGlobalRankings(response.data.rankings || [])
+    } catch (error) {
+      console.error('Error fetching global ranking:', error)
+      toast.error('Không thể tải bảng xếp hạng')
+    } finally {
+      setRankingLoading(false)
+    }
+  }
+
+  const fetchScoringConfigs = async () => {
+    try {
+      const res = await api.get('/competition-ranking/scoring-configs-public')
+      setScoringConfigs(res.data.configs || [])
+    } catch (e) {
+      // silent
+    }
+  }
 
   const fetchLevels = async () => {
     try {
@@ -113,7 +167,7 @@ export const UserCompetitionList = () => {
       // Filter by level if selected
       if (selectedLevel !== null) {
         competitions = competitions.filter((competition: UserCompetition) => 
-          competition.creator.level === selectedLevel
+          competition.level === selectedLevel
         )
       }
       
@@ -124,6 +178,8 @@ export const UserCompetitionList = () => {
       setLoading(false)
     }
   }
+
+  // no derived counts in restored UI
 
   const getStatusBadge = (competition: UserCompetition) => {
     const now = new Date()
@@ -213,7 +269,7 @@ export const UserCompetitionList = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-1">
+          <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-1">
             <TabsTrigger 
               value="pending"
               className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
@@ -232,10 +288,225 @@ export const UserCompetitionList = () => {
             >
               Cuộc thi của bạn
             </TabsTrigger>
+            <TabsTrigger 
+              value="ranking"
+              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
+            >
+              <Trophy className="w-4 h-4 mr-1" />
+              Xếp hạng toàn bộ
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {/* Level Filter Section */}
+        {/* Global Ranking Tab Content */}
+        {activeTab === 'ranking' && (
+          <div className="space-y-6">
+            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-3 text-3xl mb-2">
+                      <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
+                        <Trophy className="w-7 h-7 text-white" />
+                      </div>
+                      <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Bảng Xếp Hạng Toàn Bộ</span>
+                </CardTitle>
+                    <CardDescription className="text-base flex items-center gap-2 mt-2">
+                      <TrendingUp className="w-4 h-4" />
+                  Tổng hợp điểm số và số cuộc thi tham gia từ tất cả các cuộc thi
+                </CardDescription>
+                    {scoringConfigs.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {scoringConfigs.map((cfg, idx) => {
+                          const from = cfg.effectiveFrom ? new Date(cfg.effectiveFrom) : null
+                          const to = cfg.effectiveTo ? new Date(cfg.effectiveTo) : null
+                          const format = (d: Date) => d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                          const label = from && to ? `${format(from)} - ${format(to)}` : from ? `Từ ${format(from)}` : to ? `Đến ${format(to)}` : 'Luôn áp dụng'
+                          return (
+                            <span key={idx} className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700 border">
+                              {cfg.name}: {label}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {rankingLoading ? (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <Loader2 className="w-12 h-12 animate-spin text-purple-600 mb-4" />
+                    <p className="text-gray-600 text-lg">Đang tải bảng xếp hạng...</p>
+                  </div>
+                ) : globalRankings.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 bg-gradient-to-r from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Trophy className="w-12 h-12 text-purple-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Chưa có dữ liệu xếp hạng</h3>
+                    <p className="text-gray-600">Hãy tham gia các cuộc thi để xuất hiện trên bảng xếp hạng!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {globalRankings.slice(0, 3).length > 0 && (
+                      <div className="relative mb-12">
+                        <div className="flex items-end justify-center gap-4 mb-8">
+                          {globalRankings[1] && (
+                            <div className="flex flex-col items-center flex-1 max-w-[200px]">
+                              <div className="relative mb-4">
+                                <div className={`w-20 h-20 rounded-full bg-gradient-to-r from-gray-300 to-gray-400 flex items-center justify-center text-white font-bold text-2xl shadow-xl border-4 border-white ${globalRankings[1].user._id === user?.id ? 'ring-4 ring-blue-400' : ''}`}>
+                                  {globalRankings[1].user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="absolute -top-2 -right-2 bg-gray-400 rounded-full p-1.5 shadow-lg">
+                                  <Medal className="w-5 h-5 text-white" />
+                                </div>
+                              </div>
+                              <div className="w-full bg-gradient-to-t from-gray-300 to-gray-200 rounded-t-2xl shadow-xl p-4 text-center min-h-[120px] flex flex-col justify-end">
+                                <p className="font-bold text-white text-lg mb-1">#{globalRankings[1].rank || 2}</p>
+                                <p className="font-semibold text-gray-800 text-sm mb-1 truncate w-full">{globalRankings[1].user.name}</p>
+                                <Badge variant="outline" className="bg-white/80 mb-2">
+                                  <GraduationCap className="w-3 h-3 mr-1" />
+                                  Cấp {globalRankings[1].user.level}
+                                </Badge>
+                                <p className="text-xs text-gray-700 font-medium">{globalRankings[1].totalPoints.toLocaleString()} điểm</p>
+                                {globalRankings[1].user._id === user?.id && (
+                                  <Badge className="bg-blue-500 text-white mt-2">Bạn</Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {globalRankings[0] && (
+                            <div className="flex flex-col items-center flex-1 max-w-[200px]">
+                              <div className="relative mb-4">
+                                <div className={`w-24 h-24 rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 flex items-center justify-center text-white font-bold text-3xl shadow-2xl border-4 border-white ${globalRankings[0].user._id === user?.id ? 'ring-4 ring-yellow-400' : ''}`}>
+                                  {globalRankings[0].user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="absolute -top-2 -right-2 bg-yellow-500 rounded-full p-1.5 shadow-lg">
+                                  <Crown className="w-6 h-6 text-white" />
+                                </div>
+                              </div>
+                              <div className="w-full bg-gradient-to-t from-yellow-400 to-yellow-300 rounded-t-2xl shadow-2xl p-4 text-center min-h-[150px] flex flex-col justify-end">
+                                <p className="font-bold text-white text-xl mb-1">#{globalRankings[0].rank || 1}</p>
+                                <p className="font-bold text-gray-800 text-base mb-1 truncate w-full">{globalRankings[0].user.name}</p>
+                                <Badge variant="outline" className="bg-white/80 mb-2">
+                                  <GraduationCap className="w-3 h-3 mr-1" />
+                                  Cấp {globalRankings[0].user.level}
+                                </Badge>
+                                <p className="text-xs text-gray-800 font-bold">{globalRankings[0].totalPoints.toLocaleString()} điểm</p>
+                                {globalRankings[0].user._id === user?.id && (
+                                  <Badge className="bg-yellow-600 text-white mt-2">Bạn</Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {globalRankings[2] && (
+                            <div className="flex flex-col items-center flex-1 max-w-[200px]">
+                              <div className="relative mb-4">
+                                <div className={`w-20 h-20 rounded-full bg-gradient-to-r from-orange-400 to-orange-500 flex items-center justify-center text-white font-bold text-2xl shadow-xl border-4 border-white ${globalRankings[2].user._id === user?.id ? 'ring-4 ring-orange-400' : ''}`}>
+                                  {globalRankings[2].user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="absolute -top-2 -right-2 bg-orange-500 rounded-full p-1.5 shadow-lg">
+                                  <Medal className="w-5 h-5 text-white" />
+                                </div>
+                              </div>
+                              <div className="w-full bg-gradient-to-t from-orange-400 to-orange-300 rounded-t-2xl shadow-xl p-4 text-center min-h-[100px] flex flex-col justify-end">
+                                <p className="font-bold text-white text-lg mb-1">#{globalRankings[2].rank || 3}</p>
+                                <p className="font-semibold text-gray-800 text-sm mb-1 truncate w-full">{globalRankings[2].user.name}</p>
+                                <Badge variant="outline" className="bg-white/80 mb-2">
+                                  <GraduationCap className="w-3 h-3 mr-1" />
+                                  Cấp {globalRankings[2].user.level}
+                                </Badge>
+                                <p className="text-xs text-gray-700 font-medium">{globalRankings[2].totalPoints.toLocaleString()} điểm</p>
+                                {globalRankings[2].user._id === user?.id && (
+                                  <Badge className="bg-orange-600 text-white mt-2">Bạn</Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {globalRankings.slice(3).length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                          <Star className="w-5 h-5 text-purple-600" />
+                          Các vị trí khác
+                        </h3>
+                        {globalRankings.slice(3).map((ranking, index) => {
+                          const isCurrentUser = ranking.user._id === user?.id
+                          const actualRank = ranking.rank || index + 4
+                          return (
+                            <Card
+                              key={ranking._id} 
+                              className={`transition-all duration-300 hover:shadow-lg border-2 ${
+                                isCurrentUser
+                                  ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-300 shadow-md'
+                                  : 'bg-white/90 border-gray-200 hover:border-purple-300'
+                              }`}
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="flex-shrink-0">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
+                                      isCurrentUser
+                                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                                        : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700'
+                                    }`}>
+                                      #{actualRank}
+                                    </div>
+                                  </div>
+                                  <div className="flex-shrink-0">
+                                    <div className={`w-14 h-14 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-xl shadow-md ${
+                                      isCurrentUser ? 'ring-2 ring-blue-400 ring-offset-2' : ''
+                                    }`}>
+                                    {ranking.user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h4 className="font-bold text-lg text-gray-800 truncate">{ranking.user.name}</h4>
+                                      {isCurrentUser && (<Badge className="bg-blue-500 text-white">Bạn</Badge>)}
+                                </div>
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                      <Badge variant="outline" className="bg-white">
+                                  <GraduationCap className="w-3 h-3 mr-1" />
+                                  Cấp {ranking.user.level}
+                                </Badge>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-6 flex-shrink-0">
+                                    <div className="text-center">
+                                      <div className="flex items-center gap-1 text-gray-600 mb-1">
+                                        <Trophy className="w-4 h-4" />
+                                        <span className="text-xs font-medium">Cuộc thi</span>
+                                      </div>
+                                      <p className="font-bold text-lg text-gray-800">{ranking.competitionsParticipated}</p>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="flex items-center gap-1 text-gray-600 mb-1">
+                                        <Award className="w-4 h-4" />
+                                        <span className="text-xs font-medium">Tổng điểm</span>
+                                      </div>
+                                      <p className="font-bold text-xl text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">{ranking.totalPoints.toLocaleString()}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Level Filter Section - Only show for competition tabs */}
+        {activeTab !== 'ranking' && (
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Filter className="w-5 h-5 text-gray-600" />
@@ -270,34 +541,38 @@ export const UserCompetitionList = () => {
             ))}
           </div>
         </div>
+        )}
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="text-center">
-              <Loader2 className="w-12 h-12 animate-spin text-purple-600 mx-auto mb-4" />
-              <p className="text-gray-600">Đang tải danh sách cuộc thi...</p>
-            </div>
-          </div>
-        ) : competitions.length === 0 ? (
-          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-            <CardContent className="text-center py-16">
-              <div className="w-20 h-20 bg-gradient-to-r from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Trophy className="w-10 h-10 text-purple-600" />
+        {/* Only show competitions list when NOT in ranking tab */}
+        {activeTab !== 'ranking' && (
+          <>
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="text-center">
+                  <Loader2 className="w-12 h-12 animate-spin text-purple-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Đang tải danh sách cuộc thi...</p>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Chưa có cuộc thi nào</h3>
-              <p className="text-gray-600 mb-6">Hãy tạo cuộc thi đầu tiên để bắt đầu thi đấu với bạn bè!</p>
-              <Button 
-                onClick={() => navigate('/user-competitions/create')}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Tạo cuộc thi đầu tiên
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {competitions.map((competition) => {
+            ) : competitions.length === 0 ? (
+              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="text-center py-16">
+                  <div className="w-20 h-20 bg-gradient-to-r from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Trophy className="w-10 h-10 text-purple-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Chưa có cuộc thi nào</h3>
+                 或者 <p className="text-gray-600 mb-6">Hãy tạo cuộc thi đầu tiên để bắt đầu thi đấu với bạn bè!</p>
+                  <Button 
+                    onClick={() => navigate('/user-competitions/create')}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    <Plus className="w mv-5 h-5 mr-2" />
+                    Tạo cuộc thi đầu tiên
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {competitions.map((competition) => {
             const isCreator = competition.creator._id === user?.id
             const isParticipant = competition.participants.some(p => p._id === user?.id)
             const hasPendingRequest = competition.pendingRequests.some(r => r === user?.id)
@@ -340,7 +615,7 @@ export const UserCompetitionList = () => {
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Cấp độ</p>
-                        <p className="font-semibold text-gray-800">{getLevelName(competition.creator.level)}</p>
+                        <p className="font-semibold text-gray-800">{getLevelName(competition.level)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-lg">
@@ -410,8 +685,10 @@ export const UserCompetitionList = () => {
                 </CardContent>
               </Card>
             )
-          })}
-          </div>
+              })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

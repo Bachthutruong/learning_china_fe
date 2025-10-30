@@ -22,7 +22,8 @@ import {
   Coins,
   BookOpenCheck,
   Settings,
-  CreditCard
+  CreditCard,
+  Award
 } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -199,6 +200,26 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
       icon: CreditCard,
       href: '/admin/payment-config',
       badge: null
+    },
+    {
+      title: 'Cuộc thi người dùng',
+      icon: Trophy,
+      href: '#',
+      badge: null,
+      submenu: [
+        {
+          title: 'Cấu hình logic điểm',
+          icon: Award,
+          href: '/admin/competition-scoring-config',
+          badge: null
+        },
+        {
+          title: 'Cấu hình thưởng xếp hạng',
+          icon: Coins,
+          href: '/admin/competition-rewards-config',
+          badge: null
+        }
+      ]
     },
     // {
     //   title: 'Thống kê',
