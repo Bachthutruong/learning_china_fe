@@ -146,4 +146,58 @@
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* ReactQuill Editor Styles */
+.ql-container {
+  min-height: 400px;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.ql-editor {
+  min-height: 400px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.ql-editor.ql-blank::before {
+  font-style: normal;
+  color: #9ca3af;
+  left: 15px;
+}
+
+.ql-snow .ql-tooltip {
+  z-index: 1000;
+}
+
+.ql-snow .ql-editor img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+  cursor: pointer;
+}
+
+.ql-snow .ql-editor img:hover {
+  opacity: 0.9;
+}
+
+.ql-toolbar {
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ql-container {
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+.blog-editor .ql-container {
+  min-height: 400px;
+}
+
+.blog-editor .ql-editor {
+  min-height: 400px;
+}
+
 

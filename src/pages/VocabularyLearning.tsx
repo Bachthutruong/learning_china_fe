@@ -56,6 +56,15 @@ interface PersonalTopic {
   updatedAt: string
 }
 
+interface MonthlyVocabularyLearner {
+  userId: string
+  name: string
+  email: string
+  level: number | null
+  learnedCount: number
+  studyingCount: number
+  totalVocabularies: number
+}
 
 export const VocabularyLearning = () => {
   const [personalTopics, setPersonalTopics] = useState<PersonalTopic[]>([])
@@ -82,10 +91,40 @@ export const VocabularyLearning = () => {
   const vocabListAnchorRef = useRef<HTMLDivElement | null>(null)
   const [selectedInlineVocabulary, setSelectedInlineVocabulary] = useState<Vocabulary | null>(null)
   const studyTopRef = useRef<HTMLDivElement | null>(null)
+  // Monthly test stats states
+  const [statsMonth, setStatsMonth] = useState<string>(() => {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = (now.getMonth() + 1).toString().padStart(2, '0')
+    return `${y}-${m}`
+  })
+  const [statsLoading, setStatsLoading] = useState<boolean>(false)
+  const [vocabLearnerStats, setVocabLearnerStats] = useState<MonthlyVocabularyLearner[]>([])
+  const [statsError, setStatsError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPersonalTopics()
+    // Load this month's stats initially
+    void fetchMonthlyVocabularyLearnerStats()
   }, [])
+
+  const fetchMonthlyVocabularyLearnerStats = async (month?: string) => {
+    try {
+      setStatsLoading(true)
+      setStatsError(null)
+      const params: any = {}
+      if (month && /^\d{4}-\d{2}$/.test(month)) params.month = month
+      const response = await api.get('/vocabulary-learning/stats/monthly', { params })
+      const rows: MonthlyVocabularyLearner[] = response.data?.results || []
+      setVocabLearnerStats(rows)
+    } catch (error: any) {
+      console.error('Error fetching monthly vocabulary learner stats:', error)
+      setStatsError(error?.response?.data?.message || 'Không thể tải thống kê người học từ vựng')
+      setVocabLearnerStats([])
+    } finally {
+      setStatsLoading(false)
+    }
+  }
 
   const fetchPersonalTopics = async () => {
     try {
@@ -130,6 +169,7 @@ export const VocabularyLearning = () => {
       setLoading(false)
     }
   }
+
 
   const handleCreateTopic = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -301,6 +341,7 @@ export const VocabularyLearning = () => {
   useEffect(() => {
     fetchAvailableVocabularies()
   }, [selectedTopics, searchTerm])
+
 
   // Scroll to vocab list when a topic gets selected
   useEffect(() => {
@@ -714,6 +755,151 @@ export const VocabularyLearning = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Vocabulary learners statistics section */}
+        <Card className="mt-8 border-0 shadow-xl bg-gradient-to-br from-white to-purple-50">
+          <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
+            <CardTitle className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-full">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <div>
+                  <span className="text-xl font-bold">📚 Thống kê người học từ vựng</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Tag className="h-4 w-4 text-purple-200" />
+                    <span className="text-sm text-purple-100">Thống kê theo tháng</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const now = new Date()
+                    const y = now.getFullYear()
+                    const m = (now.getMonth() + 1).toString().padStart(2, '0')
+                    const month = `${y}-${m}`
+                    setStatsMonth(month)
+                    void fetchMonthlyVocabularyLearnerStats(month)
+                  }}
+                  className="bg-white/20 border-white/30 text-white hover:bg-white/30 hover:text-white transition-all"
+                >
+                  Tháng này
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="statsMonth" className="text-white font-medium">Chọn tháng:</Label>
+                  <Input
+                    id="statsMonth"
+                    type="month"
+                    value={statsMonth}
+                    max={(() => {
+                      const now = new Date()
+                      const y = now.getFullYear()
+                      const m = (now.getMonth() + 1).toString().padStart(2, '0')
+                      return `${y}-${m}`
+                    })()}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setStatsMonth(v)
+                      void fetchMonthlyVocabularyLearnerStats(v)
+                    }}
+                    className="bg-white text-gray-800 border-0 focus:ring-2 focus:ring-white/50 h-9"
+                  />
+                </div>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            {statsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-500 mb-3" />
+                <p className="text-gray-600">Đang tải dữ liệu thống kê...</p>
+              </div>
+            ) : statsError ? (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                  <span className="text-lg">⚠️</span>
+                  <span>{statsError}</span>
+                </div>
+              </div>
+            ) : vocabLearnerStats.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="inline-block p-6 bg-purple-100 rounded-full mb-4">
+                  <BookOpen className="h-12 w-12 text-purple-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Không có dữ liệu</h3>
+                <p className="text-gray-500">Không có dữ liệu thống kê cho tháng đã chọn</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-gray-600">
+                    Tổng cộng: <span className="font-semibold text-gray-800">{vocabLearnerStats.length}</span> người dùng
+                  </p>
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
+                    Tháng: {statsMonth}
+                  </Badge>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                  <table className="min-w-full bg-white divide-y divide-gray-200">
+                    <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">STT</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Người dùng</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
+                        <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Cấp độ</th>
+                        <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Đã thuộc</th>
+                        <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Đang học</th>
+                        <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Tổng từ vựng</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {vocabLearnerStats.map((row: MonthlyVocabularyLearner, index: number) => (
+                        <tr 
+                          key={row.userId} 
+                          className="hover:bg-purple-50 transition-colors duration-150"
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500">
+                            {index + 1}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-semibold text-gray-900">{row.name}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-600">{row.email}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            {row.level ? (
+                              <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
+                                Level {row.level}
+                              </Badge>
+                            ) : (
+                              <span className="text-sm text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+                              {row.learnedCount}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
+                              {row.studyingCount}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <span className="text-sm font-semibold text-gray-900">{row.totalVocabularies}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Empty State */}
         {personalTopics.length === 0 && (

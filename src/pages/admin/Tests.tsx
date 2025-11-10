@@ -70,6 +70,14 @@ export const AdminTests = () => {
   } | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [levels, setLevels] = useState<Array<{ _id: string; number: number; name: string }>>([])
+  // History dialog state
+  const [showHistory, setShowHistory] = useState<boolean>(false)
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false)
+  const [historyPage, setHistoryPage] = useState<number>(1)
+  const [historyTotalPages, setHistoryTotalPages] = useState<number>(1)
+  const [historyQuestion, setHistoryQuestion] = useState<QuestionItem | null>(null)
+  const [historyStats, setHistoryStats] = useState<{ total: number; correct: number }>({ total: 0, correct: 0 })
+  const [historyItems, setHistoryItems] = useState<Array<any>>([])
   const [form, setForm] = useState<QuestionFormData>({
     level: 1,
     questionType: 'multiple-choice',
@@ -228,6 +236,29 @@ export const AdminTests = () => {
       subQuestions: (q as any).subQuestions || []
     })
     setShowEdit(true)
+  }
+
+  const openHistory = async (q: QuestionItem) => {
+    setHistoryQuestion(q)
+    setShowHistory(true)
+    setHistoryPage(1)
+    await fetchHistory(q._id, 1)
+  }
+
+  const fetchHistory = async (questionId: string, pageNum = historyPage) => {
+    try {
+      setHistoryLoading(true)
+      const res = await api.get(`/questions/${questionId}/history`, { params: { page: pageNum, limit: 10 } })
+      setHistoryItems(res.data?.items || [])
+      setHistoryStats({ total: res.data?.total || 0, correct: res.data?.correct || 0 })
+      setHistoryTotalPages(res.data?.totalPages || 1)
+    } catch (e: any) {
+      setHistoryItems([])
+      setHistoryStats({ total: 0, correct: 0 })
+      toast.error(e?.response?.data?.message || 'Không lấy được lịch sử')
+    } finally {
+      setHistoryLoading(false)
+    }
   }
 
   const validateForm = (): string | null => {
@@ -869,6 +900,7 @@ export const AdminTests = () => {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openHistory(q)}>Lịch sử</Button>
                           <Button size="sm" variant="outline" onClick={() => openEdit(q)}><Edit className="h-4 w-4" /></Button>
                           <Button size="sm" variant="outline" className="text-red-600" onClick={() => askDelete(q._id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
@@ -1256,6 +1288,121 @@ export const AdminTests = () => {
               <Button type="submit" disabled={formLoading}>{formLoading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang lưu...</>) : 'Cập nhật câu hỏi'}</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* History Dialog */}
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Lịch sử làm câu hỏi</DialogTitle>
+            <DialogDescription>
+              {historyQuestion ? `Câu hỏi: ${historyQuestion.question}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm">
+                <span className="font-medium text-gray-700">Thống kê: </span>
+                <span className="text-green-600 font-semibold">Đúng {historyStats.correct}</span>
+                <span> / Tổng {historyStats.total}</span>
+              </div>
+              {historyQuestion && (
+                <div className="text-xs text-gray-500">
+                  ID: {historyQuestion._id}
+                </div>
+              )}
+            </div>
+            <div className="border rounded-lg overflow-hidden">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 text-gray-600">
+                  <tr>
+                    <th className="text-left px-4 py-3 w-8">#</th>
+                    <th className="text-left px-4 py-3">Người dùng</th>
+                    <th className="text-left px-4 py-3">Đáp án đã chọn</th>
+                    <th className="text-left px-4 py-3">Kết quả</th>
+                    <th className="text-left px-4 py-3">Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyLoading ? (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">Đang tải...</td></tr>
+                  ) : historyItems.length === 0 ? (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">Chưa có lịch sử</td></tr>
+                  ) : (
+                    historyItems.map((h, idx) => {
+                      const q = historyQuestion as any
+                      // Render user answer text based on question type
+                      let answerText = ''
+                      if (q?.questionType === 'multiple-choice' && (q as any).options) {
+                        const opts = (h.options && Array.isArray(h.options) ? h.options : (q as any).options) || []
+                        if (Array.isArray(h.userAnswer)) {
+                          answerText = h.userAnswer.map((i: number) => opts[i]).filter(Boolean).join(', ')
+                        } else if (typeof h.userAnswer === 'number') {
+                          answerText = opts[h.userAnswer] ?? String(h.userAnswer)
+                        } else {
+                          answerText = String(h.userAnswer ?? '')
+                        }
+                      } else if (q?.questionType === 'sentence-order') {
+                        answerText = Array.isArray(h.userAnswer) ? `[${h.userAnswer.join(', ')}]` : String(h.userAnswer ?? '')
+                      } else if (q?.questionType === 'reading-comprehension') {
+                        answerText = Array.isArray(h.userAnswer) ? h.userAnswer.join(', ') : String(h.userAnswer ?? '')
+                      } else {
+                        answerText = String(h.userAnswer ?? '')
+                      }
+                      return (
+                        <tr key={idx} className="border-t">
+                          <td className="px-4 py-3">{(historyPage - 1) * 10 + idx + 1}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{h.user?.name || 'N/A'}</span>
+                              <span className="text-xs text-gray-500">{h.user?.email || ''}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">{answerText || '-'}</td>
+                          <td className="px-4 py-3">
+                            {h.correct ? (
+                              <span className="text-green-600 font-medium">Đúng</span>
+                            ) : (
+                              <span className="text-red-600 font-medium">Sai</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">{new Date(h.attemptedAt).toLocaleString()}</td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {historyTotalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 text-sm">
+                <Button
+                  variant="outline"
+                  disabled={historyPage === 1 || historyLoading || !historyQuestion}
+                  onClick={async () => {
+                    const newPage = Math.max(1, historyPage - 1)
+                    setHistoryPage(newPage)
+                    if (historyQuestion) await fetchHistory(historyQuestion._id, newPage)
+                  }}
+                >
+                  Trước
+                </Button>
+                <div>Trang {historyPage}/{historyTotalPages}</div>
+                <Button
+                  variant="outline"
+                  disabled={historyPage === historyTotalPages || historyLoading || !historyQuestion}
+                  onClick={async () => {
+                    const newPage = Math.min(historyTotalPages, historyPage + 1)
+                    setHistoryPage(newPage)
+                    if (historyQuestion) await fetchHistory(historyQuestion._id, newPage)
+                  }}
+                >
+                  Sau
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

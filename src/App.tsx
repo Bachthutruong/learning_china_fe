@@ -43,6 +43,8 @@ import { AdminCoinTransactions } from './pages/admin/CoinTransactions'
 import { PaymentConfigPage } from './pages/admin/PaymentConfig'
 import { CompetitionScoringConfigPage } from './pages/admin/CompetitionScoringConfig'
 import { CompetitionRewardsConfigPage } from './pages/admin/CompetitionRewardsConfig'
+import { AdminBlogPosts } from './pages/admin/BlogPosts'
+import { BlogPostForm } from './pages/admin/BlogPostForm'
 import { TestList } from './pages/TestList'
 import { TestDetail } from './pages/TestDetail'
 import { NewTestPage } from './pages/NewTestPage'
@@ -66,6 +68,7 @@ import { Feedback } from './pages/Feedback'
 import { PrivacyPolicy } from './pages/PrivacyPolicy'
 import { TermsOfUse } from './pages/TermsOfUse'
 import { CookiePolicy } from './pages/CookiePolicy'
+import { BlogPostDetail } from './pages/BlogPostDetail'
 
 function App() {
   return (
@@ -79,6 +82,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/blog/:id" element={<BlogPostDetail />} />
               
               {/* Help pages */}
               <Route path="/help" element={<HelpCenter />} />
@@ -349,6 +353,27 @@ function App() {
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
                     <CompetitionRewardsConfigPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/blog-posts" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminBlogPosts />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/blog-posts/new" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <BlogPostForm />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/blog-posts/:id" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <BlogPostForm />
                   </AdminLayout>
                 </ProtectedRoute>
               } />

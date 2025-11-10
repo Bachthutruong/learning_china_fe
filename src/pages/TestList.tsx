@@ -19,19 +19,51 @@ import {
   Flame,
   Gamepad2,
   Shield,
-  Sword
+  Sword,
+  Users,
+  Calendar,
+  BarChart3
 } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
 
+interface TestStatistics {
+  userId: string
+  userName: string
+  userEmail: string
+  userLevel: number
+  totalTests: number
+  totalQuestions: number
+  totalCorrect: number
+  totalWrong: number
+  totalCoinsEarned: number
+  totalExperienceEarned: number
+  averageScore: number
+  lastTestDate: string
+}
+
+interface StatisticsResponse {
+  year: number
+  month: number
+  monthName: string
+  totalUsers: number
+  totalTests: number
+  statistics: TestStatistics[]
+}
+
 export const TestList = () => {
   const { user } = useAuth()
   const [userLevel, setUserLevel] = useState(1)
+  const [statistics, setStatistics] = useState<StatisticsResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
 
   useEffect(() => {
     fetchUserLevel()
-  }, [])
+    fetchStatistics()
+  }, [selectedYear, selectedMonth])
 
   const fetchUserLevel = async () => {
     try {
@@ -40,6 +72,38 @@ export const TestList = () => {
     } catch (error) {
       console.error('Error fetching user level:', error)
     }
+  }
+
+  const fetchStatistics = async () => {
+    setLoading(true)
+    try {
+      const response = await api.get('/tests/statistics/month', {
+        params: {
+          year: selectedYear,
+          month: selectedMonth
+        }
+      })
+      setStatistics(response.data)
+    } catch (error: any) {
+      console.error('Error fetching statistics:', error)
+      if (error.response?.status !== 404) {
+        toast.error('Không thể tải thống kê')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleThisMonth = () => {
+    const now = new Date()
+    setSelectedYear(now.getFullYear())
+    setSelectedMonth(now.getMonth() + 1)
+  }
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value)
+    setSelectedYear(date.getFullYear())
+    setSelectedMonth(date.getMonth() + 1)
   }
 
 
@@ -261,6 +325,146 @@ export const TestList = () => {
                 <h4 className="font-bold text-purple-800 mb-2">Mục tiêu</h4>
                 <p className="text-purple-600 font-semibold text-lg">Trả lời đúng tất cả câu hỏi</p>
               </div>
+            </div>
+          </div>
+
+          {/* Test Statistics Section */}
+          <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-8 rounded-3xl shadow-xl border-2 border-indigo-200 mb-8">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-3 bg-white/50 px-6 py-3 rounded-2xl mb-4">
+                <BarChart3 className="h-6 w-6 text-indigo-500" />
+                <span className="font-bold text-indigo-700 text-lg">Thống kê người làm bài test</span>
+              </div>
+            </div>
+
+            {/* Filter Section */}
+            <div className="mb-6 flex flex-wrap items-center justify-center gap-4">
+              <Button
+                onClick={handleThisMonth}
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 py-2 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105"
+              >
+                <Calendar className="h-5 w-5 mr-2" />
+                Tháng này
+              </Button>
+              
+              <div className="flex items-center gap-3 bg-white/70 px-4 py-2 rounded-xl shadow-md">
+                <Calendar className="h-5 w-5 text-indigo-500" />
+                <input
+                  type="month"
+                  value={`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`}
+                  onChange={handleMonthChange}
+                  className="bg-transparent border-none outline-none text-indigo-700 font-medium cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Statistics Summary */}
+            {statistics && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white/70 p-4 rounded-2xl shadow-md text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Users className="h-5 w-5 text-blue-500" />
+                    <span className="font-bold text-blue-700">Tổng người dùng</span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-800">{statistics.totalUsers}</p>
+                </div>
+                
+                <div className="bg-white/70 p-4 rounded-2xl shadow-md text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    <span className="font-bold text-yellow-700">Tổng bài test</span>
+                  </div>
+                  <p className="text-2xl font-bold text-yellow-800">{statistics.totalTests}</p>
+                </div>
+                
+                <div className="bg-white/70 p-4 rounded-2xl shadow-md text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Calendar className="h-5 w-5 text-purple-500" />
+                    <span className="font-bold text-purple-700">Tháng</span>
+                  </div>
+                  <p className="text-lg font-bold text-purple-800 capitalize">{statistics.monthName} {statistics.year}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Statistics Table */}
+            <div className="bg-white/70 rounded-2xl shadow-lg overflow-hidden">
+              {loading ? (
+                <div className="p-8 text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                  <p className="mt-4 text-indigo-600">Đang tải thống kê...</p>
+                </div>
+              ) : statistics && statistics.statistics.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold">STT</th>
+                        <th className="px-4 py-3 text-left font-semibold">Tên người dùng</th>
+                        <th className="px-4 py-3 text-left font-semibold">Email</th>
+                        <th className="px-4 py-3 text-center font-semibold">Cấp độ</th>
+                        <th className="px-4 py-3 text-center font-semibold">Số bài test</th>
+                        <th className="px-4 py-3 text-center font-semibold">Tổng câu hỏi</th>
+                        <th className="px-4 py-3 text-center font-semibold">Đúng</th>
+                        <th className="px-4 py-3 text-center font-semibold">Sai</th>
+                        <th className="px-4 py-3 text-center font-semibold">Điểm TB</th>
+                        <th className="px-4 py-3 text-center font-semibold">Xu nhận</th>
+                        <th className="px-4 py-3 text-center font-semibold">XP nhận</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statistics.statistics.map((stat, index) => (
+                        <tr 
+                          key={stat.userId} 
+                          className={`border-b border-indigo-100 hover:bg-indigo-50 transition-colors ${
+                            index % 2 === 0 ? 'bg-white' : 'bg-indigo-50/30'
+                          }`}
+                        >
+                          <td className="px-4 py-3 font-medium text-indigo-700">{index + 1}</td>
+                          <td className="px-4 py-3 font-medium text-indigo-800">{stat.userName}</td>
+                          <td className="px-4 py-3 text-sm text-indigo-600">{stat.userEmail}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                              <Crown className="h-4 w-4" />
+                              {stat.userLevel}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center font-semibold text-indigo-700">{stat.totalTests}</td>
+                          <td className="px-4 py-3 text-center text-indigo-600">{stat.totalQuestions}</td>
+                          <td className="px-4 py-3 text-center font-semibold text-green-600">{stat.totalCorrect}</td>
+                          <td className="px-4 py-3 text-center font-semibold text-red-600">{stat.totalWrong}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${
+                              stat.averageScore >= 80 ? 'bg-green-100 text-green-700' :
+                              stat.averageScore >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {stat.averageScore}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center gap-1 text-blue-600 font-semibold">
+                              <Coins className="h-4 w-4" />
+                              {stat.totalCoinsEarned.toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center gap-1 text-purple-600 font-semibold">
+                              <Star className="h-4 w-4" />
+                              {stat.totalExperienceEarned.toLocaleString()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  <Users className="h-12 w-12 text-indigo-300 mx-auto mb-4" />
+                  <p className="text-indigo-600 font-medium">Không có dữ liệu thống kê cho tháng này</p>
+                </div>
+              )}
             </div>
           </div>
 

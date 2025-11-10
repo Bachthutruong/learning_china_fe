@@ -1,7 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { CheckCircle, BookOpen, Target, BrainCircuit, Sparkles, Trophy, Users } from 'lucide-react'
+import { CheckCircle, BookOpen, Target, BrainCircuit, Sparkles, Trophy, Users, Eye, Calendar, ArrowRight } from 'lucide-react'
+import { api } from '../services/api'
 
 const features = [
   {
@@ -42,8 +44,55 @@ const features = [
   }
 ]
 
+interface BlogPost {
+  _id: string
+  title: string
+  content: string
+  excerpt?: string
+  featuredImage?: string
+  author: {
+    _id: string
+    name: string
+    email: string
+  }
+  status: 'draft' | 'published'
+  publishedAt?: string
+  views: number
+  tags?: string[]
+  slug?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export const Home = () => {
   const navigate = useNavigate()
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
+  const [loadingPosts, setLoadingPosts] = useState(true)
+
+  useEffect(() => {
+    fetchBlogPosts()
+  }, [])
+
+  const fetchBlogPosts = async () => {
+    try {
+      setLoadingPosts(true)
+      const response = await api.get('/blog-posts', {
+        params: { page: 1, limit: 6 }
+      })
+      setBlogPosts(response.data.posts || [])
+    } catch (error) {
+      console.error('Error fetching blog posts:', error)
+    } finally {
+      setLoadingPosts(false)
+    }
+  }
+
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement('DIV')
+    tmp.innerHTML = html
+    return tmp.textContent || tmp.innerText || ''
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Hero Section */}
@@ -152,6 +201,81 @@ export const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Blog Posts Section */}
+      {blogPosts.length > 0 && (
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Bài viết mới nhất
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Khám phá các bài viết hữu ích về học tiếng Trung và văn hóa Trung Quốc
+              </p>
+            </div>
+            {loadingPosts ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Đang tải bài viết...</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {blogPosts.map((post) => (
+                  <Card key={post._id} className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border-0 shadow-lg overflow-hidden">
+                    {post.featuredImage && (
+                      <div className="relative h-48 overflow-hidden">
+                        <img
+                          src={post.featuredImage}
+                          alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      </div>
+                    )}
+                    <CardHeader>
+                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                        <Calendar className="h-4 w-4" />
+                        {post.publishedAt && new Date(post.publishedAt).toLocaleDateString('vi-VN')}
+                        <span className="mx-2">•</span>
+                        <Eye className="h-4 w-4" />
+                        {post.views} lượt xem
+                      </div>
+                      <CardTitle className="text-xl font-bold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                        {post.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription className="text-gray-600 line-clamp-3 mb-4">
+                        {post.excerpt || stripHtml(post.content).substring(0, 150) + '...'}
+                      </CardDescription>
+                      {post.tags && post.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {post.tags.slice(0, 3).map((tag, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <Button
+                        variant="link"
+                        className="p-0 text-blue-600 hover:text-blue-700 group-hover:underline"
+                        onClick={() => navigate(`/blog/${post.slug || post._id}`)}
+                      >
+                        Đọc thêm
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-20">

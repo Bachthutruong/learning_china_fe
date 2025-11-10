@@ -23,7 +23,8 @@ import {
   BookOpenCheck,
   Settings,
   CreditCard,
-  Award
+  Award,
+  FileText
 } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -182,6 +183,12 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
       icon: Users,
       href: '/admin/users',
       badge: stats.users > 0 ? stats.users.toString() : null
+    },
+    {
+      title: 'Blog',
+      icon: FileText,
+      href: '/admin/blog-posts',
+      badge: null
     },
     {
       title: 'Mua xu',
