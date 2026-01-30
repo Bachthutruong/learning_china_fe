@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
@@ -12,7 +11,8 @@ import {
   BookOpen,
   Tag,
   
-  Loader2
+  Loader2,
+  CheckCircle
 } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
@@ -245,215 +245,230 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
   // Removed audio play helper in compact UI
 
   return (
-    <div className={`${inDialog ? '' : 'min-h-screen'} bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-6`}>
-      <div className="max-w-6xl mx-auto">
-        {/* Enhanced Header */}
-        <div className="mb-8 text-center">
-          <div className="relative inline-block">
-            {/* <Button
-              variant="outline"
-              onClick={() => {
-                if (onClose) {
-                  onClose()
-                } else {
-                  try { window.history.back() } catch {}
-                }
-              }}
-              className="absolute -left-32 top-0 bg-white/50 border-white/30 text-gray-700 hover:bg-white/70 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              {inDialog ? 'Đóng' : 'Quay lại'}
-            </Button> */}
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4">
-              📚 Thêm từ vựng
-            </h1>
-            <div className="absolute -top-2 -right-2">
-              <BookOpen className="h-8 w-8 text-yellow-400 animate-bounce" />
-            </div>
-            <div className="absolute -bottom-2 -left-2">
-              <Tag className="h-6 w-6 text-purple-400 animate-pulse" />
-            </div>
+    <div className={`${inDialog ? '' : 'min-h-screen'} bg-[#fdfaf6] p-4 md:p-8`}>
+      <div className="max-w-6xl mx-auto space-y-10">
+        {/* Header Section */}
+        {!inDialog && (
+          <div className="text-center space-y-4 max-w-3xl mx-auto">
+             <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+                <Plus className="w-4 h-4 text-primary" />
+                <span className="text-primary text-xs font-bold uppercase tracking-widest">Mở rộng kho kiến thức</span>
+             </div>
+             <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">Thêm <span className="text-primary">Từ vựng mới</span></h1>
+             <p className="text-gray-500 font-medium">Tìm kiếm từ vựng từ hệ thống và tổ chức chúng vào các chủ đề cá nhân của bạn.</p>
           </div>
-          <p className="text-xl text-gray-700 font-medium">
-            Chọn chủ đề và thêm từ vựng từ danh mục hệ thống
-          </p>
-        </div>
+        )}
 
-        <div className="space-y-6">
-          {/* 1) Personal topics - compact badges */}
-          <Card className="border-0 shadow bg-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-purple-600" />
-                  <span className="font-semibold">Chủ đề của bạn</span>
-                  <Badge variant="outline" className="text-xs">Có thể chọn nhiều</Badge>
+        <div className="space-y-8">
+          {/* Step 1: Search & Filter Categories */}
+          <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
+             <div className="flex items-center space-x-4">
+                <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white shadow-lg">
+                   <Search className="w-5 h-5" />
                 </div>
-                <Button size="sm" onClick={() => setShowCreateTopicDialog(true)} className="h-8 px-3"> 
-                  <Plus className="w-3 h-3 mr-1" /> Tạo chủ đề
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {personalTopics.map((topic) => (
-                  <button
-                    key={topic._id}
-                    onClick={() => handleTopicSelect(topic._id)}
-                    className={`px-3 py-1 rounded-full border text-sm transition ${
-                      selectedPersonalTopics.includes(topic._id)
-                        ? 'bg-purple-600 text-white border-purple-600'
-                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    {topic.name}
-                    <span className={`ml-2 inline-flex items-center justify-center text-[10px] px-1.5 py-0.5 rounded-full border ${
-                      selectedPersonalTopics.includes(topic._id) ? 'border-white/40' : 'border-gray-300 text-gray-500'
-                    }`}>{topic.vocabularyCount}</span>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 2) System categories - compact badges */}
-          <Card className="border-0 shadow bg-white">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <BookOpen className="w-4 h-4 text-blue-600" />
-                <span className="font-semibold">Danh mục hệ thống</span>
-                <Badge variant="outline" className="text-xs">Chọn để xem từ vựng</Badge>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {systemCategories.map((category) => (
-                  <button
-                    key={category._id}
-                    onClick={() => handleCategorySelect(category._id)}
-                    className={`px-3 py-1 rounded-full border text-sm transition ${
-                      selectedCategories.includes(category.name)
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    {category.name}
-                    <span className={`ml-2 inline-flex items-center justify-center text-[10px] px-1.5 py-0.5 rounded-full border ${
-                      selectedCategories.includes(category.name) ? 'border-white/40' : 'border-gray-300 text-gray-500'
-                    }`}>{category.vocabularyCount}</span>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 3) Vocabulary list for selected categories */}
-          <Card className="border-0 shadow bg-white">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Tag className="w-4 h-4 text-rose-600" />
-                <span className="font-semibold">Từ vựng</span>
-                <span className="text-sm text-gray-500">{selectedCategories.length > 0 ? 'Theo danh mục đã chọn' : 'Chọn danh mục để hiển thị'}</span>
-              </div>
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Tìm kiếm từ vựng..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                <div>
+                   <h3 className="text-xl font-black text-gray-900">1. Tìm kiếm từ hệ thống</h3>
+                   <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Khám phá kho từ vựng Jiudi</p>
                 </div>
-              </div>
+             </div>
 
-              {loading ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
-              ) : selectedCategories.length === 0 ? (
-                <div className="text-sm text-gray-600 py-6 text-center">Hãy chọn danh mục hệ thống ở trên để xem từ vựng.</div>
-              ) : availableVocabularies.length > 0 ? (
-                <>
-                  <div className="flex flex-wrap gap-2 mb-4">
+             <div className="grid md:grid-cols-3 gap-8">
+                <div className="md:col-span-2 space-y-4">
+                   <div className="relative group">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-primary transition-colors" />
+                      <Input
+                        placeholder="Nhập Hán tự, Pinyin hoặc nghĩa của từ..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="h-14 pl-12 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all text-base font-bold"
+                      />
+                   </div>
+                   
+                   <div className="space-y-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center">
+                         <BookOpen className="w-3 h-3 mr-2" /> Danh mục phổ biến
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {systemCategories.map((category) => (
+                          <button
+                            key={category._id}
+                            onClick={() => handleCategorySelect(category._id)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
+                              selectedCategories.includes(category.name)
+                                ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
+                                : 'bg-white text-gray-500 border-gray-100 hover:border-primary/20 hover:text-primary'
+                            }`}
+                          >
+                            {category.name}
+                            <span className="ml-2 opacity-50 font-black">({category.vocabularyCount})</span>
+                          </button>
+                        ))}
+                      </div>
+                   </div>
+                </div>
+
+                <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10 flex flex-col justify-between">
+                   <p className="text-xs font-medium text-primary leading-relaxed italic">"Hệ thống sẽ lọc những từ vựng phù hợp nhất với tiêu chí tìm kiếm và danh mục bạn chọn."</p>
+                   <div className="pt-4 flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                      <span className="text-[10px] font-black uppercase text-primary tracking-widest">AI Assisted Filter</span>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          {/* Step 2: Vocabulary Selection */}
+          {selectedCategories.length > 0 && (
+            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-6 animate-in slide-in-from-bottom duration-500">
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                     <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                        <Tag className="w-5 h-5" />
+                     </div>
+                     <div>
+                        <h3 className="text-xl font-black text-gray-900">2. Lựa chọn từ vựng</h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn các từ bạn muốn học</p>
+                     </div>
+                  </div>
+                  <Badge className="bg-blue-50 text-blue-600 border-blue-100 rounded-lg font-black">{availableVocabularies.length} Từ khả dụng</Badge>
+               </div>
+
+               {loading ? (
+                 <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                 </div>
+               ) : availableVocabularies.length > 0 ? (
+                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {availableVocabularies.map((vocabulary) => (
                       <button
                         key={vocabulary._id}
                         onClick={() => handleVocabularySelect(vocabulary._id)}
-                        className={`px-3 py-1 rounded-full border text-sm transition ${
+                        className={`p-4 rounded-2xl border-2 text-center transition-all group relative ${
                           selectedVocabularies.includes(vocabulary._id)
-                            ? 'bg-rose-600 text-white border-rose-600'
-                            : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                            ? 'bg-blue-50 border-blue-500 shadow-md ring-4 ring-blue-50'
+                            : 'bg-white border-gray-50 hover:border-blue-200 hover:bg-blue-50/30'
                         }`}
-                        title={vocabulary.examples[0] || ''}
                       >
-                        {vocabulary.word}
-                        <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full border ${
-                          selectedVocabularies.includes(vocabulary._id) ? 'border-white/40' : 'border-gray-300 text-gray-500'
-                        }`}>L{vocabulary.level}</span>
+                        <p className={`text-2xl font-black transition-colors ${selectedVocabularies.includes(vocabulary._id) ? 'text-blue-700' : 'text-gray-900'}`}>{vocabulary.word}</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{vocabulary.pinyin}</p>
+                        <p className="text-xs text-gray-500 line-clamp-1 mt-2 font-medium">{vocabulary.meaning}</p>
+                        
+                        {selectedVocabularies.includes(vocabulary._id) && (
+                          <div className="absolute top-2 right-2">
+                             <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                <CheckCircle className="w-3 h-3 text-white" />
+                             </div>
+                          </div>
+                        )}
                       </button>
                     ))}
+                 </div>
+               ) : (
+                 <div className="text-center py-12 text-gray-400 italic font-medium">Không tìm thấy từ vựng nào phù hợp.</div>
+               )}
+            </div>
+          )}
+
+          {/* Step 3: Target Personal Topics */}
+          {selectedVocabularies.length > 0 && (
+            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8 animate-in slide-in-from-bottom duration-700">
+               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex items-center space-x-4">
+                     <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-200">
+                        <Plus className="w-5 h-5" />
+                     </div>
+                     <div>
+                        <h3 className="text-xl font-black text-gray-900">3. Đích đến học tập</h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn chủ đề cá nhân của bạn</p>
+                     </div>
                   </div>
-                  {selectedPersonalTopics.length > 0 && selectedVocabularies.length > 0 && (
-                    <div className="flex justify-center">
-                      <Button onClick={handleAddVocabularies} className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
-                        <Plus className="w-4 h-4 mr-2" /> Thêm {selectedVocabularies.length} từ vào {selectedPersonalTopics.length} chủ đề
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-sm text-gray-600 py-6 text-center">Không có từ vựng phù hợp.</div>
-              )}
-            </CardContent>
-          </Card>
+                  <Button 
+                    onClick={() => setShowCreateTopicDialog(true)}
+                    variant="ghost"
+                    className="rounded-xl font-black text-xs text-primary hover:bg-primary/5"
+                  >
+                     <Plus className="w-4 h-4 mr-2" /> Tạo chủ đề mới
+                  </Button>
+               </div>
+
+               <div className="flex flex-wrap gap-3">
+                  {personalTopics.map((topic) => (
+                    <button
+                      key={topic._id}
+                      onClick={() => handleTopicSelect(topic._id)}
+                      className={`flex items-center px-6 py-3 rounded-2xl border-2 transition-all font-bold ${
+                        selectedPersonalTopics.includes(topic._id)
+                          ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-100'
+                          : 'bg-white text-gray-500 border-gray-100 hover:border-green-300 hover:text-green-600'
+                      }`}
+                    >
+                      <Tag className={`w-4 h-4 mr-3 ${selectedPersonalTopics.includes(topic._id) ? 'text-white' : 'text-green-500'}`} />
+                      {topic.name}
+                      <Badge className={`ml-3 rounded-lg border-none ${selectedPersonalTopics.includes(topic._id) ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                         {topic.vocabularyCount}
+                      </Badge>
+                    </button>
+                  ))}
+               </div>
+
+               <div className="pt-8 border-t border-gray-50 flex justify-center">
+                  <Button
+                    onClick={handleAddVocabularies}
+                    disabled={selectedPersonalTopics.length === 0}
+                    className="h-16 px-12 rounded-2xl chinese-gradient text-white font-black text-xl shadow-2xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all disabled:opacity-50 disabled:transform-none"
+                  >
+                     Hoàn tất & Thêm {selectedVocabularies.length} từ vào {selectedPersonalTopics.length} chủ đề
+                  </Button>
+               </div>
+            </div>
+          )}
         </div>
 
         {/* Create Topic Dialog */}
         <Dialog open={showCreateTopicDialog} onOpenChange={setShowCreateTopicDialog}>
-          <DialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
-            <DialogHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg p-6 -m-6 mb-6">
-              <DialogTitle className="flex items-center gap-3 text-xl">
-                <div className="p-2 bg-white/20 rounded-full">
-                  <Plus className="w-6 h-6" />
-                </div>
-                <div>
-                  <span>Tạo chủ đề mới</span>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Tag className="h-4 w-4 text-purple-200" />
-                    <span className="text-sm text-purple-100">Tổ chức từ vựng cá nhân</span>
-                  </div>
-                </div>
-              </DialogTitle>
+          <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl">
+            <DialogHeader className="text-center space-y-4 mb-8">
+               <div className="w-16 h-16 chinese-gradient rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                  <Plus className="w-8 h-8 text-white" />
+               </div>
+               <DialogTitle className="text-3xl font-black text-gray-900">Tạo chủ đề học tập</DialogTitle>
+               <p className="text-gray-500 font-medium leading-relaxed">Tổ chức từ vựng theo cách riêng của bạn để ghi nhớ tốt hơn.</p>
             </DialogHeader>
+            
             <div className="space-y-6">
-              <div>
-                <Label htmlFor="topicName" className="text-lg font-semibold text-gray-700">Tên chủ đề *</Label>
+              <div className="space-y-2">
+                <Label htmlFor="topicName" className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Tên chủ đề của bạn</Label>
                 <Input
                   id="topicName"
                   value={newTopicName}
                   onChange={(e) => setNewTopicName(e.target.value)}
-                  placeholder="Nhập tên chủ đề..."
-                  className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
+                  placeholder="Ví dụ: Tiếng Trung chuyên ngành IT..."
+                  className="h-14 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
                 />
               </div>
-              <div>
-                <Label htmlFor="topicDescription" className="text-lg font-semibold text-gray-700">Mô tả</Label>
+              <div className="space-y-2">
+                <Label htmlFor="topicDescription" className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Mô tả ngắn gọn (tùy chọn)</Label>
                 <Input
                   id="topicDescription"
                   value={newTopicDescription}
                   onChange={(e) => setNewTopicDescription(e.target.value)}
-                  placeholder="Nhập mô tả chủ đề..."
-                  className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
+                  placeholder="Mục tiêu của chủ đề này là gì?..."
+                  className="h-14 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
                 />
               </div>
-              <div className="flex justify-end gap-4">
+              <div className="flex gap-4 pt-4">
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   onClick={() => setShowCreateTopicDialog(false)}
-                  className="px-6 py-3 text-lg border-2 border-gray-300 hover:border-gray-400"
+                  className="flex-1 h-12 rounded-xl font-bold text-gray-400"
                 >
-                  Hủy
+                  Hủy bỏ
                 </Button>
                 <Button 
                   onClick={handleCreateTopic}
-                  className="px-6 py-3 text-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                  className="flex-1 chinese-gradient h-12 rounded-xl font-black text-white shadow-lg"
                 >
-                  Tạo chủ đề
+                  Tạo ngay
                 </Button>
               </div>
             </div>

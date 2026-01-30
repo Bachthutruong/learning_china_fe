@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
-// Avatar imports not used on list page; used in detail page instead
 import { 
   Trophy, 
   Clock, 
   Users, 
-  Star, 
   Target, 
   Calendar,
   Gem,
   TrendingUp,
-  Loader2
+  Loader2,
+  Diamond,
+  Zap
 } from 'lucide-react'
 import { api } from '../services/api'
 import { useNavigate } from 'react-router-dom'
@@ -32,15 +31,11 @@ interface Competition {
   level: string | any
 }
 
-// LeaderboardEntry is defined/used in detail page
-
 export const Competition = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [competitions, setCompetitions] = useState<Competition[]>([])
-  // leaderboard is shown in detail page
   const [loading, setLoading] = useState(true)
-  // details moved to separate page
 
   useEffect(() => {
     fetchCompetitions()
@@ -58,10 +53,6 @@ export const Competition = () => {
       setLoading(false)
     }
   }
-
-  // leaderboard fetching moved to detail page
-
-  // Removed unused fetchCompetitionStats function
 
   const joinCompetition = async (competitionId: string, cost: number) => {
     if (!user) {
@@ -108,8 +99,6 @@ export const Competition = () => {
     }
   }
 
-  // Rank icon used in detail page only
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
@@ -121,131 +110,147 @@ export const Competition = () => {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cuộc thi ngôn ngữ</h1>
-          <p className="text-gray-600">Tham gia các cuộc thi để thử thách bản thân và giành giải thưởng</p>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Competitions */}
-          <div className="lg:col-span-2 space-y-6">
-            {competitions.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-500 mb-2">Chưa có cuộc thi nào</h3>
-                  <p className="text-gray-400">Các cuộc thi mới sẽ được thông báo sớm.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              competitions.map((competition) => (
-                <Card key={competition._id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <Trophy className="h-5 w-5 text-yellow-500" />
-                          {competition.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          {competition.description}
-                        </CardDescription>
-                      </div>
-                      {getStatusBadge(competition)}
+    return (
+      <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-12">
+          {/* Header/Hero Section */}
+          <div className="text-center space-y-4 max-w-3xl mx-auto">
+             <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+                <Trophy className="w-4 h-4 text-primary" />
+                <span className="text-primary text-xs font-bold uppercase tracking-widest">Đấu trường trí tuệ</span>
+             </div>
+             <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+                Cuộc thi <span className="text-primary">Ngôn ngữ</span>
+             </h1>
+             <p className="text-gray-500 font-medium">
+                Thử thách kỹ năng tiếng Trung của bạn với hàng ngàn học viên khác và giành những phần thưởng hấp dẫn.
+             </p>
+          </div>
+  
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Competitions List */}
+            <div className="lg:col-span-2 space-y-6">
+              {competitions.length === 0 ? (
+                <div className="bg-white p-20 rounded-[2.5rem] border border-gray-100 shadow-sm text-center space-y-4">
+                   <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
+                      <Trophy className="w-10 h-10" />
+                   </div>
+                   <p className="text-gray-500 font-bold">Hiện chưa có cuộc thi nào đang diễn ra.</p>
+                </div>
+              ) : (
+                competitions.map((competition) => (
+                  <div 
+                    key={competition._id} 
+                    className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 w-32 h-32 chinese-gradient opacity-5 rounded-bl-[4rem]" />
+                    
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                       <div className="space-y-2">
+                          <div className="flex items-center space-x-3">
+                             <h3 className="text-2xl font-black text-gray-900 group-hover:text-primary transition-colors">{competition.title}</h3>
+                             {getStatusBadge(competition)}
+                          </div>
+                          <p className="text-gray-500 text-sm font-medium leading-relaxed max-w-md">
+                             {competition.description}
+                          </p>
+                       </div>
+                       <div className="bg-gray-50 px-6 py-4 rounded-3xl border border-gray-100 text-center">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Thưởng tối đa</p>
+                          <p className="text-xl font-black text-amber-500 flex items-center justify-center">
+                             <Gem className="w-5 h-5 mr-1 fill-current" /> {competition.reward.coins} Xu
+                          </p>
+                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Calendar className="h-4 w-4" />
-                          <span>Bắt đầu: {new Date(competition.startDate).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Clock className="h-4 w-4" />
-                          <span>Kết thúc: {new Date(competition.endDate).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Users className="h-4 w-4" />
-                          <span>
-                            {Array.isArray(competition.participants) ? competition.participants.length : competition.participants} người tham gia
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Target className="h-4 w-4 text-blue-500" />
-                          <span>Cấp độ: {typeof competition.level === 'string' ? competition.level : (competition.level?.name || 'Unknown')}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Gem className="h-4 w-4 text-blue-500" />
-                          <span>Phí tham gia: {competition.cost} xu</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Star className="h-4 w-4 text-yellow-500" />
-                          <span>Thưởng: +{competition.reward.xp} XP, +{competition.reward.coins} xu</span>
-                        </div>
-                      </div>
+  
+                    <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 pt-8 border-t border-gray-50">
+                       <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Thời gian</p>
+                          <div className="flex items-center text-sm font-bold text-gray-700">
+                             <Calendar className="w-4 h-4 mr-2 text-primary" />
+                             {new Date(competition.startDate).toLocaleDateString('vi-VN')}
+                          </div>
+                       </div>
+                       <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Tham gia</p>
+                          <div className="flex items-center text-sm font-bold text-gray-700">
+                             <Users className="w-4 h-4 mr-2 text-blue-500" />
+                             {Array.isArray(competition.participants) ? competition.participants.length : competition.participants} người
+                          </div>
+                       </div>
+                       <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Cấp độ</p>
+                          <div className="flex items-center text-sm font-bold text-gray-700">
+                             <Target className="w-4 h-4 mr-2 text-green-500" />
+                             {typeof competition.level === 'string' ? competition.level : (competition.level?.name || 'HSK 1-6')}
+                          </div>
+                       </div>
+                       <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Lệ phí</p>
+                          <div className="flex items-center text-sm font-bold text-gray-700">
+                             <Diamond className="w-4 h-4 mr-2 text-amber-500" />
+                             {competition.cost} Xu
+                          </div>
+                       </div>
                     </div>
-
-                    <div className="flex gap-2">
+  
+                    <div className="relative z-10 flex flex-wrap gap-3">
                       <Button
                         onClick={() => joinCompetition(competition._id, competition.cost)}
                         disabled={getComputedStatus(competition) !== 'active'}
-                        className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
+                        className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg shadow-primary/20 transform hover:-translate-y-1 transition-all"
                       >
-                        {getComputedStatus(competition) === 'active' ? 'Tham gia' : 'Chưa mở'}
+                        {getComputedStatus(competition) === 'active' ? 'Tham gia đấu trường' : 'Chưa mở đăng ký'}
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => navigate(`/competition/${competition._id}`)}
+                        className="h-12 px-8 rounded-xl font-bold border-2 border-gray-100 hover:border-primary hover:text-primary transition-all"
                       >
-                        Chi tiết
+                        Xem chi tiết
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-          {/* Sidebar stats */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-500" />
-                  Thống kê
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Tổng cuộc thi</span>
-                  <span className="font-semibold">{competitions.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Đang diễn ra</span>
-                  <span className="font-semibold text-green-600">
-                    {competitions.filter(c => getComputedStatus(c) === 'active').length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Sắp diễn ra</span>
-                  <span className="font-semibold text-blue-600">
-                    {competitions.filter(c => getComputedStatus(c) === 'upcoming').length}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                ))
+              )}
+            </div>
+  
+            {/* Sidebar Stats */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
+                 <h3 className="text-xl font-black text-gray-900 flex items-center">
+                    <TrendingUp className="w-5 h-5 mr-2 text-primary" />
+                    Thống kê đấu trường
+                 </h3>
+                 
+                 <div className="space-y-6">
+                    {[
+                      { label: 'Tổng cuộc thi', value: competitions.length, color: 'bg-blue-50 text-blue-600', icon: Trophy },
+                      { label: 'Đang diễn ra', value: competitions.filter(c => getComputedStatus(c) === 'active').length, color: 'bg-green-50 text-green-600', icon: Zap },
+                      { label: 'Sắp bắt đầu', value: competitions.filter(c => getComputedStatus(c) === 'upcoming').length, color: 'bg-amber-50 text-amber-600', icon: Clock }
+                    ].map((stat, i) => (
+                      <div key={i} className="flex items-center justify-between group cursor-pointer">
+                         <div className="flex items-center space-x-4">
+                            <div className={`w-10 h-10 rounded-xl ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110`}>
+                               <stat.icon className="w-5 h-5" />
+                            </div>
+                            <span className="text-sm font-bold text-gray-500">{stat.label}</span>
+                         </div>
+                         <span className="text-lg font-black text-gray-900">{stat.value}</span>
+                      </div>
+                    ))}
+                 </div>
+  
+                 <div className="pt-8 border-t border-gray-50">
+                    <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10 text-center space-y-3">
+                       <p className="text-sm font-bold text-primary italic">"Học tiếng Trung là một hành trình marathon, không phải một cuộc chạy nước rút."</p>
+                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">— Jiudi Master</p>
+                    </div>
+                 </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Details moved to separate page */}
       </div>
-    </div>
-  )
+    )
 }

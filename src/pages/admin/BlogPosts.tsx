@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
@@ -11,8 +10,9 @@ import {
   Search,
   Eye,
   FileText,
-  ChevronLeft,
-  ChevronRight
+  // ChevronLeft,
+  // ChevronRight,
+  Loader2
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { api } from '../../services/api'
@@ -121,240 +121,165 @@ export const AdminBlogPosts = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quản lý Blog</h1>
-          <p className="text-gray-600 mt-1">Tạo và quản lý các bài viết blog</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
+             <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg">
+                <FileText className="w-6 h-6" />
+             </div>
+             Quản trị Blog
+          </h1>
+          <p className="text-gray-500 font-medium">Sáng tạo và quản lý nội dung bản tin, kinh nghiệm học tập Hán ngữ.</p>
         </div>
-        <Button onClick={() => navigate('/admin/blog-posts/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tạo bài viết mới
+        
+        <Button onClick={() => navigate('/admin/blog-posts/new')} className="chinese-gradient h-11 px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-1">
+          <Plus className="mr-2 h-4 w-4" /> Viết bài mới
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Tìm kiếm bài viết..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+      {/* Control Bar */}
+      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl space-y-6">
+         <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+            <div className="flex-1 relative group">
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-primary transition-colors" />
+               <Input
+                 placeholder="Tìm kiếm theo tiêu đề bài viết hoặc tác giả..."
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 className="h-12 pl-11 rounded-xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+               />
             </div>
-            <div className="flex gap-4">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="published">Đã xuất bản</SelectItem>
-                  <SelectItem value="draft">Bản nháp</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={limit.toString()} onValueChange={(value) => {
-                setLimit(Number(value))
-                setPage(1)
-              }}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Số lượng" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5 / trang</SelectItem>
-                  <SelectItem value="10">10 / trang</SelectItem>
-                  <SelectItem value="20">20 / trang</SelectItem>
-                  <SelectItem value="50">50 / trang</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            
+            <div className="flex items-center gap-4">
+               <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-44 h-12 rounded-xl border-gray-100 font-bold bg-gray-50/50">
+                     <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                     <SelectItem value="all">Tất cả bài viết</SelectItem>
+                     <SelectItem value="published">Đã xuất bản</SelectItem>
+                     <SelectItem value="draft">Bản nháp</SelectItem>
+                  </SelectContent>
+               </Select>
 
-      {/* Posts List */}
+               <div className="flex items-center space-x-2">
+                  <span className="text-[10px] font-black uppercase text-gray-400">Trang</span>
+                  <Select value={limit.toString()} onValueChange={(v) => { setLimit(Number(v)); setPage(1); }}>
+                     <SelectTrigger className="w-20 h-10 rounded-xl border-gray-100 font-black text-[10px]">
+                        <SelectValue />
+                     </SelectTrigger>
+                     <SelectContent className="rounded-xl">
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                     </SelectContent>
+                  </Select>
+               </div>
+            </div>
+         </div>
+      </div>
+
+      {/* Posts List Rendering */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Đang tải...</p>
+        <div className="flex flex-col items-center justify-center py-20">
+           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+           <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Đang truy xuất bản thảo...</p>
         </div>
       ) : posts.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Chưa có bài viết nào</p>
-            <Button onClick={() => navigate('/admin/blog-posts/new')} className="mt-4">
-              <Plus className="mr-2 h-4 w-4" />
-              Tạo bài viết đầu tiên
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="bg-white p-20 rounded-[3rem] border border-gray-100 shadow-sm text-center space-y-6">
+           <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
+              <FileText className="w-10 h-10" />
+           </div>
+           <div className="space-y-2">
+              <h3 className="text-2xl font-black text-gray-900">Chưa có bài viết nào</h3>
+              <p className="text-gray-500 font-medium">Bắt đầu chia sẻ kiến thức của bạn ngay hôm nay.</p>
+           </div>
+           <Button onClick={() => navigate('/admin/blog-posts/new')} className="chinese-gradient h-12 px-8 rounded-xl font-black text-white">Viết bài đầu tiên</Button>
+        </div>
       ) : (
-        <>
-          <div className="grid gap-6">
-            {posts.map((post) => (
-              <Card key={post._id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex gap-6">
-                    {post.featuredImage && (
-                      <div className="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                        <img
-                          src={post.featuredImage}
-                          alt={post.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">
-                            {post.title}
-                          </h3>
-                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                            {post.excerpt || stripHtml(post.content).substring(0, 150) + '...'}
-                          </p>
-                          <div className="flex items-center gap-4 flex-wrap">
-                            <Badge variant={post.status === 'published' ? 'default' : 'secondary'}>
-                              {post.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
-                            </Badge>
-                            <span className="text-sm text-gray-500">
-                              Tác giả: {post.author.name}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              <Eye className="inline h-4 w-4 mr-1" />
-                              {post.views} lượt xem
-                            </span>
-                            {post.publishedAt && (
-                              <span className="text-sm text-gray-500">
-                                {new Date(post.publishedAt).toLocaleDateString('vi-VN')}
-                              </span>
-                            )}
-                          </div>
-                          {post.tags && post.tags.length > 0 && (
-                            <div className="flex gap-2 mt-3 flex-wrap">
-                              {post.tags.map((tag, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/admin/blog-posts/${post._id}`)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setPostToDelete(post._id)
-                              setDeleteDialogOpen(true)
-                            }}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+        <div className="grid gap-6">
+          {posts.map((post) => (
+            <div key={post._id} className="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col md:flex-row gap-8 items-center">
+               {post.featuredImage && (
+                 <div className="w-full md:w-48 h-40 shrink-0 rounded-[2rem] overflow-hidden border-2 border-white shadow-lg ring-1 ring-gray-100">
+                    <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                 </div>
+               )}
+               
+               <div className="flex-1 space-y-4">
+                  <div className="flex items-center space-x-3">
+                     <Badge className={`rounded-lg font-black uppercase text-[8px] tracking-widest ${post.status === 'published' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                        {post.status === 'published' ? 'Live' : 'Draft'}
+                     </Badge>
+                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(post.createdAt).toLocaleDateString('vi-VN')}</span>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="text-sm text-gray-600">
-                    Hiển thị {((page - 1) * limit) + 1} - {Math.min(page * limit, total)} trong tổng số {total} bài viết
+                  <div className="space-y-2">
+                     <h3 className="text-xl font-black text-gray-900 group-hover:text-primary transition-colors leading-tight">{post.title}</h3>
+                     <p className="text-sm text-gray-500 font-medium line-clamp-2 leading-relaxed">
+                        {post.excerpt || stripHtml(post.content).substring(0, 150) + '...'}
+                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Trước
-                    </Button>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                        let pageNum: number
-                        if (totalPages <= 7) {
-                          pageNum = i + 1
-                        } else if (page <= 4) {
-                          pageNum = i + 1
-                        } else if (page >= totalPages - 3) {
-                          pageNum = totalPages - 6 + i
-                        } else {
-                          pageNum = page - 3 + i
-                        }
-                        
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={page === pageNum ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setPage(pageNum)}
-                            className="min-w-[40px]"
-                          >
-                            {pageNum}
-                          </Button>
-                        )
-                      })}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                    >
-                      Sau
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
+
+                  <div className="flex items-center justify-between pt-2">
+                     <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2 text-xs font-bold text-gray-400">
+                           <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black">{post.author.name[0]}</div>
+                           <span>{post.author.name}</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-xs font-bold text-gray-400">
+                           <Eye className="w-4 h-4 text-primary" />
+                           <span>{post.views.toLocaleString()}</span>
+                        </div>
+                     </div>
+                     
+                     <div className="flex items-center space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/blog-posts/${post._id}`)} className="w-9 h-9 rounded-xl hover:bg-blue-50 hover:text-blue-600"><Edit className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => { setPostToDelete(post._id); setDeleteDialogOpen(true); }} className="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
+               </div>
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center space-x-4 mt-8">
+           <Button variant="ghost" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="rounded-xl font-bold text-xs uppercase text-gray-400 hover:text-primary">Trước</Button>
+           <div className="bg-white px-6 py-2 rounded-2xl border border-gray-100 shadow-sm font-black text-sm text-gray-900">
+              Trang {page} / {totalPages}
+           </div>
+           <Button variant="ghost" disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="rounded-xl font-bold text-xs uppercase text-gray-400 hover:text-primary">Tiếp</Button>
+        </div>
+      )}
+
+      {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.
+        <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-sm text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500">
+             <Trash2 className="w-8 h-8" />
+          </div>
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-2xl font-black text-gray-900">Xóa bài viết?</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-gray-500 leading-relaxed">
+               Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Hủy
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Xóa
-            </Button>
+          <div className="flex flex-col gap-3 mt-8">
+            <Button onClick={handleDelete} className="h-12 rounded-xl font-black text-white shadow-lg bg-red-500 hover:bg-red-600">Đồng ý xóa</Button>
+            <Button variant="ghost" onClick={() => setDeleteDialogOpen(false)} className="h-12 rounded-xl font-bold text-gray-400">Hủy bỏ</Button>
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Footer Info */}
+      <div className="mt-8 text-center">
+         <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Hiển thị {posts.length} trong tổng số {total} bài viết</p>
+      </div>
     </div>
   )
 }

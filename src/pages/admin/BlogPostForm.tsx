@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-// import { Label } from '../../components/ui/label'
+import { Label } from '../../components/ui/label'
+import { Textarea } from '../../components/ui/textarea'
 import { Badge } from '../../components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { 
@@ -287,219 +287,146 @@ export const BlogPostForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {id ? 'Chỉnh sửa bài viết' : 'Tạo bài viết mới'}
-            </h1>
-            <p className="text-gray-600 mt-1">
-              {id ? 'Cập nhật thông tin bài viết' : 'Tạo một bài viết blog mới'}
-            </p>
+    <form onSubmit={handleSubmit} className="space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">
+            {id ? 'Biên tập bài viết' : 'Khởi tạo bản thảo'}
+          </h1>
+          <p className="text-gray-500 font-medium">Sáng tạo nội dung chất lượng cao cho cộng đồng Jiudi Learning.</p>
+        </div>
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/admin/blog-posts')}
+            className="rounded-xl font-bold border-gray-200 h-11 px-6"
+          >
+            Hủy bỏ
+          </Button>
+          <Button type="submit" disabled={loading} className="chinese-gradient h-11 px-8 rounded-xl font-black text-white shadow-lg shadow-primary/20">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            Lưu bài viết
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Title & Content */}
+          <div className="bg-white rounded-[3rem] p-8 md:p-10 border border-gray-100 shadow-xl space-y-8 relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+             
+             <div className="relative z-10 space-y-6">
+                <div className="space-y-2">
+                   <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Tiêu đề bài viết</Label>
+                   <Input
+                     value={title}
+                     onChange={(e) => setTitle(e.target.value)}
+                     placeholder="Ví dụ: Lộ trình chinh phục HSK 6 trong 6 tháng..."
+                     className="h-14 rounded-xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-black text-xl"
+                     required
+                   />
+                </div>
+
+                <div className="space-y-2">
+                   <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Nội dung chi tiết</Label>
+                   <div className="min-h-[500px] rounded-2xl border-2 border-gray-50 overflow-hidden bg-white" id="quill-editor-wrapper">
+                      <ReactQuill
+                        key="blog-editor"
+                        ref={quillRef}
+                        theme="snow"
+                        value={content}
+                        onChange={(value) => setContent(value)}
+                        modules={quillModules}
+                        formats={quillFormats}
+                        placeholder="Bắt đầu viết nội dung tại đây..."
+                        style={{ minHeight: '450px' }}
+                        className="blog-editor"
+                      />
+                   </div>
+                </div>
+             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/admin/blog-posts')}
-            >
-              <X className="mr-2 h-4 w-4" />
-              Hủy
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Đang lưu...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Lưu
-                </>
-              )}
-            </Button>
+
+          <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-4">
+             <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Mô tả ngắn (Excerpt)</Label>
+             <Textarea
+               value={excerpt}
+               onChange={(e) => setExcerpt(e.target.value)}
+               placeholder="Tóm tắt ngắn gọn nội dung bài viết để thu hút người đọc..."
+               className="min-h-[120px] rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-medium"
+               rows={4}
+             />
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Title */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Tiêu đề</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Nhập tiêu đề bài viết..."
-                  required
-                />
-              </CardContent>
-            </Card>
-
-            {/* Content */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Nội dung</CardTitle>
-                <CardDescription>
-                  Nhập nội dung bài viết. Bạn có thể chèn ảnh vào bất kỳ vị trí nào bằng cách click vào biểu tượng ảnh trên thanh công cụ.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="min-h-[500px] mb-4" id="quill-editor-wrapper">
-                  <ReactQuill
-                    key="blog-editor"
-                    ref={quillRef}
-                    theme="snow"
-                    value={content}
-                    onChange={(value) => {
-                      setContent(value)
-                    }}
-                    modules={quillModules}
-                    formats={quillFormats}
-                    placeholder="Nhập nội dung bài viết..."
-                    style={{ 
-                      minHeight: '400px',
-                      backgroundColor: 'white'
-                    }}
-                    className="blog-editor"
-                  />
+        <div className="space-y-8">
+          {/* Publishing Options */}
+          <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-6">
+             <h3 className="text-sm font-black uppercase tracking-widest text-gray-900 border-b border-gray-50 pb-4">Thiết lập xuất bản</h3>
+             
+             <div className="space-y-4">
+                <div className="space-y-2">
+                   <Label className="text-[10px] font-black uppercase text-gray-400">Trạng thái</Label>
+                   <Select value={status} onValueChange={(v: 'draft' | 'published') => setStatus(v)}>
+                      <SelectTrigger className="h-12 rounded-xl border-gray-100 font-bold bg-gray-50/50">
+                         <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                         <SelectItem value="draft">Bản nháp (Draft)</SelectItem>
+                         <SelectItem value="published">Xuất bản (Live)</SelectItem>
+                      </SelectContent>
+                   </Select>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Excerpt */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Mô tả ngắn</CardTitle>
-                <CardDescription>
-                  Tóm tắt ngắn gọn về bài viết (tùy chọn)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <textarea
-                  value={excerpt}
-                  onChange={(e) => setExcerpt(e.target.value)}
-                  placeholder="Nhập mô tả ngắn..."
-                  className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={4}
-                />
-              </CardContent>
-            </Card>
+                <div className="space-y-2">
+                   <Label className="text-[10px] font-black uppercase text-gray-400">Gắn thẻ (Tags)</Label>
+                   <div className="flex gap-2">
+                      <Input
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                        placeholder="HSK, Mẹo học..."
+                        className="h-10 rounded-lg bg-gray-50 border-gray-100 font-bold text-xs"
+                      />
+                      <Button type="button" onClick={handleAddTag} className="bg-gray-900 text-white rounded-lg h-10 px-4 font-black text-xs">Thêm</Button>
+                   </div>
+                   <div className="flex flex-wrap gap-1.5 pt-2">
+                      {tags.map((tag) => (
+                        <Badge key={tag} className="bg-primary/5 text-primary border-none rounded-lg px-2 py-1 text-[9px] font-black flex items-center gap-1 group">
+                           {tag}
+                           <X className="w-2.5 h-2.5 cursor-pointer hover:text-red-500" onClick={() => handleRemoveTag(tag)} />
+                        </Badge>
+                      ))}
+                   </div>
+                </div>
+             </div>
           </div>
 
-          <div className="space-y-6">
-            {/* Featured Image */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Ảnh đại diện</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {featuredImage && (
-                  <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
-                    <img
-                      src={featuredImage}
-                      alt="Featured"
-                      className="w-full h-full object-cover"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => {
-                        setFeaturedImage('')
-                        setImageFile(null)
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = ''
-                        }
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+          {/* Media Card */}
+          <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-6">
+             <h3 className="text-sm font-black uppercase tracking-widest text-gray-900 border-b border-gray-50 pb-4">Ảnh bìa (Featured)</h3>
+             
+             {featuredImage ? (
+               <div className="relative aspect-video rounded-2xl overflow-hidden group border-4 border-white shadow-xl ring-1 ring-gray-100">
+                  <img src={featuredImage} alt="Cover" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                     <Button type="button" variant="destructive" size="sm" onClick={() => { setFeaturedImage(''); setImageFile(null); }} className="rounded-xl h-9 px-4 font-black text-[10px] uppercase">Gỡ bỏ ảnh</Button>
                   </div>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                  id="image-upload"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  {featuredImage ? 'Thay đổi ảnh' : 'Tải ảnh lên'}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Trạng thái</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select value={status} onValueChange={(value: 'draft' | 'published') => setStatus(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Bản nháp</SelectItem>
-                    <SelectItem value="published">Đã xuất bản</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
-            {/* Tags */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Thẻ</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleAddTag()
-                      }
-                    }}
-                    placeholder="Thêm thẻ..."
-                  />
-                  <Button type="button" onClick={handleAddTag}>
-                    Thêm
-                  </Button>
-                </div>
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTag(tag)}
-                          className="ml-1 hover:text-red-600"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+               </div>
+             ) : (
+               <div 
+                 onClick={() => fileInputRef.current?.click()}
+                 className="aspect-video rounded-2xl border-2 border-dashed border-gray-100 bg-gray-50/50 hover:border-primary/30 hover:bg-white transition-all flex flex-col items-center justify-center cursor-pointer group"
+               >
+                  <Upload className="w-8 h-8 text-gray-300 mb-2 group-hover:text-primary transition-colors" />
+                  <p className="text-[10px] font-black uppercase text-gray-400">Chọn ảnh tiêu biểu</p>
+               </div>
+             )}
+             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+             <p className="text-[9px] font-bold text-gray-400 italic text-center">Định dạng JPG, PNG. Tối đa 5MB.</p>
           </div>
         </div>
       </div>

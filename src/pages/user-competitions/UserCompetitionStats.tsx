@@ -224,334 +224,203 @@ export const UserCompetitionStats = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      <div className="container mx-auto py-8 px-4 max-w-6xl">
-        {/* Header */}
-        <div className="mb-8">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/user-competitions')}
-            className="mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại
-          </Button>
-          
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Thống Kê Cuộc Thi
-              </h1>
-              <p className="text-xl text-gray-600 mt-2">{competition.title}</p>
-              <div className="flex items-center gap-4 mt-4">
-                <div className="flex items-center gap-2">
-                  <Crown className="w-5 h-5 text-yellow-500" />
-                  <span className="text-gray-600">Người tạo: {competition.creator.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-500" />
-                  <span className="text-gray-600">
-                    {new Date(competition.startTime).toLocaleString('vi-VN')}
-                  </span>
-                </div>
-              </div>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-10">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+          <div className="space-y-4">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/user-competitions')}
+              className="rounded-xl font-bold text-gray-500 hover:text-primary -ml-4"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
+            </Button>
+            <h1 className="text-4xl font-black text-gray-900 tracking-tight">Phân tích <span className="text-primary">Đấu trường</span></h1>
+            <p className="text-xl font-bold text-gray-500">{competition.title}</p>
+            
+            <div className="flex flex-wrap gap-4 pt-2">
+               <div className="flex items-center space-x-2 text-xs font-black text-gray-400 uppercase tracking-widest bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
+                  <Crown className="w-4 h-4 text-yellow-500" />
+                  <span>Chủ phòng: {competition.creator.name}</span>
+               </div>
+               <div className="flex items-center space-x-2 text-xs font-black text-gray-400 uppercase tracking-widest bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
+                  <Calendar className="w-4 h-4 text-blue-500" />
+                  <span>{new Date(competition.startTime).toLocaleDateString('vi-VN')}</span>
+               </div>
             </div>
-            <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 text-lg">
-              <Trophy className="w-5 h-5 mr-2" />
-              HSK {competition.level}
-            </Badge>
+          </div>
+          
+          <div className="chinese-gradient p-6 rounded-[2rem] text-white shadow-xl shadow-primary/20 text-center min-w-[160px] transform hover:rotate-3 transition-transform">
+             <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Trình độ</p>
+             <p className="text-3xl font-black">HSK {competition.level}</p>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-1">
-            <TabsTrigger
-              value="overview"
-              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Tổng quan
-            </TabsTrigger>
-            <TabsTrigger
-              value="leaderboard"
-              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
-            >
-              <Trophy className="w-4 h-4 mr-2" />
-              Bảng xếp hạng
-            </TabsTrigger>
-            <TabsTrigger
-              value="analytics"
-              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white"
-            >
-              <PieChart className="w-4 h-4 mr-2" />
-              Phân tích
-            </TabsTrigger>
-          </TabsList>
+        {/* Main Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+           {[
+             { label: 'Tổng đấu thủ', val: stats.totalParticipants, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+             { label: 'Điểm trung bình', val: `${stats.averageScore.toFixed(1)}%`, icon: Target, color: 'text-green-600', bg: 'bg-green-50' },
+             { label: 'Thời gian TB', val: formatTime(stats.averageTime), icon: Timer, color: 'text-orange-600', bg: 'bg-orange-50' },
+             { label: 'Tỷ lệ hoàn tất', val: `${stats.completionRate.toFixed(1)}%`, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' }
+           ].map((stat, i) => (
+             <div key={i} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 transition-transform group-hover:rotate-6`}>
+                   <stat.icon className="w-6 h-6" />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{stat.label}</p>
+                <p className="text-2xl font-black text-gray-900">{stat.val}</p>
+             </div>
+           ))}
+        </div>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Tổng tham gia</p>
-                      <p className="text-3xl font-bold text-blue-600">{stats.totalParticipants}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Users className="w-6 h-6 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <div className="bg-white p-2 rounded-[2rem] border border-gray-100 shadow-xl inline-flex gap-2">
+            {[
+              { id: 'overview', label: 'Bảng điểm tổng quát', icon: BarChart3 },
+              { id: 'analytics', label: 'Phân tích kỹ thuật', icon: PieChart }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2 px-8 py-3 rounded-[1.5rem] text-sm font-black transition-all ${
+                  activeTab === tab.id
+                    ? 'chinese-gradient text-white shadow-lg'
+                    : 'text-gray-400 hover:bg-gray-50'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
 
-              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Điểm trung bình</p>
-                      <p className="text-3xl font-bold text-green-600">{stats.averageScore.toFixed(1)}%</p>
-                    </div>
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                      <Target className="w-6 h-6 text-green-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Thời gian TB</p>
-                      <p className="text-3xl font-bold text-orange-600">{formatTime(stats.averageTime)}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                      <Timer className="w-6 h-6 text-orange-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Tỷ lệ hoàn thành</p>
-                      <p className="text-3xl font-bold text-purple-600">{stats.completionRate.toFixed(1)}%</p>
-                    </div>
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                      <TrendingUp className="w-6 h-6 text-purple-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Competition Info */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-purple-600" />
-                    Thông tin cuộc thi
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                    <span className="text-gray-600">Số câu hỏi</span>
-                    <span className="font-semibold">{competition.numberOfQuestions} câu</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                    <span className="text-gray-600">Thời gian</span>
-                    <span className="font-semibold">{competition.totalTime} phút</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span className="text-gray-600">Cấp độ</span>
-                    <span className="font-semibold">HSK {competition.level}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                    <span className="text-gray-600">Trạng thái</span>
-                    <Badge className="bg-green-500 text-white">Đã kết thúc</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Star className="w-5 h-5 text-yellow-500" />
-                    Top 3 thành tích
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {results.slice(0, 3).map((result) => (
-                    <div key={result._id} className="flex items-center justify-between p-3 mb-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                      <div className="flex items-center gap-3">
-                        {getRankIcon(result.rank)}
-                        <div>
-                          <p className="font-semibold text-gray-800">{result.user.name}</p>
-                          <p className="text-sm text-gray-600">HSK {result.user.level}</p>
+          <TabsContent value="overview" className="animate-in fade-in slide-in-from-bottom duration-500">
+             <div className="bg-white rounded-[3rem] border border-gray-100 shadow-xl overflow-hidden">
+                <div className="p-8 md:p-12 space-y-8">
+                   <div className="flex items-center justify-between">
+                      <h3 className="text-2xl font-black text-gray-900 flex items-center">
+                         <Trophy className="w-6 h-6 mr-2 text-yellow-500" /> Top 3 Nhà Vô Địch
+                      </h3>
+                   </div>
+                   
+                   <div className="grid md:grid-cols-3 gap-6">
+                      {results.slice(0, 3).map((r) => (
+                        <div key={r._id} className="relative p-8 rounded-[2.5rem] border-2 border-amber-100 bg-amber-50/30 text-center space-y-4 group hover:scale-105 transition-all">
+                           <div className="absolute top-4 right-4">{getRankIcon(r.rank)}</div>
+                           <div className="w-20 h-20 rounded-2xl chinese-gradient flex items-center justify-center text-white text-2xl font-black mx-auto shadow-lg">
+                              {r.user.name.charAt(0).toUpperCase()}
+                           </div>
+                           <div>
+                              <p className="text-lg font-black text-gray-900">{r.user.name}</p>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Level {r.user.level}</p>
+                           </div>
+                           <div className="pt-4 border-t border-amber-100 flex justify-between items-center px-4">
+                              <div className="text-left">
+                                 <p className="text-[10px] font-black text-gray-400 uppercase">Score</p>
+                                 <p className="text-xl font-black text-primary">{r.score}%</p>
+                              </div>
+                              <div className="text-right">
+                                 <p className="text-[10px] font-black text-gray-400 uppercase">Time</p>
+                                 <p className="text-sm font-black text-gray-700">{formatTime(r.timeTaken)}</p>
+                              </div>
+                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-bold text-lg ${getScoreColor(result.score, result.totalQuestions)}`}>
-                          {result.correctAnswers}/{result.totalQuestions}
-                        </p>
-                        <p className="text-sm text-gray-600">{formatTime(result.timeTaken)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
+                      ))}
+                   </div>
+
+                   <div className="pt-8 border-t border-gray-50 overflow-x-auto">
+                      <table className="w-full text-left">
+                         <thead>
+                            <tr>
+                               <th className="pb-4 text-[10px] font-black uppercase text-gray-400 px-4">Rank</th>
+                               <th className="pb-4 text-[10px] font-black uppercase text-gray-400 px-4">Participant</th>
+                               <th className="pb-4 text-[10px] font-black uppercase text-gray-400 px-4 text-center">Score</th>
+                               <th className="pb-4 text-[10px] font-black uppercase text-gray-400 px-4 text-right">Time Taken</th>
+                            </tr>
+                         </thead>
+                         <tbody className="divide-y divide-gray-50">
+                            {results.slice(3).map((r) => (
+                              <tr key={r._id} className="group hover:bg-gray-50 transition-colors">
+                                 <td className="py-4 px-4 font-black text-gray-300">#{r.rank}</td>
+                                 <td className="py-4 px-4">
+                                    <div className="flex items-center space-x-3">
+                                       <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-black text-gray-400">{r.user.name[0]}</div>
+                                       <span className="text-sm font-bold text-gray-700 group-hover:text-primary transition-colors">{r.user.name}</span>
+                                    </div>
+                                 </td>
+                                 <td className="py-4 px-4 text-center">
+                                    <span className={`text-sm font-black ${getScoreColor(r.score, r.totalQuestions)}`}>{r.score}%</span>
+                                 </td>
+                                 <td className="py-4 px-4 text-right">
+                                    <span className="text-xs font-bold text-gray-400">{formatTime(r.timeTaken)}</span>
+                                 </td>
+                              </tr>
+                            ))}
+                         </tbody>
+                      </table>
+                   </div>
+                </div>
+             </div>
           </TabsContent>
 
-          {/* Leaderboard Tab */}
-          <TabsContent value="leaderboard" className="space-y-6">
-            <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="w-6 h-6 text-yellow-500" />
-                  Bảng xếp hạng
-                </CardTitle>
-                <CardDescription>
-                  Danh sách tất cả người tham gia được sắp xếp theo điểm số
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {results.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg">Chưa có kết quả nào</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {results.map((result, index) => (
-                      <div
-                        key={result._id}
-                        className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200 ${
-                          index < 3
-                            ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 shadow-lg'
-                            : 'bg-white border-gray-200 hover:border-purple-300 hover:shadow-md'
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center justify-center w-10 h-10">
-                            {getRankIcon(result.rank)}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-800 text-lg">{result.user.name}</p>
-                            <p className="text-sm text-gray-600">HSK {result.user.level}</p>
-                          </div>
+          <TabsContent value="analytics" className="animate-in fade-in slide-in-from-bottom duration-500">
+             <div className="grid md:grid-cols-2 gap-8">
+                <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl space-y-8">
+                   <h3 className="text-xl font-black text-gray-900 flex items-center">
+                      <PieChart className="w-6 h-6 mr-2 text-primary" /> Phân bố điểm số
+                   </h3>
+                   <div className="space-y-6">
+                      {[
+                        { label: 'Xuất sắc (90-100%)', count: stats.scoreDistribution.excellent, color: 'bg-green-500', bg: 'bg-green-50' },
+                        { label: 'Khá giỏi (70-89%)', count: stats.scoreDistribution.good, color: 'bg-blue-500', bg: 'bg-blue-50' },
+                        { label: 'Trung bình (50-69%)', count: stats.scoreDistribution.average, color: 'bg-yellow-500', bg: 'bg-yellow-50' },
+                        { label: 'Cần nỗ lực (0-49%)', count: stats.scoreDistribution.poor, color: 'bg-red-500', bg: 'bg-red-50' }
+                      ].map((item, i) => (
+                        <div key={i} className="space-y-2">
+                           <div className="flex justify-between items-center text-xs font-bold">
+                              <span className="text-gray-500">{item.label}</span>
+                              <span className="text-gray-900">{item.count} người</span>
+                           </div>
+                           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className={`h-full ${item.color}`} style={{ width: `${(item.count / results.length) * 100}%` }} />
+                           </div>
                         </div>
-                        <div className="flex items-center gap-6">
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600">Điểm</p>
-                            <p className={`font-bold text-xl ${getScoreColor(result.score, result.totalQuestions)}`}>
-                              {result.correctAnswers}/{result.totalQuestions}
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600">Thời gian</p>
-                            <p className="font-semibold text-gray-800">{formatTime(result.timeTaken)}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600">Tỷ lệ</p>
-                            <p className={`font-semibold ${getScoreColor(result.score, result.totalQuestions)}`}>
-                              {result.score.toFixed(1)}%
-                            </p>
-                          </div>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl space-y-8">
+                   <h3 className="text-xl font-black text-gray-900 flex items-center">
+                      <Clock className="w-6 h-6 mr-2 text-primary" /> Phân bố tốc độ
+                   </h3>
+                   <div className="space-y-6">
+                      {[
+                        { label: 'Tốc độ tia chớp (<50% thời gian)', count: stats.timeDistribution.fast, color: 'bg-orange-500' },
+                        { label: 'Tốc độ tiêu chuẩn (50-80% thời gian)', count: stats.timeDistribution.normal, color: 'bg-blue-500' },
+                        { label: 'Chậm và chắc (>80% thời gian)', count: stats.timeDistribution.slow, color: 'bg-purple-500' }
+                      ].map((item, i) => (
+                        <div key={i} className="space-y-2">
+                           <div className="flex justify-between items-center text-xs font-bold">
+                              <span className="text-gray-500">{item.label}</span>
+                              <span className="text-gray-900">{item.count} người</span>
+                           </div>
+                           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className={`h-full ${item.color}`} style={{ width: `${(item.count / results.length) * 100}%` }} />
+                           </div>
                         </div>
+                      ))}
+                   </div>
+                   
+                   <div className="pt-6 border-t border-gray-50">
+                      <div className="p-4 bg-gray-50 rounded-2xl flex items-center space-x-3">
+                         <Target className="w-5 h-5 text-gray-400" />
+                         <p className="text-[10px] font-medium text-gray-500 leading-relaxed italic">"Dữ liệu được tổng hợp từ toàn bộ các đấu thủ đã hoàn thành bài thi."</p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Score Distribution */}
-              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PieChart className="w-5 h-5 text-blue-600" />
-                    Phân bố điểm số
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                        <span className="text-gray-700">Xuất sắc (90-100%)</span>
-                      </div>
-                      <span className="font-semibold text-green-600">{stats.scoreDistribution.excellent}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                        <span className="text-gray-700">Tốt (70-89%)</span>
-                      </div>
-                      <span className="font-semibold text-blue-600">{stats.scoreDistribution.good}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
-                        <span className="text-gray-700">Trung bình (50-69%)</span>
-                      </div>
-                      <span className="font-semibold text-yellow-600">{stats.scoreDistribution.average}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                        <span className="text-gray-700">Yếu (0-49%)</span>
-                      </div>
-                      <span className="font-semibold text-red-600">{stats.scoreDistribution.poor}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Time Distribution */}
-              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-orange-600" />
-                    Phân bố thời gian
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                        <span className="text-gray-700">Nhanh (&lt; 50% thời gian)</span>
-                      </div>
-                      <span className="font-semibold text-green-600">{stats.timeDistribution.fast}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                        <span className="text-gray-700">Bình thường (50-80%)</span>
-                      </div>
-                      <span className="font-semibold text-blue-600">{stats.timeDistribution.normal}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
-                        <span className="text-gray-700">Chậm (&gt; 80% thời gian)</span>
-                      </div>
-                      <span className="font-semibold text-orange-600">{stats.timeDistribution.slow}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                   </div>
+                </div>
+             </div>
           </TabsContent>
         </Tabs>
       </div>

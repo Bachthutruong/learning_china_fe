@@ -1,38 +1,49 @@
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Dialog, DialogContent, DialogFooter, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle } from '../../components/ui/dialog'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
+import { AlertCircle, CheckCircle, Search, XCircle } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 
 interface ReportItem {
-  id: string
   _id: string
-  type: 'vocabulary' | 'question' | 'test'
-  targetId: string
-  category: string
+  id?: string
+  type: 'vocabulary' | 'question' | 'test' | string
+  targetId?: string
+  category?: string
   description: string
-  status: 'pending' | 'approved' | 'reviewed' | 'rejected'
+  status: 'pending' | 'approved' | 'reviewed' | 'rejected' | string
   createdAt: string
   user?: {
-    _id: string
+    _id?: string
     email?: string
     username?: string
     name?: string
   }
   targetSummary?: {
-    // vocabulary
     word?: string
     pronunciation?: string
     meaning?: string
     level?: number
     topics?: string[]
-    // question
     question?: string
     questionType?: string
   }
+}
+
+const getStatusBadgeClass = (status: string) => {
+  if (status === 'pending') return 'bg-amber-100 text-amber-700 border border-amber-200'
+  if (status === 'approved' || status === 'reviewed') return 'bg-green-100 text-green-700 border border-green-200'
+  if (status === 'rejected') return 'bg-red-100 text-red-700 border border-red-200'
+  return 'bg-gray-200 text-gray-800'
+}
+
+const getStatusLabel = (status: string) => {
+  if (status === 'reviewed') return 'approved'
+  return status
 }
 
 export const AdminReports = () => {
@@ -41,35 +52,32 @@ export const AdminReports = () => {
   const [rewardCoins, setRewardCoins] = useState<Record<string, number>>({})
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
   const [search, setSearch] = useState('')
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
-  const [confirmAction, setConfirmAction] = useState<{id: string, action: 'approved' | 'rejected'} | null>(null)
-  const getStatusBadgeClass = (status: string) => {
-    if (status === 'pending') return 'bg-gray-200 text-gray-800'
-    if (status === 'approved' || status === 'reviewed') return 'bg-green-100 text-green-700 border border-green-200'
-    if (status === 'rejected') return 'bg-red-100 text-red-700 border border-red-200'
-    return 'bg-gray-200 text-gray-800'
+  const [confirmAction, setConfirmAction] = useState<{ id: string; action: 'approved' | 'rejected' } | null>(null)
+
+  const fetchReports = async () => {
+    try {
+      const res = await api.get('/reports/admin/all', { params: { page, limit: pageSize, search } })
+      setReports(res.data?.reports || [])
+      setTotalPages(res.data?.totalPages || 1)
+      setTotalItems(res.data?.total || 0)
+    } catch {
+      setReports([])
+      setTotalPages(1)
+      setTotalItems(0)
+    }
   }
 
   useEffect(() => {
     fetchReports()
   }, [page, pageSize, search])
 
-  const fetchReports = async () => {
-    try {
-      const res = await api.get('/reports/admin/all', {
-        params: { page, limit: pageSize, search }
-      })
-      setReports(res.data?.reports || [])
-    } catch {
-      setReports([])
-    }
-  }
-
   const updateReport = async (id: string, status: 'approved' | 'rejected') => {
     try {
-      // Default rewards: 0.5 XP and 0.5 coins for approved reports
       const defaultXp = 0.5
       const defaultCoins = 0.5
       const rawXp = rewardXp[id]
@@ -80,10 +88,7 @@ export const AdminReports = () => {
       const coins = status === 'approved'
         ? (typeof rawCoins === 'number' && !Number.isNaN(rawCoins) ? rawCoins : defaultCoins)
         : 0
-      // Round half up to integer as requested (e.g., 4.5 => 5)
-      // const roundedXp = Math.round(xp)
-      // const roundedCoins = Math.round(coins)
-      
+
       await api.put(`/reports/admin/${id}`, {
         status,
         rewardExperience: xp,
@@ -106,7 +111,7 @@ export const AdminReports = () => {
   }
 
   const handleApproveReject = (id: string, action: 'approved' | 'rejected') => {
-    setConfirmAction({id, action})
+    setConfirmAction({ id, action })
   }
 
   const confirmActionHandler = async () => {
@@ -117,189 +122,270 @@ export const AdminReports = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 pb-12">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Báo cáo</h1>
-          <p className="text-gray-600">Danh sách báo cáo từ người dùng</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Input 
-            placeholder="Tìm kiếm theo loại..." 
-            value={search} 
-            onChange={e => { setPage(1); setSearch(e.target.value) }} 
-            className="w-64" 
-          />
+          <h1 className="text-3xl font-black text-gray-900 flex items-center">
+            <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg">
+              <AlertCircle />
+            </div>
+            Trung tâm phản hồi
+          </h1>
         </div>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>Danh sách báo cáo</CardTitle></CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-600">
-                  <th className="py-2 pr-4">#</th>
-                  <th className="py-2 pr-4">Loại</th>
-                  <th className="py-2 pr-4">Nội dung</th>
-                  <th className="py-2 pr-4">Trạng thái</th>
-                  <th className="py-2 pr-4">Ngày tạo</th>
-                  <th className="py-2">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reports.map((r, i) => (
-                  <tr key={r.id || r._id} className="border-t">
-                    <td className="py-2 pr-4">{(page - 1) * pageSize + i + 1}</td>
-                    <td className="py-2 pr-4">{r.type}</td>
-                    <td className="py-2 pr-4 max-w-xs">
-                      <div className="truncate">
-                        {r.type === 'vocabulary' && r.targetSummary?.word && (
-                          <>
-                            <span className="font-medium">{r.targetSummary.word}</span>
-                            <span className="text-gray-600"> — {r.targetSummary.meaning}</span>
-                          </>
-                        )}
-                        {r.type === 'question' && r.targetSummary?.question && (
-                          <span className="text-gray-800">{r.targetSummary.question}</span>
-                        )}
-                        {!r.targetSummary && r.description}
-                      </div>
-                    </td>
-                    <td className="py-2 pr-4">
-                      <Badge className={getStatusBadgeClass(r.status)}>
-                        {r.status === 'reviewed' ? 'approved' : r.status}
-                      </Badge>
-                    </td>
-                    <td className="py-2 pr-4">{new Date(r.createdAt).toLocaleDateString()}</td>
-                    <td className="py-2">
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => showReportDetail(r)}>Chi tiết</Button>
-                        {r.status === 'pending' && (
-                          <>
-                            <Button size="sm" onClick={() => handleApproveReject(r.id || r._id, 'approved')}>Duyệt</Button>
-                            <Button variant="outline" size="sm" onClick={() => handleApproveReject(r.id || r._id, 'rejected')}>Từ chối</Button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {reports.length === 0 && (
-                  <tr><td colSpan={6} className="py-6 text-center text-gray-500">Không có báo cáo</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center justify-between mt-3 text-sm">
-            <div className="flex items-center gap-2">
-              <label className="text-gray-600">Hiển thị</label>
-              <select className="border rounded px-2 py-1" value={pageSize} onChange={e => { setPage(1); setPageSize(parseInt(e.target.value)) }}>
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Trước</Button>
-              <Badge variant="outline">Trang {page}</Badge>
-              <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)}>Sau</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-white p-6 rounded-[2rem] border shadow-xl flex gap-6 items-center">
+        <div className="flex-1 relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Tìm kiếm..."
+            value={search}
+            onChange={e => { setPage(1); setSearch(e.target.value) }}
+            className="h-12 pl-11 rounded-xl bg-gray-50/50"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black text-gray-400 uppercase">Hiển thị</span>
+          <Select value={pageSize.toString()} onValueChange={v => { setPageSize(parseInt(v)); setPage(1) }}>
+            <SelectTrigger className="w-20 h-10 rounded-xl"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[2.5rem] border shadow-xl overflow-hidden">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="bg-gray-50/50 border-b">
+              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">#</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Phân loại</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Nội dung</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 text-center">Trạng thái</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Ngày tạo</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {reports.map((r, i) => (
+              <tr key={r._id} className="group hover:bg-gray-50/50">
+                <td className="px-8 py-6 text-sm text-gray-400">{(page - 1) * pageSize + i + 1}</td>
+                <td className="px-8 py-6">
+                  <Badge variant="outline" className="text-primary">{r.type}</Badge>
+                </td>
+                <td className="px-8 py-6">
+                  {r.type === 'vocabulary' && r.targetSummary?.word ? (
+                    <div>
+                      <p className="text-sm font-black">
+                        {r.targetSummary.word}
+                        <span className="text-gray-400 font-medium"> — {r.targetSummary.meaning}</span>
+                      </p>
+                      <p className="text-[10px] text-gray-400 italic line-clamp-1">"{r.description}"</p>
+                    </div>
+                  ) : r.type === 'question' && r.targetSummary?.question ? (
+                    <div>
+                      <p className="text-sm font-black">{r.targetSummary.question}</p>
+                      <p className="text-[10px] text-gray-400 italic line-clamp-1">"{r.description}"</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-black">{r.targetSummary?.word || r.targetSummary?.question || 'N/A'}</p>
+                      <p className="text-[10px] text-gray-400 italic line-clamp-1">"{r.description}"</p>
+                    </div>
+                  )}
+                </td>
+                <td className="px-8 py-6 text-center">
+                  <Badge className={getStatusBadgeClass(r.status)}>{getStatusLabel(r.status)}</Badge>
+                </td>
+                <td className="px-8 py-6 text-sm text-gray-500">
+                  {new Date(r.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-8 py-6 text-right space-x-2">
+                  <Button variant="ghost" size="sm" onClick={() => showReportDetail(r)} className="text-[10px] font-black uppercase">
+                    Chi tiết
+                  </Button>
+                  {r.status === 'pending' && (
+                    <>
+                      <Button size="sm" onClick={() => handleApproveReject(r.id || r._id, 'approved')} className="bg-green-500 text-white">
+                        <CheckCircle className="w-4 h-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleApproveReject(r.id || r._id, 'rejected')} className="text-red-500">
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {reports.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-10 text-center text-gray-400 font-bold">
+                  Không có báo cáo
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-center items-center gap-4 mt-8">
+        <Button 
+          variant="ghost" 
+          disabled={page === 1} 
+          onClick={() => setPage(p => p - 1)} 
+          className="rounded-xl font-bold border hover:bg-gray-50"
+        >
+          Trước
+        </Button>
+        
+        <div className="flex items-center gap-2">
+          <span className="bg-white px-6 py-2 rounded-xl border font-black shadow-sm">
+            Trang {page} / {totalPages}
+          </span>
+          <span className="text-[10px] font-black text-gray-400 uppercase bg-gray-50 px-3 py-2 rounded-lg border">
+            Tổng: {totalItems}
+          </span>
+        </div>
+
+        <Button 
+          variant="ghost" 
+          disabled={page >= totalPages} 
+          onClick={() => setPage(p => p + 1)} 
+          className="rounded-xl font-bold border hover:bg-gray-50"
+        >
+          Tiếp
+        </Button>
+      </div>
 
       {/* Report Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={(open) => { if (!open) setShowDetailDialog(false) }}>
-        <DialogContent className="max-w-2xl">
-          <UIDialogHeader><UIDialogTitle>Chi tiết báo cáo</UIDialogTitle></UIDialogHeader>
+        <DialogContent className="rounded-[2.5rem] p-10 max-w-2xl">
+          <UIDialogHeader>
+            <UIDialogTitle className="text-3xl font-black">Chi tiết báo cáo</UIDialogTitle>
+          </UIDialogHeader>
           {selectedReport && (
-            <div className="space-y-4">
+            <div className="space-y-5 pt-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500">Loại</label>
-                  <div className="text-sm">{selectedReport.type}</div>
+                <div className="bg-gray-50 p-4 rounded-2xl">
+                  <p className="text-[10px] font-black uppercase text-gray-400">Loại</p>
+                  <Badge variant="outline" className="text-primary mt-1">{selectedReport.type}</Badge>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-500">Trạng thái</label>
-                  <div className="text-sm">
-                    <Badge className={getStatusBadgeClass(selectedReport.status)}>
-                      {selectedReport.status === 'reviewed' ? 'approved' : selectedReport.status}
-                    </Badge>
+                <div className="bg-gray-50 p-4 rounded-2xl">
+                  <p className="text-[10px] font-black uppercase text-gray-400">Trạng thái</p>
+                  <Badge className={`mt-1 ${getStatusBadgeClass(selectedReport.status)}`}>
+                    {getStatusLabel(selectedReport.status)}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Vocabulary target summary */}
+              {selectedReport.type === 'vocabulary' && selectedReport.targetSummary && (
+                <div className="p-5 bg-purple-50/50 rounded-2xl border border-purple-100">
+                  <div className="text-sm space-y-1">
+                    <div><span className="font-black">Từ:</span> {selectedReport.targetSummary.word} {selectedReport.targetSummary.pronunciation && `(${selectedReport.targetSummary.pronunciation})`}</div>
+                    <div><span className="font-black">Nghĩa:</span> {selectedReport.targetSummary.meaning}</div>
+                    <div>
+                      <span className="font-black">Cấp:</span> L{selectedReport.targetSummary.level}
+                      {selectedReport.targetSummary.topics && selectedReport.targetSummary.topics.length > 0 && (
+                        <> • <span className="font-black">Chủ đề:</span> {selectedReport.targetSummary.topics.join(', ')}</>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              {/* Target summary */}
-              {selectedReport.type === 'vocabulary' && selectedReport.targetSummary && (
-                <div className="p-3 bg-purple-50 rounded border border-purple-100 text-sm">
-                  <div><span className="font-semibold">Từ:</span> {selectedReport.targetSummary.word} ({selectedReport.targetSummary.pronunciation})</div>
-                  <div><span className="font-semibold">Nghĩa:</span> {selectedReport.targetSummary.meaning}</div>
-                  <div><span className="font-semibold">Cấp:</span> L{selectedReport.targetSummary.level} • <span className="font-semibold">Chủ đề:</span> {(selectedReport.targetSummary.topics || []).join(', ')}</div>
-                </div>
               )}
+
+              {/* Question target summary */}
               {selectedReport.type === 'question' && selectedReport.targetSummary?.question && (
-                <div className="p-3 bg-blue-50 rounded border border-blue-100 text-sm">
-                  <div><span className="font-semibold">Câu hỏi:</span> {selectedReport.targetSummary.question}</div>
-                  <div><span className="font-semibold">Loại:</span> {selectedReport.targetSummary.questionType}</div>
-                  {selectedReport.targetSummary.level && (
-                    <div><span className="font-semibold">Cấp:</span> L{selectedReport.targetSummary.level}</div>
-                  )}
+                <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100">
+                  <div className="text-sm space-y-1">
+                    <div><span className="font-black">Câu hỏi:</span> {selectedReport.targetSummary.question}</div>
+                    <div><span className="font-black">Loại:</span> {selectedReport.targetSummary.questionType}</div>
+                    {selectedReport.targetSummary.level && (
+                      <div><span className="font-black">Cấp:</span> L{selectedReport.targetSummary.level}</div>
+                    )}
+                  </div>
                 </div>
               )}
-              <div>
-                <label className="text-xs text-gray-500">Danh mục</label>
-                <div className="text-sm">{selectedReport.category}</div>
+
+              {selectedReport.category && (
+                <div className="bg-gray-50 p-4 rounded-2xl">
+                  <p className="text-[10px] font-black uppercase text-gray-400">Danh mục</p>
+                  <p className="text-sm font-bold mt-1">{selectedReport.category}</p>
+                </div>
+              )}
+
+              <div className="bg-gray-50 p-4 rounded-2xl">
+                <p className="text-[10px] font-black uppercase text-gray-400">Người báo cáo</p>
+                <p className="font-bold mt-1">
+                  {selectedReport.user?.name || selectedReport.user?.username || selectedReport.user?._id || 'Ẩn danh'}
+                  {selectedReport.user?.email && <span className="text-gray-400 font-medium"> ({selectedReport.user.email})</span>}
+                </p>
               </div>
-              <div>
-                <label className="text-xs text-gray-500">Người báo cáo</label>
-                <div className="text-sm">{selectedReport.user?.name || selectedReport.user?.username || selectedReport.user?._id} ({selectedReport.user?.email})</div>
+
+              <div className="bg-gray-50 p-4 rounded-2xl">
+                <p className="text-[10px] font-black uppercase text-gray-400">Mô tả lỗi</p>
+                <p className="text-sm font-medium mt-1 whitespace-pre-wrap">"{selectedReport.description}"</p>
               </div>
-              <div>
-                <label className="text-xs text-gray-500">Nội dung</label>
-                <div className="text-sm p-3 bg-gray-50 rounded whitespace-pre-wrap">{selectedReport.description}</div>
+
+              <div className="bg-gray-50 p-4 rounded-2xl">
+                <p className="text-[10px] font-black uppercase text-gray-400">Ngày tạo</p>
+                <p className="text-sm font-bold mt-1">{new Date(selectedReport.createdAt).toLocaleString()}</p>
               </div>
-              <div>
-                <label className="text-xs text-gray-500">Ngày tạo</label>
-                <div className="text-sm">{new Date(selectedReport.createdAt).toLocaleString()}</div>
-              </div>
+
+              {/* Reward inputs for pending reports */}
               {selectedReport.status === 'pending' && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-gray-500">Thưởng XP (mặc định: 0.5)</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        placeholder="0.5"
-                        value={rewardXp[selectedReport.id || selectedReport._id] ?? ''}
-                        onChange={(e) => setRewardXp({ ...rewardXp, [selectedReport.id || selectedReport._id]: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">Thưởng Xu (mặc định: 0.5)</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        placeholder="0.5"
-                        value={rewardCoins[selectedReport.id || selectedReport._id] ?? ''}
-                        onChange={(e) => setRewardCoins({ ...rewardCoins, [selectedReport.id || selectedReport._id]: Number(e.target.value) })}
-                      />
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <label className="text-[10px] font-black uppercase text-gray-400">Thưởng XP (mặc định: 0.5)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      placeholder="0.5"
+                      className="mt-1 rounded-xl"
+                      value={rewardXp[selectedReport.id || selectedReport._id] ?? ''}
+                      onChange={(e) => setRewardXp({ ...rewardXp, [selectedReport.id || selectedReport._id]: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <label className="text-[10px] font-black uppercase text-gray-400">Thưởng Xu (mặc định: 0.5)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      placeholder="0.5"
+                      className="mt-1 rounded-xl"
+                      value={rewardCoins[selectedReport.id || selectedReport._id] ?? ''}
+                      onChange={(e) => setRewardCoins({ ...rewardCoins, [selectedReport.id || selectedReport._id]: Number(e.target.value) })}
+                    />
                   </div>
                 </div>
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDetailDialog(false)}>Đóng</Button>
+          <DialogFooter className="pt-4">
+            <Button variant="ghost" onClick={() => setShowDetailDialog(false)} className="rounded-xl font-bold text-gray-400">
+              Đóng
+            </Button>
             {selectedReport?.status === 'pending' && (
               <>
-                <Button onClick={() => { handleApproveReject(selectedReport.id || selectedReport._id, 'approved'); setShowDetailDialog(false) }}>Duyệt</Button>
-                <Button variant="outline" onClick={() => { handleApproveReject(selectedReport.id || selectedReport._id, 'rejected'); setShowDetailDialog(false) }}>Từ chối</Button>
+                <Button
+                  onClick={() => { handleApproveReject(selectedReport.id || selectedReport._id, 'approved'); setShowDetailDialog(false) }}
+                  className="rounded-xl font-bold bg-green-500 hover:bg-green-600 text-white"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" /> Duyệt
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { handleApproveReject(selectedReport.id || selectedReport._id, 'rejected'); setShowDetailDialog(false) }}
+                  className="rounded-xl font-bold text-red-500"
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Từ chối
+                </Button>
               </>
             )}
           </DialogFooter>
@@ -308,22 +394,23 @@ export const AdminReports = () => {
 
       {/* Confirmation Dialog */}
       <Dialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null) }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="rounded-[2.5rem] p-10 max-w-md">
           <UIDialogHeader>
-            <UIDialogTitle>
+            <UIDialogTitle className="text-2xl font-black">
               {confirmAction?.action === 'approved' ? 'Xác nhận duyệt báo cáo' : 'Xác nhận từ chối báo cáo'}
             </UIDialogTitle>
           </UIDialogHeader>
-          <p className="text-sm text-gray-600">
-            {confirmAction?.action === 'approved' 
+          <p className="text-sm text-gray-500 font-medium">
+            {confirmAction?.action === 'approved'
               ? 'Bạn có chắc muốn duyệt báo cáo này? Hành động này sẽ cấp thưởng cho người báo cáo.'
-              : 'Bạn có chắc muốn từ chối báo cáo này? Hành động này không thể hoàn tác.'
-            }
+              : 'Bạn có chắc muốn từ chối báo cáo này? Hành động này không thể hoàn tác.'}
           </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmAction(null)}>Hủy</Button>
-            <Button 
-              className={confirmAction?.action === 'approved' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+          <DialogFooter className="pt-4">
+            <Button variant="ghost" onClick={() => setConfirmAction(null)} className="rounded-xl font-bold text-gray-400">
+              Hủy
+            </Button>
+            <Button
+              className={`rounded-xl font-bold text-white ${confirmAction?.action === 'approved' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
               onClick={confirmActionHandler}
             >
               {confirmAction?.action === 'approved' ? 'Duyệt' : 'Từ chối'}
@@ -334,5 +421,3 @@ export const AdminReports = () => {
     </div>
   )
 }
-
-

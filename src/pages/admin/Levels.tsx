@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Textarea } from '../../components/ui/textarea'
 import { Badge } from '../../components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog'
 import { 
   Target, 
   Plus, 
@@ -96,7 +95,6 @@ export const AdminLevels = () => {
     try {
       setLoading(true)
       const response = await api.get('/admin/levels')
-      console.log('Levels response:', response.data)
       setLevels(response.data.levels || response.data || [])
     } catch (error) {
       console.error('Error fetching levels:', error)
@@ -205,11 +203,6 @@ export const AdminLevels = () => {
     setShowEditDialog(true)
   }
 
-  const getIconComponent = (iconName: string | undefined) => {
-    const iconConfig = levelIcons.find(i => i.value === iconName)
-    return iconConfig ? iconConfig.icon : Star
-  }
-
   const filteredLevels = levels.filter(level =>
     level.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     level.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -217,417 +210,266 @@ export const AdminLevels = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Quản lý cấp độ</h1>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="py-20 text-center">
+        <Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" />
+        <p className="mt-4 text-gray-500 font-medium">Đang tải dữ liệu cấp độ...</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quản lý cấp độ</h1>
-          <p className="text-gray-600">Quản lý các cấp độ học tập</p>
+          <h1 className="text-3xl font-black text-gray-900 flex items-center">
+            <Target className="w-8 h-8 mr-3 text-primary" /> 
+            Quản lý cấp độ
+          </h1>
+          <p className="text-gray-500 font-medium">Thiết lập lộ trình thăng tiến cho học viên.</p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-              <Plus className="mr-2 h-4 w-4" />
-              Thêm cấp độ
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Tạo cấp độ mới</DialogTitle>
-              <DialogDescription>
-                Tạo cấp độ học tập mới với yêu cầu và phần thưởng
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateLevel} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="level">Số cấp độ *</Label>
-                  <Input
-                    id="level"
-                    type="number"
-                    step="0.1"
-                    value={formData.level}
-                    onChange={(e) => setFormData(prev => ({ ...prev, level: parseFloat(e.target.value) }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="requiredExperience">Điểm kinh nghiệm yêu cầu *</Label>
-                  <Input
-                    id="requiredExperience"
-                    type="number"
-                    min="0"
-                    value={formData.requiredExperience}
-                    onChange={(e) => setFormData(prev => ({ ...prev, requiredExperience: parseInt(e.target.value) }))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="name">Tên cấp độ *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Người mới bắt đầu, Trung cấp, Cao cấp..."
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Mô tả</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Mô tả về cấp độ này..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Biểu tượng</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {levelIcons.map((icon) => {
-                    const IconComponent = icon.icon
-                    return (
-                      <button
-                        key={icon.value}
-                        type="button"
-                        className={`p-3 rounded-lg border-2 ${
-                          formData.icon === icon.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                        } hover:border-blue-300 transition-colors`}
-                        onClick={() => setFormData(prev => ({ ...prev, icon: icon.value }))}
-                      >
-                        <IconComponent className="h-6 w-6 mx-auto" />
-                        <p className="text-xs mt-1">{icon.name}</p>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Màu sắc</Label>
-                <div className="grid grid-cols-5 gap-2">
-                  {colorOptions.map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      className={`w-12 h-12 rounded-lg ${color.value} border-2 ${
-                        formData.color === color.value ? 'border-gray-900' : 'border-transparent'
-                      } hover:scale-105 transition-transform`}
-                      onClick={() => setFormData(prev => ({ ...prev, color: color.value }))}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
-                <p className="text-sm text-gray-500">
-                  Màu đã chọn: {colorOptions.find(c => c.value === formData.color)?.name}
-                </p>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  Hủy
-                </Button>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang tạo...
-                    </>
-                  ) : (
-                    'Tạo cấp độ'
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Chỉnh sửa cấp độ</DialogTitle>
-              <DialogDescription>
-                Cập nhật thông tin cấp độ
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleEditLevel} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-level">Số cấp độ *</Label>
-                  <Input
-                    id="edit-level"
-                    type="number"
-                    step="0.1"
-                    value={formData.level}
-                    onChange={(e) => setFormData(prev => ({ ...prev, level: parseFloat(e.target.value) }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-requiredExperience">Điểm kinh nghiệm yêu cầu *</Label>
-                  <Input
-                    id="edit-requiredExperience"
-                    type="number"
-                    min="0"
-                    value={formData.requiredExperience}
-                    onChange={(e) => setFormData(prev => ({ ...prev, requiredExperience: parseInt(e.target.value) }))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Tên cấp độ *</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Người mới bắt đầu, Trung cấp, Cao cấp..."
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Mô tả</Label>
-                <Textarea
-                  id="edit-description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Mô tả về cấp độ này..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Biểu tượng</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {levelIcons.map((icon) => {
-                    const IconComponent = icon.icon
-                    return (
-                      <button
-                        key={icon.value}
-                        type="button"
-                        className={`p-3 rounded-lg border-2 ${
-                          formData.icon === icon.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                        } hover:border-blue-300 transition-colors`}
-                        onClick={() => setFormData(prev => ({ ...prev, icon: icon.value }))}
-                      >
-                        <IconComponent className="h-6 w-6 mx-auto" />
-                        <p className="text-xs mt-1">{icon.name}</p>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Màu sắc</Label>
-                <div className="grid grid-cols-5 gap-2">
-                  {colorOptions.map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      className={`w-12 h-12 rounded-lg ${color.value} border-2 ${
-                        formData.color === color.value ? 'border-gray-900' : 'border-transparent'
-                      } hover:scale-105 transition-transform`}
-                      onClick={() => setFormData(prev => ({ ...prev, color: color.value }))}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
-                <p className="text-sm text-gray-500">
-                  Màu đã chọn: {colorOptions.find(c => c.value === formData.color)?.name}
-                </p>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
-                  Hủy
-                </Button>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang cập nhật...
-                    </>
-                  ) : (
-                    'Cập nhật'
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => { resetForm(); setShowCreateDialog(true); }} 
+          className="chinese-gradient h-11 px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-1"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Thêm cấp độ
+        </Button>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Tìm kiếm cấp độ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+      {/* Search & Filter */}
+      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl space-y-6">
+         <div className="max-w-md relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 transition-colors group-focus-within:text-primary" />
+            <Input 
+              placeholder="Tìm kiếm theo tên hoặc mô tả..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="h-12 pl-11 rounded-xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold" 
             />
-          </div>
-        </div>
+         </div>
       </div>
 
-      {/* Levels List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Levels Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredLevels.map((level) => {
-          const IconComponent = getIconComponent(level.icon || 'star')
+          const IconComp = levelIcons.find(i => i.value === level.icon)?.icon || Star
           return (
-            <Card key={level._id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${level.color}`}>
-                      <IconComponent className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl font-bold text-gray-900">
-                        Cấp {level.level || level.number}: {level.name}
-                      </CardTitle>
-                      <CardDescription>
-                        {level.requiredExperience} XP yêu cầu
-                      </CardDescription>
-                    </div>
+            <div key={level._id} className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all group overflow-hidden flex flex-col">
+               <div className={`h-2 w-full ${level.color}`} />
+               <div className="p-8 space-y-6 flex-1">
+                  <div className="flex justify-between items-start">
+                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg ${level.color}`}>
+                        <IconComp className="w-8 h-8" />
+                     </div>
+                     <div className="flex space-x-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(level)} className="w-9 h-9 rounded-xl hover:bg-blue-50 hover:text-blue-600">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteLevel(level._id)} className="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-red-600">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditDialog(level)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteLevel(level._id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {level.description && (
-                  <p className="text-gray-600 text-sm">
-                    {level.description}
-                  </p>
-                )}
-
-                <div className="grid grid-cols-3 gap-4 text-center">
+                  
                   <div>
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <BookOpen className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">Từ vựng</span>
-                    </div>
-                    <div className="text-lg font-semibold text-gray-900">
-                      {level.vocabularyCount || 0}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <TestTube className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">Bài test</span>
-                    </div>
-                    <div className="text-lg font-semibold text-gray-900">
-                      {level.testCount || 0}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">Người dùng</span>
-                    </div>
-                    <div className="text-lg font-semibold text-gray-900">
-                      {level.userCount || 0}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <Badge variant="outline" className="text-xs">
-                    {new Date(level.createdAt).toLocaleDateString()}
-                  </Badge>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded ${level.color}`} />
-                    <span className="text-xs text-gray-500">
-                      {level.color}
+                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                      Level {level.level || level.number}
                     </span>
+                    <h3 className="text-2xl font-black text-gray-900 mt-1">{level.name}</h3>
+                    <p className="text-sm text-gray-500 font-medium leading-relaxed mt-3 line-clamp-2">
+                      {level.description}
+                    </p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+
+                  {/* Stats Section from Old Version */}
+                  <div className="grid grid-cols-3 gap-2 py-4 border-y border-gray-50">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <BookOpen className="h-3 w-3 text-gray-400" />
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Từ vựng</span>
+                      </div>
+                      <div className="text-sm font-black text-gray-900">{level.vocabularyCount || 0}</div>
+                    </div>
+                    <div className="text-center border-x border-gray-50 px-1">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <TestTube className="h-3 w-3 text-gray-400" />
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Bài test</span>
+                      </div>
+                      <div className="text-sm font-black text-gray-900">{level.testCount || 0}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Users className="h-3 w-3 text-gray-400" />
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Học viên</span>
+                      </div>
+                      <div className="text-sm font-black text-gray-900">{level.userCount || 0}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-2xl p-4 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase text-gray-400">Yêu cầu EXP</span>
+                    <div className="flex items-center text-primary font-black">
+                      <Star className="w-3.5 h-3.5 mr-1 fill-current" />
+                      <span>{level.requiredExperience.toLocaleString()}</span>
+                    </div>
+                  </div>
+               </div>
+            </div>
           )
         })}
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-md">
+      {filteredLevels.length === 0 && (
+        <div className="bg-white p-20 rounded-[3rem] border border-gray-100 shadow-sm text-center space-y-6">
+           <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
+              <Target className="w-10 h-10" />
+           </div>
+           <div className="space-y-2">
+              <h3 className="text-2xl font-black text-gray-900">Không tìm thấy cấp độ nào</h3>
+              <p className="text-gray-500 font-medium">Thử thay đổi từ khóa tìm kiếm hoặc thêm cấp độ mới.</p>
+           </div>
+        </div>
+      )}
+
+      {/* Dialogs */}
+      <Dialog open={showCreateDialog || showEditDialog} onOpenChange={(o) => { if (!o) { setShowCreateDialog(false); setShowEditDialog(false); } }}>
+        <DialogContent className="rounded-[2.5rem] p-10 max-w-2xl overflow-y-auto max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa cấp độ</DialogTitle>
-            <DialogDescription>
-              Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa cấp độ này?
+            <DialogTitle className="text-3xl font-black">
+              {showEditDialog ? 'Hiệu chỉnh' : 'Tạo mới'} cấp độ
+            </DialogTitle>
+            <DialogDescription className="font-medium text-gray-500">
+              {showEditDialog ? 'Cập nhật thông tin chi tiết cho cấp độ học tập hiện tại.' : 'Thiết lập một cột mốc mới trên lộ trình học tập của học viên.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Hủy</Button>
-            <Button className="bg-red-600 hover:bg-red-700" onClick={confirmDeleteLevel}>Xóa</Button>
-          </div>
+          <form onSubmit={showEditDialog ? handleEditLevel : handleCreateLevel} className="space-y-6 pt-4">
+             <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Số thứ tự Level</Label>
+                  <Input 
+                    type="number" 
+                    step="0.1"
+                    value={formData.level} 
+                    onChange={(e) => setFormData({ ...formData, level: parseFloat(e.target.value) })} 
+                    className="h-12 rounded-xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold" 
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Tên cấp độ</Label>
+                  <Input 
+                    value={formData.name} 
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                    placeholder="Ví dụ: Sơ cấp 1, HSK 1..."
+                    className="h-12 rounded-xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold" 
+                    required 
+                  />
+                </div>
+             </div>
+             <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Yêu cầu EXP để đạt được</Label>
+                <Input 
+                  type="number" 
+                  min="0"
+                  value={formData.requiredExperience} 
+                  onChange={(e) => setFormData({ ...formData, requiredExperience: parseInt(e.target.value) })} 
+                  className="h-12 rounded-xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold" 
+                  required 
+                />
+             </div>
+             <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Mô tả ngắn</Label>
+                <Textarea 
+                  value={formData.description} 
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+                  placeholder="Mô tả kỹ năng học viên đạt được ở cấp độ này..."
+                  className="min-h-[100px] rounded-2xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-medium" 
+                />
+             </div>
+             
+             <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Màu sắc định danh</Label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {colorOptions.map(c => (
+                      <button 
+                        key={c.value} 
+                        type="button" 
+                        onClick={() => setFormData({ ...formData, color: c.value })} 
+                        className={`h-8 rounded-lg ${c.value} transition-all ${formData.color === c.value ? 'ring-2 ring-primary ring-offset-2 scale-90 shadow-inner' : 'hover:scale-105'}`} 
+                        title={c.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Biểu tượng</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {levelIcons.map(i => (
+                      <button 
+                        key={i.value} 
+                        type="button" 
+                        onClick={() => setFormData({ ...formData, icon: i.value })} 
+                        className={`h-10 flex flex-col items-center justify-center rounded-lg border-2 transition-all ${formData.icon === i.value ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                      >
+                        <i.icon className="w-4 h-4" />
+                        <span className="text-[8px] font-black uppercase mt-1">{i.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+             </div>
+
+             <DialogFooter className="flex gap-4 pt-4">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => { setShowCreateDialog(false); setShowEditDialog(false); }} 
+                  className="flex-1 h-12 rounded-xl font-bold text-gray-400 hover:bg-gray-50"
+                >
+                  Hủy bỏ
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={formLoading} 
+                  className="flex-1 chinese-gradient h-12 rounded-xl font-black text-white shadow-xl shadow-primary/20"
+                >
+                  {formLoading ? <Loader2 className="animate-spin" /> : 'Lưu thông tin'}
+                </Button>
+             </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
-      {filteredLevels.length === 0 && (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">
-              Không tìm thấy cấp độ nào
-            </h3>
-            <p className="text-gray-500">
-              {searchTerm 
-                ? 'Thử thay đổi từ khóa tìm kiếm'
-                : 'Hãy thêm cấp độ đầu tiên'
-              }
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Delete Confirmation */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="rounded-[2.5rem] p-10 max-w-sm text-center border-none shadow-2xl">
+          <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500">
+            <Trash2 className="w-8 h-8" />
+          </div>
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-2xl font-black text-gray-900">Xác nhận xóa?</DialogTitle>
+            <DialogDescription className="font-medium text-gray-500 leading-relaxed">
+              Hành động này sẽ gỡ bỏ vĩnh viễn cấp độ này khỏi hệ thống. Các học viên đang ở cấp độ này sẽ bị ảnh hưởng.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-8">
+            <Button 
+              onClick={confirmDeleteLevel} 
+              className="h-12 rounded-xl font-black text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-100 transition-all"
+            >
+              Đồng ý xóa
+            </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowDeleteDialog(false)} 
+              className="h-12 rounded-xl font-bold text-gray-400 hover:bg-gray-50"
+            >
+              Quay lại
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-
-

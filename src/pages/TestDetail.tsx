@@ -15,7 +15,8 @@ import {
   AlertCircle,
   CheckCircle,
   Flag,
-  ArrowLeft
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
@@ -216,262 +217,212 @@ export const TestDetail = () => {
   const progress = ((currentQuestion + 1) / test.questions.length) * 100
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header Navigation */}
+        <div className="flex items-center justify-between">
           <Button 
-            variant="outline" 
+            variant="ghost" 
             onClick={() => navigate('/tests')}
-            className="mb-4"
+            className="rounded-xl font-bold text-gray-500 hover:text-primary hover:bg-primary/5"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại
+            <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
           </Button>
           
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{test.title}</h1>
-              <p className="text-gray-600">{test.description}</p>
-            </div>
-            <Badge className="bg-blue-100 text-blue-800">
-              Cấp {test.level}
-            </Badge>
-          </div>
-
-          {/* Test Info */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-gray-500" />
-              <span>{test.timeLimit} phút</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <TestTube className="h-4 w-4 text-gray-500" />
-              <span>{test.questions.length} câu hỏi</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Coins className="h-4 w-4 text-yellow-500" />
-              <span>Cần {test.requiredCoins} xu</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Star className="h-4 w-4 text-blue-500" />
-              <span>Thưởng {test.rewardExperience} XP</span>
-            </div>
-          </div>
-
-          {/* Time and Progress */}
           {testStarted && (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Tiến độ</span>
-                <span className="text-sm font-medium">
-                  Câu {currentQuestion + 1}/{test.questions.length}
-                </span>
-              </div>
-              <Progress value={progress} className="mb-2" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">
-                  {reviewMode ? 'Chế độ xem lại' : `Thời gian còn lại: ${formatTime(timeLeft)}`}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowReportDialog(true)}
-                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                  >
-                    <Flag className="h-4 w-4 mr-1" />
-                    Báo lỗi
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Review Mode Info */}
-              {reviewMode && (
-                <div className="mt-4 bg-yellow-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-yellow-900 mb-2">Chế độ xem lại</h3>
-                  <p className="text-sm text-yellow-800">
-                    Bạn cần làm lại những câu hỏi bỏ qua và làm sai để hoàn thành test.
-                  </p>
-                  <div className="mt-2 flex gap-4 text-sm">
-                    <span className="text-orange-600">
-                      Bỏ qua: {skippedQuestions.length} câu
-                    </span>
-                    <span className="text-red-600">
-                      Làm sai: {wrongQuestions.length} câu
-                    </span>
-                  </div>
-                </div>
-              )}
+            <div className="flex items-center space-x-3 bg-primary/5 px-6 py-3 rounded-2xl border border-primary/10">
+               <Clock className="w-5 h-5 text-primary animate-pulse" />
+               <span className="text-xl font-black text-primary font-mono">{formatTime(timeLeft)}</span>
             </div>
           )}
         </div>
 
-        {/* Test Content */}
         {!testStarted ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TestTube className="h-6 w-6 text-blue-600" />
-                Sẵn sàng bắt đầu?
-              </CardTitle>
-              <CardDescription>
-                Test này sẽ kiểm tra kiến thức của bạn ở cấp độ {test.level}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-blue-900 mb-2">Thông tin test:</h3>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Thời gian: {test.timeLimit} phút</li>
-                  <li>• Số câu hỏi: {test.questions.length}</li>
-                  <li>• Cần xu: {test.requiredCoins}</li>
-                  <li>• Thưởng: {test.rewardExperience} XP + {test.rewardCoins} xu</li>
-                </ul>
-              </div>
-              
-              {user && user.coins < test.requiredCoins && (
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 text-red-800">
-                    <AlertCircle className="h-5 w-5" />
-                    <span className="font-semibold">Không đủ xu!</span>
+          <div className="space-y-8">
+            <div className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-gray-100 shadow-xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-64 h-64 chinese-gradient opacity-5 rounded-bl-[4rem]" />
+               
+               <div className="relative z-10 grid md:grid-cols-2 gap-12">
+                  <div className="space-y-6">
+                     <Badge className="bg-primary/10 text-primary border-primary/20 rounded-lg px-3 py-1 font-bold text-xs uppercase tracking-widest">
+                        Cấp độ {test.level}
+                     </Badge>
+                     <h1 className="text-4xl font-black text-gray-900 tracking-tight">{test.title}</h1>
+                     <p className="text-gray-500 font-medium leading-relaxed">{test.description}</p>
+                     
+                     <div className="space-y-4 pt-4">
+                        {[
+                          { icon: Clock, label: 'Thời gian:', value: `${test.timeLimit} Phút`, color: 'text-blue-500' },
+                          { icon: TestTube, label: 'Số câu hỏi:', value: `${test.questions.length} Câu`, color: 'text-red-500' },
+                          { icon: Coins, label: 'Lệ phí:', value: `${test.requiredCoins} Xu`, color: 'text-amber-500' },
+                          { icon: Star, label: 'Thưởng đạt:', value: `${test.rewardExperience} XP`, color: 'text-green-500' }
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-center space-x-3">
+                             <div className={`w-8 h-8 rounded-lg ${item.color} bg-current/10 flex items-center justify-center`}>
+                                <item.icon className="w-4 h-4" />
+                             </div>
+                             <span className="text-sm font-bold text-gray-500">{item.label}</span>
+                             <span className="text-sm font-black text-gray-900">{item.value}</span>
+                          </div>
+                        ))}
+                     </div>
                   </div>
-                  <p className="text-sm text-red-700 mt-1">
-                    Bạn cần {test.requiredCoins} xu nhưng chỉ có {user.coins} xu
-                  </p>
-                </div>
-              )}
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleStartTest}
-                  disabled={!user || user.coins < test.requiredCoins}
-                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-                >
-                  {!user ? 'Đăng nhập để làm test' : 
-                   user.coins < test.requiredCoins ? 'Không đủ xu' : 
-                   'Bắt đầu test'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="bg-gray-50 rounded-3xl p-8 flex flex-col justify-between space-y-8">
+                     <div className="space-y-4">
+                        <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs">Yêu cầu tham gia</h3>
+                        <div className="p-4 bg-white rounded-2xl border border-gray-100 flex items-center justify-between">
+                           <span className="text-sm font-bold text-gray-500">Số dư hiện tại:</span>
+                           <span className="text-lg font-black text-amber-500">{user?.coins.toLocaleString()} Xu</span>
+                        </div>
+                        {user && user.coins < test.requiredCoins && (
+                          <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
+                             <p className="text-xs font-bold text-red-600 flex items-center italic">
+                                <AlertCircle className="w-4 h-4 mr-2" /> Không đủ số dư để bắt đầu.
+                             </p>
+                          </div>
+                        )}
+                     </div>
+
+                     <Button
+                       onClick={handleStartTest}
+                       disabled={!user || user.coins < test.requiredCoins}
+                       className="w-full h-16 chinese-gradient rounded-2xl font-black text-white text-lg shadow-xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all"
+                     >
+                        Bắt đầu làm bài
+                     </Button>
+                  </div>
+               </div>
+            </div>
+          </div>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">
-                Câu hỏi {currentQuestion + 1}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <p className="text-lg font-medium">{currentQ.question}</p>
-              
-              {/* Multiple Choice */}
-              {currentQ.questionType === 'multiple-choice' && currentQ.options && (
-                <div className="space-y-3">
-                  {currentQ.options.map((option, index) => (
-                    <Button
-                      key={index}
-                      variant={answers[currentQuestion] === index ? 'default' : 'outline'}
-                      className={`w-full justify-start h-auto py-4 text-left ${
-                        answers[currentQuestion] === index 
-                          ? 'bg-blue-500 text-white' 
-                          : 'hover:bg-blue-50'
-                      }`}
-                      onClick={() => handleAnswerSelect(index)}
-                    >
-                      <span className="font-semibold mr-3">{String.fromCharCode(65 + index)}.</span>
-                      {option}
-                    </Button>
-                  ))}
-                </div>
-              )}
+          <div className="space-y-8">
+            {/* Progress Bar */}
+            <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-lg">
+               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                  <span>Tiến độ bài làm</span>
+                  <span>Câu {currentQuestion + 1} / {test.questions.length}</span>
+               </div>
+               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full chinese-gradient transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+               </div>
+            </div>
 
-              {/* True/False */}
-              {currentQ.questionType === 'true-false' && (
-                <div className="space-y-3">
-                  <Button
-                    variant={answers[currentQuestion] === true ? 'default' : 'outline'}
-                    className={`w-full h-auto py-4 ${
-                      answers[currentQuestion] === true 
-                        ? 'bg-green-500 text-white' 
-                        : 'hover:bg-green-50'
-                    }`}
-                    onClick={() => handleAnswerSelect(true)}
-                  >
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    Đúng
-                  </Button>
-                  <Button
-                    variant={answers[currentQuestion] === false ? 'default' : 'outline'}
-                    className={`w-full h-auto py-4 ${
-                      answers[currentQuestion] === false 
-                        ? 'bg-red-500 text-white' 
-                        : 'hover:bg-red-50'
-                    }`}
-                    onClick={() => handleAnswerSelect(false)}
-                  >
-                    <AlertCircle className="h-5 w-5 mr-2" />
-                    Sai
-                  </Button>
-                </div>
-              )}
+            <div className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-gray-100 shadow-xl space-y-10 relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+               
+               <div className="relative z-10 space-y-8">
+                  <div className="space-y-4">
+                     <Badge className="bg-primary/10 text-primary border-primary/20 rounded-lg px-3 py-1 font-bold text-xs uppercase tracking-widest">
+                        Câu hỏi {currentQuestion + 1}
+                     </Badge>
+                     <h3 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight">
+                        {currentQ.question}
+                     </h3>
+                  </div>
 
-              {/* Navigation */}
-              <div className="flex justify-between pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevQuestion}
-                  disabled={currentQuestion === 0}
-                >
-                  Câu trước
-                </Button>
-                
-                <div className="flex gap-2">
-                  {!reviewMode && (
-                    <Button
-                      variant="outline"
-                      onClick={handleSkipQuestion}
-                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                    >
-                      Bỏ qua
-                    </Button>
-                  )}
-                  
-                  {currentQuestion === test.questions.length - 1 ? (
-                    <Button
-                      onClick={handleSubmitTest}
-                      disabled={submitting}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Đang nộp...
-                        </>
-                      ) : (
-                        'Nộp bài'
-                      )}
-                    </Button>
-                  ) : (
-                    <Button onClick={handleNextQuestion}>
-                      Câu tiếp
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="grid gap-4">
+                     {currentQ.questionType === 'multiple-choice' && currentQ.options?.map((option, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleAnswerSelect(index)}
+                          className={`flex items-center p-6 rounded-2xl border-2 transition-all group text-left ${
+                            answers[currentQuestion] === index 
+                              ? 'border-primary bg-primary/5 shadow-md ring-4 ring-primary/5' 
+                              : 'border-gray-100 hover:border-primary/30 hover:bg-gray-50'
+                          }`}
+                        >
+                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mr-6 shrink-0 transition-colors ${
+                             answers[currentQuestion] === index ? 'chinese-gradient text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-primary/10 group-hover:text-primary'
+                           }`}>
+                              {String.fromCharCode(65 + index)}
+                           </div>
+                           <span className={`text-lg font-bold ${answers[currentQuestion] === index ? 'text-gray-900' : 'text-gray-600'}`}>{option}</span>
+                           {answers[currentQuestion] === index && <CheckCircle className="ml-auto w-6 h-6 text-primary" />}
+                        </button>
+                     ))}
+
+                     {currentQ.questionType === 'true-false' && (
+                        <div className="grid grid-cols-2 gap-6">
+                           {[
+                             { val: true, label: 'Chính xác', color: 'bg-green-500', border: 'border-green-500', icon: CheckCircle },
+                             { val: false, label: 'Sai lệch', color: 'bg-red-500', border: 'border-red-500', icon: AlertCircle }
+                           ].map((item) => (
+                             <button
+                               key={String(item.val)}
+                               onClick={() => handleAnswerSelect(item.val)}
+                               className={`flex flex-col items-center justify-center p-8 rounded-[2rem] border-2 transition-all space-y-4 ${
+                                 answers[currentQuestion] === item.val
+                                   ? `${item.border} bg-gray-50 ring-4 ring-gray-100`
+                                   : 'border-gray-100 hover:border-gray-200'
+                               }`}
+                             >
+                                <div className={`w-12 h-12 rounded-2xl ${answers[currentQuestion] === item.val ? item.color : 'bg-gray-100 text-gray-400'} flex items-center justify-center text-white transition-all`}>
+                                   <item.icon className="w-6 h-6" />
+                                </div>
+                                <span className={`text-lg font-black ${answers[currentQuestion] === item.val ? 'text-gray-900' : 'text-gray-400'}`}>{item.label}</span>
+                             </button>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+               </div>
+
+               {/* Navigation Controls */}
+               <div className="relative z-10 pt-8 border-t border-gray-100 flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    onClick={handlePrevQuestion}
+                    disabled={currentQuestion === 0}
+                    className="rounded-xl font-bold text-gray-500 h-12"
+                  >
+                     <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
+                  </Button>
+
+                  <div className="flex items-center space-x-3">
+                     {!reviewMode && (
+                       <Button
+                         variant="outline"
+                         onClick={handleSkipQuestion}
+                         className="rounded-xl font-bold text-orange-600 border-2 border-orange-100 hover:bg-orange-50 h-12"
+                       >
+                          Bỏ qua câu này
+                       </Button>
+                     )}
+                     
+                     {currentQuestion === test.questions.length - 1 ? (
+                       <Button
+                         onClick={handleSubmitTest}
+                         disabled={submitting}
+                         className="chinese-gradient h-12 px-10 rounded-xl font-black text-white shadow-lg shadow-primary/20 transform hover:-translate-y-1 transition-all"
+                       >
+                          {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Kết thúc & Nộp bài'}
+                       </Button>
+                     ) : (
+                       <Button 
+                         onClick={handleNextQuestion}
+                         className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg"
+                       >
+                          Câu tiếp theo <ArrowRight className="ml-2 h-4 w-4" />
+                       </Button>
+                     )}
+                  </div>
+               </div>
+            </div>
+          </div>
         )}
-
-        {/* Report Error Dialog */}
-        <ReportErrorDialog
-          isOpen={showReportDialog}
-          onClose={() => setShowReportDialog(false)}
-          itemType="question"
-          itemId={currentQ?._id || ''}
-          itemContent={currentQ?.question || ''}
-        />
       </div>
+
+      <ReportErrorDialog
+        isOpen={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        itemType="question"
+        itemId={currentQ?._id || ''}
+        itemContent={currentQ?.question || ''}
+      />
     </div>
   )
 }

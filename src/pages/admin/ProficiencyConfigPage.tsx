@@ -1,21 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { 
   ArrowLeft,
   Plus, 
   Trash2, 
   Brain,
   Settings,
-  Crown,
-  Zap,
-  Target,
-  Award
+  Gem
 } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
+import { Badge } from '@/components/ui/badge'
 
 
 interface ProficiencyConfig {
@@ -119,198 +116,89 @@ export const ProficiencyConfigPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/admin/proficiency')}
-              className="mb-6 bg-white/50 hover:bg-white/70 border-2 border-blue-200"
-            >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Quay lại
-            </Button>
-            
-            <div className="text-center">
-              <div className="relative inline-block mb-4">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  ⚙️ Cấu hình Test năng lực
-                </h1>
-                <div className="absolute -top-2 -right-2">
-                  <Settings className="h-8 w-8 text-blue-400 animate-bounce" />
-                </div>
-                <div className="absolute -bottom-2 -left-2">
-                  <Brain className="h-6 w-6 text-purple-400 animate-pulse" />
-                </div>
-              </div>
-              <p className="text-xl text-gray-700 font-medium">
-                Quản lý cấu hình test năng lực
-              </p>
-            </div>
+    <div className="space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => navigate('/admin/proficiency')} className="w-10 h-10 rounded-xl bg-white border border-gray-100 shadow-sm hover:bg-gray-50 p-0">
+             <ArrowLeft className="h-5 w-5 text-gray-500" />
+          </Button>
+          <div>
+             <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
+                <Brain className="w-8 h-8 mr-3 text-primary" />
+                Quản lý kịch bản Test
+             </h1>
+             <p className="text-gray-500 font-medium">Thiết lập cấu trúc phân nhánh và logic AI cho bài thi đánh giá năng lực.</p>
           </div>
-
-          {/* Configs List */}
-          {configs.length === 0 ? (
-            <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50">
-              <CardContent className="p-12 text-center">
-                <div className="mb-6">
-                  <Brain className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-2xl font-semibold text-gray-600 mb-2">
-                    Chưa có cấu hình nào
-                  </h3>
-                  <p className="text-gray-500">
-                    Hãy tạo cấu hình đầu tiên để bắt đầu
-                  </p>
-                </div>
-                <Button
-                  onClick={() => navigate('/admin/proficiency-config/new')}
-                  className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                >
-                  <Plus className="h-6 w-6 mr-3" />
-                  Tạo cấu hình đầu tiên
-                  <Settings className="h-5 w-5 ml-3" />
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6">
-              {configs.map((config) => (
-                <Card key={config._id} className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50 hover:shadow-2xl transition-all duration-300">
-                  <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-t-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/20 rounded-full">
-                          <Brain className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-xl">{config.name}</CardTitle>
-                          <CardDescription className="text-blue-100">
-                            {config.description}
-                          </CardDescription>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {config.isActive && (
-                          <div className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                            Đang hoạt động
-                          </div>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/admin/proficiency-config/${config._id}/edit`)}
-                          className="text-white hover:bg-white/20"
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteConfig(config._id)}
-                          className="text-red-200 hover:bg-red-500/20"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Zap className="h-4 w-4 text-yellow-500" />
-                          <span className="font-semibold text-gray-700">Chi phí</span>
-                        </div>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {config.cost.toLocaleString()} xu
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Target className="h-4 w-4 text-green-500" />
-                          <span className="font-semibold text-gray-700">Câu hỏi ban đầu</span>
-                        </div>
-                        <p className="text-lg font-semibold text-green-600">
-                          {config.initialQuestions.length} cấp độ
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-purple-500" />
-                          <span className="font-semibold text-gray-700">Nhánh logic</span>
-                        </div>
-                        <p className="text-lg font-semibold text-purple-600">
-                          {config.branches.length} nhánh
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 flex gap-3">
-                      {!config.isActive && (
-                        <Button
-                          onClick={() => handleActivateConfig(config._id)}
-                          className="bg-green-500 hover:bg-green-600 text-white"
-                        >
-                          <Crown className="h-4 w-4 mr-2" />
-                          Kích hoạt
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate(`/admin/proficiency-config/${config._id}/edit`)}
-                        className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Chỉnh sửa
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Create Button */}
-          <div className="text-center mt-8">
-            <Button
-              onClick={() => navigate('/admin/proficiency-config/new')}
-              className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-            >
-              <Plus className="h-6 w-6 mr-3" />
-              Tạo cấu hình mới
-              <Settings className="h-5 w-5 ml-3" />
-            </Button>
-          </div>
-
-          {/* Delete Confirmation Dialog */}
-          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Xác nhận xóa cấu hình</DialogTitle>
-                <DialogDescription>
-                  Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa cấu hình này?
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex justify-end space-x-2 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteDialog(false)}
-                >
-                  Hủy
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={confirmDelete}
-                >
-                  Xóa
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
+        
+        <Button onClick={() => navigate('/admin/proficiency-config/new')} className="chinese-gradient h-11 px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-1">
+          <Plus className="mr-2 h-4 w-4" /> Tạo kịch bản mới
+        </Button>
       </div>
+
+      {/* Configs List Rendering */}
+      {configs.length === 0 ? (
+        <div className="bg-white p-20 rounded-[3rem] border border-gray-100 shadow-sm text-center space-y-6">
+           <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
+              <Settings className="w-10 h-10" />
+           </div>
+           <div className="space-y-2">
+              <h3 className="text-2xl font-black text-gray-900">Chưa có kịch bản nào</h3>
+              <p className="text-gray-500 font-medium">Khởi tạo kịch bản đầu tiên để bắt đầu hệ thống khảo thí năng lực.</p>
+           </div>
+           <Button onClick={() => navigate('/admin/proficiency-config/new')} className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg">Khởi tạo ngay</Button>
+        </div>
+      ) : (
+        <div className="grid gap-8">
+          {configs.map((config) => (
+            <div key={config._id} className="bg-white rounded-[3rem] p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+               
+               <div className="relative z-10 space-y-8">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                     <div className="space-y-4 flex-1">
+                        <div className="flex items-center space-x-3">
+                           <h2 className="text-2xl font-black text-gray-900 group-hover:text-primary transition-colors">{config.name}</h2>
+                           {config.isActive && (
+                             <Badge className="bg-green-100 text-green-700 border-none rounded-lg font-black text-[8px] uppercase px-2 py-1 tracking-widest">Active System</Badge>
+                           )}
+                        </div>
+                        <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-2xl">{config.description}</p>
+                     </div>
+
+                     <div className="flex items-center space-x-2">
+                        {!config.isActive && (
+                          <Button onClick={() => handleActivateConfig(config._id)} className="h-10 px-5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-green-100">Kích hoạt</Button>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/proficiency-config/${config._id}/edit`)} className="w-10 h-10 rounded-xl hover:bg-blue-50 hover:text-blue-600"><Settings className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteConfig(config._id)} className="w-10 h-10 rounded-xl hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                     <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-50 text-center space-y-1 group-hover:bg-white group-hover:shadow-md transition-all">
+                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Lệ phí khảo thí</p>
+                        <p className="text-xl font-black text-amber-500 flex items-center justify-center"><Gem className="w-4 h-4 mr-1 fill-current" /> {config.cost.toLocaleString()}</p>
+                     </div>
+                     <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-50 text-center space-y-1 group-hover:bg-white group-hover:shadow-md transition-all">
+                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Giai đoạn Initial</p>
+                        <p className="text-xl font-black text-gray-900">{config.initialQuestions.length} Cấp độ</p>
+                     </div>
+                     <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-50 text-center space-y-1 group-hover:bg-white group-hover:shadow-md transition-all">
+                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Số nhánh logic</p>
+                        <p className="text-xl font-black text-gray-900">{config.branches.length} Nhánh</p>
+                     </div>
+                     <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-50 text-center space-y-1 group-hover:bg-white group-hover:shadow-md transition-all">
+                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Cập nhật cuối</p>
+                        <p className="text-sm font-bold text-gray-700">{new Date(config.updatedAt).toLocaleDateString('vi-VN')}</p>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

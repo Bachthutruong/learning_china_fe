@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
-import { 
-  Users, 
-  BookOpen, 
-  TestTube, 
-  Brain, 
-  Flag, 
-  TrendingUp, 
+import {
+  Users,
+  BookOpen,
+  TestTube,
+  Brain,
+  Flag,
+  TrendingUp,
   Activity,
   Award,
-  Clock
+  Coins,
+  LayoutDashboard,
+  CheckCircle,
+  Star
 } from 'lucide-react'
 import { api } from '../../services/api'
 
@@ -129,208 +132,121 @@ export const AdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10 pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tổng quan</h1>
-          <p className="text-gray-600">Thống kê tổng quan về hệ thống</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
+             <LayoutDashboard className="w-8 h-8 mr-3 text-primary" />
+             Tổng quan hệ thống
+          </h1>
+          <p className="text-gray-500 font-medium">Theo dõi dữ liệu và hiệu suất vận hành thời gian thực.</p>
         </div>
-        <Button onClick={fetchDashboardData} variant="outline">
+        <Button 
+          onClick={fetchDashboardData} 
+          className="chinese-gradient h-12 px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all"
+        >
           <Activity className="mr-2 h-4 w-4" />
-          Làm mới
+          Làm mới dữ liệu
         </Button>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng người dùng</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+{Math.floor(Math.random() * 20) + 5}%</span> từ tháng trước
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Từ vựng</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalVocabulary.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+{Math.floor(Math.random() * 15) + 3}%</span> từ tháng trước
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bài test</CardTitle>
-            <TestTube className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTests.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+{Math.floor(Math.random() * 25) + 10}%</span> từ tháng trước
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Báo cáo chờ</CardTitle>
-            <Flag className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingReports}</div>
-            <p className="text-xs text-muted-foreground">
-              Cần xem xét
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Người dùng hoạt động</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              Trong 24h qua
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng XP</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalExperience.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              Điểm kinh nghiệm
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng xu</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCoins.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              Xu trong hệ thống
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Test năng lực</CardTitle>
-            <Brain className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProficiencyTests}</div>
-            <p className="text-xs text-muted-foreground">
-              Bài test đã tạo
-            </p>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Tổng người dùng', value: stats.totalUsers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Kho từ vựng', value: stats.totalVocabulary, icon: BookOpen, color: 'text-red-600', bg: 'bg-red-50' },
+          { label: 'Bài test học', value: stats.totalTests, icon: TestTube, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Báo cáo chờ', value: stats.pendingReports, icon: Flag, color: 'text-orange-600', bg: 'bg-orange-50' },
+          { label: 'User Active', value: stats.activeUsers, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Tổng XP', value: stats.totalExperience, icon: Award, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Tổng Xu', value: stats.totalCoins, icon: Coins, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+          { label: 'Test Năng lực', value: stats.totalProficiencyTests, icon: Brain, color: 'text-cyan-600', bg: 'bg-cyan-50' }
+        ].map((item, i) => (
+          <div key={i} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group">
+             <div className="flex items-center justify-between mb-4">
+                <div className={`w-12 h-12 rounded-2xl ${item.bg} ${item.color} flex items-center justify-center transition-transform group-hover:rotate-6`}>
+                   <item.icon className="w-6 h-6" />
+                </div>
+                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-gray-100 text-gray-400">
+                   Realtime
+                </Badge>
+             </div>
+             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{item.label}</p>
+             <div className="text-2xl font-black text-gray-900">{item.value.toLocaleString()}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Recent Activities */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Hoạt động gần đây</CardTitle>
-            <CardDescription>Những hoạt động mới nhất trong hệ thống</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.slice(0, 5).map((activity) => {
-                const Icon = getActivityIcon(activity.type)
-                return (
-                  <div key={activity.id} className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-full bg-gray-100 ${getActivityColor(activity.type)}`}>
-                      <Icon className="h-4 w-4" />
+      {/* Main Analysis Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
+           <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-gray-900">Hoạt động gần đây</h3>
+              <Button variant="ghost" className="text-xs font-black text-primary hover:bg-primary/5 rounded-xl">Xem tất cả</Button>
+           </div>
+           
+           <div className="space-y-6">
+              {recentActivities.length > 0 ? (
+                recentActivities.slice(0, 6).map((activity) => {
+                  const Icon = getActivityIcon(activity.type)
+                  return (
+                    <div key={activity.id} className="flex items-center justify-between group">
+                       <div className="flex items-center space-x-4">
+                          <div className={`w-10 h-10 rounded-xl bg-gray-50 ${getActivityColor(activity.type)} flex items-center justify-center`}>
+                             <Icon className="w-5 h-5" />
+                          </div>
+                          <div>
+                             <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-primary transition-colors">{activity.description}</p>
+                             <p className="text-[10px] font-medium text-gray-400 mt-1 italic">{new Date(activity.timestamp).toLocaleString('vi-VN')}</p>
+                          </div>
+                       </div>
+                       <Badge className="bg-gray-50 text-gray-400 hover:bg-gray-100 transition-all rounded-lg font-bold text-[9px] uppercase">
+                          {activity.type.split('_')[1]}
+                       </Badge>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(activity.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {activity.type.replace('_', ' ')}
-                    </Badge>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  )
+                })
+              ) : (
+                <div className="text-center py-12 text-gray-400 font-bold italic">Chưa có hoạt động nào được ghi nhận.</div>
+              )}
+           </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Báo cáo nhanh</CardTitle>
-            <CardDescription>Thống kê và phân tích</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Tỷ lệ hoàn thành test</span>
-                <span className={`text-sm font-bold ${stats.testCompletionRate >= 80 ? 'text-green-600' : stats.testCompletionRate >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {stats.testCompletionRate}%
-                </span>
+        <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
+           <h3 className="text-xl font-black text-gray-900">Chỉ số vận hành</h3>
+           
+           <div className="space-y-8">
+              {[
+                { label: 'Tỷ lệ hoàn thành test', val: stats.testCompletionRate, color: 'bg-green-500', icon: CheckCircle },
+                { label: 'Tỷ lệ học từ vựng', val: stats.vocabularyLearningRate, color: 'bg-blue-500', icon: BookOpen },
+                { label: 'Độ hài lòng (CSAT)', val: stats.satisfactionRate, color: 'bg-primary', icon: Star }
+              ].map((prog, i) => (
+                <div key={i} className="space-y-3">
+                   <div className="flex justify-between items-end">
+                      <div className="flex items-center space-x-2 text-sm font-bold text-gray-700">
+                         <prog.icon className="w-4 h-4" />
+                         <span>{prog.label}</span>
+                      </div>
+                      <span className="text-lg font-black text-gray-900">{prog.val}%</span>
+                   </div>
+                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${prog.color} transition-all duration-1000`}
+                        style={{ width: `${prog.val}%` }}
+                      />
+                   </div>
+                </div>
+              ))}
+           </div>
+
+           <div className="pt-8 border-t border-gray-50">
+              <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10 text-center space-y-2">
+                 <p className="text-[10px] font-black uppercase tracking-widest text-primary">System Health</p>
+                 <p className="text-xl font-black text-gray-900">Optimal (99.9%)</p>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full ${stats.testCompletionRate >= 80 ? 'bg-green-600' : stats.testCompletionRate >= 60 ? 'bg-yellow-600' : 'bg-red-600'}`}
-                  style={{ width: `${stats.testCompletionRate}%` }}
-                ></div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Tỷ lệ học từ vựng</span>
-                <span className={`text-sm font-bold ${stats.vocabularyLearningRate >= 80 ? 'text-blue-600' : stats.vocabularyLearningRate >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {stats.vocabularyLearningRate}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full ${stats.vocabularyLearningRate >= 80 ? 'bg-blue-600' : stats.vocabularyLearningRate >= 60 ? 'bg-yellow-600' : 'bg-red-600'}`}
-                  style={{ width: `${stats.vocabularyLearningRate}%` }}
-                ></div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Độ hài lòng</span>
-                <span className={`text-sm font-bold ${stats.satisfactionRate >= 90 ? 'text-purple-600' : stats.satisfactionRate >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {Math.round(stats.satisfactionRate / 20 * 5 * 10) / 10}/5
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full ${stats.satisfactionRate >= 90 ? 'bg-purple-600' : stats.satisfactionRate >= 80 ? 'bg-yellow-600' : 'bg-red-600'}`}
-                  style={{ width: `${stats.satisfactionRate}%` }}
-                ></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+           </div>
+        </div>
       </div>
     </div>
   )

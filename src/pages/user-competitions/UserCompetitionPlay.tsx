@@ -18,7 +18,8 @@ import {
   AlertCircle,
   CheckCircle,
   Send,
-  AlertTriangle
+  AlertTriangle,
+  Trophy
 } from 'lucide-react'
 
 interface Question {
@@ -196,218 +197,164 @@ export const UserCompetitionPlay = () => {
   const isLastQuestion = currentQuestion === competition.questions.length - 1
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Đang làm bài thi
-              </h1>
-              <p className="text-gray-600 mt-1">Hãy tập trung và làm bài cẩn thận!</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-gray-200 shadow-lg">
-                <Badge className="text-lg px-3 py-1 bg-gradient-to-r from-red-500 to-pink-500 text-white">
-                  <Clock className="w-5 h-5 mr-2" />
-                  {formatTime(timeLeft)}
-                </Badge>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Header with Timer and Info */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl">
+           <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 chinese-gradient rounded-2xl flex items-center justify-center shadow-lg">
+                 <Trophy className="w-6 h-6 text-white" />
               </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-gray-200 shadow-lg">
-                <Badge className="text-lg px-3 py-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white">
-                  Câu {currentQuestion + 1}/{competition.questions.length}
-                </Badge>
+              <div>
+                 <h2 className="text-xl font-black text-gray-900">Đấu trường Bạn hữu</h2>
+                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Đang tranh tài...</p>
               </div>
-            </div>
-          </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-gray-200 shadow-lg">
-            <Progress value={progress} className="h-3 bg-gray-200 rounded-full" />
-            <div className="flex justify-between text-sm text-gray-600 mt-2">
-              <span>Tiến độ: {Math.round(progress)}%</span>
-              <span>{currentQuestion + 1}/{competition.questions.length} câu</span>
-            </div>
-          </div>
+           </div>
+
+           <div className="flex-1 max-w-md mx-4">
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                 <span>Tiến độ bài thi</span>
+                 <span>{currentQuestion + 1} / {competition.questions.length}</span>
+              </div>
+              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                 <div 
+                   className="h-full chinese-gradient rounded-full transition-all duration-500"
+                   style={{ width: `${progress}%` }}
+                 />
+              </div>
+           </div>
+
+           <div className="flex items-center space-x-3 bg-primary/5 px-6 py-3 rounded-2xl border border-primary/10">
+              <Clock className="w-5 h-5 text-primary animate-pulse" />
+              <span className="text-xl font-black text-primary font-mono">{formatTime(timeLeft)}</span>
+           </div>
         </div>
 
-        {/* Question Card */}
-        <Card className="mb-8 shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-t-xl">
-            <CardTitle className="text-2xl font-bold text-gray-800">
-              Câu {currentQuestion + 1}: {question.question}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <RadioGroup
-              value={answers[currentQuestion]?.userAnswer?.toString() || ''}
-              onValueChange={handleAnswerChange}
-            >
+        {/* Question Area */}
+        <div className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-gray-100 shadow-xl space-y-10 relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+           
+           <div className="relative z-10 space-y-8">
               <div className="space-y-4">
-                {question.options.map((option, index) => (
-                  <div 
-                    key={index} 
-                    className={`flex items-center space-x-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                      answers[currentQuestion]?.userAnswer?.toString() === index.toString()
-                        ? 'border-purple-500 bg-purple-50 shadow-md'
-                        : 'border-gray-200 hover:border-purple-300 hover:bg-purple-25'
-                    }`}
-                  >
-                    <RadioGroupItem 
-                      value={index.toString()} 
-                      id={`option-${index}`}
-                      className="w-5 h-5"
-                    />
-                    <Label 
-                      htmlFor={`option-${index}`} 
-                      className="flex-1 cursor-pointer text-lg font-medium text-gray-700"
-                    >
-                      {option}
-                    </Label>
-                  </div>
-                ))}
+                 <Badge className="bg-primary/10 text-primary border-primary/20 rounded-lg px-3 py-1 font-bold text-xs uppercase tracking-widest">
+                    Câu hỏi {currentQuestion + 1}
+                 </Badge>
+                 <h3 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight">
+                    {question.question}
+                 </h3>
               </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
 
-        {/* Navigation */}
-        <div className="flex justify-between items-center mb-8">
-          <Button
-            variant="outline"
-            onClick={() => handleNavigation('prev')}
-            disabled={currentQuestion === 0}
-            className="px-6 py-3 rounded-xl border-2 hover:bg-purple-50 hover:border-purple-300"
-          >
-            <ChevronLeft className="w-5 h-5 mr-2" />
-            Câu trước
-          </Button>
+              <div className="grid gap-4">
+                 {question.options.map((option, index) => {
+                    const isSelected = answers[currentQuestion]?.userAnswer === index
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleAnswerChange(index.toString())}
+                        className={`flex items-center p-6 rounded-2xl border-2 transition-all group text-left ${
+                          isSelected 
+                            ? 'border-primary bg-primary/5 shadow-md ring-4 ring-primary/5' 
+                            : 'border-gray-100 hover:border-primary/30 hover:bg-gray-50'
+                        }`}
+                      >
+                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mr-6 shrink-0 transition-colors ${
+                           isSelected ? 'chinese-gradient text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-primary/10 group-hover:text-primary'
+                         }`}>
+                            {String.fromCharCode(65 + index)}
+                         </div>
+                         <span className={`text-lg font-bold ${isSelected ? 'text-gray-900' : 'text-gray-600'}`}>{option}</span>
+                         {isSelected && <CheckCircle className="ml-auto w-6 h-6 text-primary" />}
+                      </button>
+                    )
+                 })}
+              </div>
+           </div>
 
-          {/* Question indicators */}
-          <div className="flex gap-2 flex-wrap justify-center max-w-md">
-            {competition.questions.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentQuestion(index)}
-                className={`w-10 h-10 rounded-full text-sm font-bold transition-all duration-200 ${
-                  index === currentQuestion
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg scale-110'
-                    : answers[index]?.userAnswer !== null
-                    ? 'bg-green-500 text-white shadow-md hover:scale-105'
-                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300 hover:scale-105'
-                }`}
+           {/* Navigation Controls */}
+           <div className="relative z-10 pt-8 border-t border-gray-100 flex items-center justify-between">
+              <Button
+                variant="outline"
+                onClick={() => handleNavigation('prev')}
+                disabled={currentQuestion === 0}
+                className="rounded-xl font-bold text-gray-500 h-12"
               >
-                {index + 1}
-              </button>
-            ))}
-          </div>
+                 <ChevronLeft className="mr-2 h-4 w-4" /> Câu trước
+              </Button>
 
-          {isLastQuestion ? (
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Đang nộp...
-                </>
-              ) : (
-                <>
-                  <Send className="w-5 h-5 mr-2" />
-                  Nộp bài
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button
-              onClick={() => handleNavigation('next')}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              Câu tiếp
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </Button>
-          )}
+              <div className="flex items-center space-x-3">
+                 <div className="hidden md:flex items-center gap-1.5 mr-4">
+                    {competition.questions.map((_, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          idx === currentQuestion ? 'bg-primary scale-125' : 
+                          answers[idx]?.userAnswer !== null ? 'bg-green-400' : 'bg-gray-200'
+                        }`} 
+                      />
+                    ))}
+                 </div>
+
+                 {isLastQuestion ? (
+                   <Button
+                     onClick={handleSubmit}
+                     disabled={submitting}
+                     className="chinese-gradient h-12 px-10 rounded-xl font-black text-white shadow-lg shadow-primary/20 transform hover:-translate-y-1 transition-all"
+                   >
+                      {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Nộp bài ngay'}
+                   </Button>
+                 ) : (
+                   <Button 
+                     onClick={() => handleNavigation('next')}
+                     className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg"
+                   >
+                      Câu tiếp theo <ChevronRight className="ml-2 h-4 w-4" />
+                   </Button>
+                 )}
+              </div>
+           </div>
         </div>
 
-        {/* Summary */}
-        <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-200">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Đã trả lời</p>
-                  <p className="text-xl font-bold text-green-600">{answers.filter(a => a.userAnswer !== null).length}</p>
-                </div>
+        {/* Footer Stats Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600 font-black text-xs">
+                 {answers.filter(a => a.userAnswer !== null).length}
               </div>
-              <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-xl border border-orange-200">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-5 h-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Chưa trả lời</p>
-                  <p className="text-xl font-bold text-orange-600">{answers.filter(a => a.userAnswer === null).length}</p>
-                </div>
+              <span className="text-[10px] font-black uppercase text-gray-400">Đã trả lời</span>
+           </div>
+           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 font-black text-xs">
+                 {answers.filter(a => a.userAnswer === null).length}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <span className="text-[10px] font-black uppercase text-gray-400">Còn trống</span>
+           </div>
+        </div>
       </div>
 
-      {/* Submit Confirmation Dialog */}
+      {/* Submit Confirmation Dialog Redesign */}
       <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-500" />
-              Xác nhận nộp bài
-            </DialogTitle>
-            <DialogDescription>
-              {(() => {
-                const unanswered = answers.filter(a => a.userAnswer === null).length
-                if (unanswered > 0) {
-                  return (
-                    <>
-                      Bạn còn <strong>{unanswered} câu chưa trả lời</strong>. 
-                      Bạn có chắc chắn muốn nộp bài không?
-                    </>
-                  )
-                } else {
-                  return (
-                    <>
-                      Bạn đã trả lời hết tất cả câu hỏi. 
-                      Bạn có chắc chắn muốn nộp bài không?
-                    </>
-                  )
-                }
-              })()}
+        <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-sm text-center">
+          <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-amber-500">
+             <AlertTriangle className="w-8 h-8" />
+          </div>
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-2xl font-black text-gray-900">Nộp bài thi?</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-gray-500">
+               {answers.filter(a => a.userAnswer === null).length > 0 
+                 ? `Bạn vẫn còn ${answers.filter(a => a.userAnswer === null).length} câu chưa hoàn thành. Bạn có chắc chắn muốn kết thúc bài thi?`
+                 : "Bạn đã hoàn thành tất cả câu hỏi. Chúc bạn đạt kết quả cao!"}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowSubmitDialog(false)}>
-              Hủy
-            </Button>
+          <div className="flex flex-col gap-3 mt-8">
             <Button
               onClick={handleConfirmSubmit}
               disabled={submitting}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+              className="h-12 rounded-xl font-black text-white shadow-lg bg-green-500 hover:bg-green-600"
             >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Đang nộp...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Nộp bài
-                </>
-              )}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác nhận nộp bài'}
             </Button>
-          </DialogFooter>
+            <Button variant="ghost" onClick={() => setShowSubmitDialog(false)} className="h-12 rounded-xl font-bold text-gray-400">Tiếp tục làm bài</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

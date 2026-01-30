@@ -21,7 +21,9 @@ import {
   X,
   Play,
   AlertTriangle,
-  ArrowUpDown
+  ArrowUpDown,
+  Diamond,
+  Gem
 } from 'lucide-react'
 
 interface Competition {
@@ -46,6 +48,7 @@ interface Competition {
   status: 'pending' | 'active' | 'completed'
   isStarted: boolean
   level: number
+  cost: number
 }
 
 interface JoinRequest {
@@ -265,260 +268,190 @@ export const UserCompetitionDetail = () => {
   const canStart = isParticipant && isActive && !competition.isStarted
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate('/user-competitions')}
-        className="mb-4"
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Quay lại
-      </Button>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/user-competitions')}
+            className="rounded-xl font-bold text-gray-500 hover:text-primary hover:bg-primary/5"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại danh sách
+          </Button>
+          
+          <div className="flex items-center space-x-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+             <div className="px-4 py-1.5 border-r border-gray-100 flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full animate-pulse ${isActive ? 'bg-green-500' : 'bg-amber-500'}`} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{isPending ? 'Sắp khai cuộc' : isActive ? 'Đang tranh tài' : 'Trận đấu kết thúc'}</span>
+             </div>
+             <div className="px-4 py-1.5">
+                <span className="text-sm font-black text-primary font-mono">{countdown}</span>
+             </div>
+          </div>
+        </div>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl">{competition.title}</CardTitle>
-              <CardDescription className="mt-2 space-y-1">
-                <div className="flex items-center gap-2">
-                  <Crown className="w-4 h-4" />
-                  <span>Người tạo: {competition.creator.name}</span>
-                  {isCreator && <Badge variant="secondary">Của bạn</Badge>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <GraduationCap className="w-4 h-4" />
-                  <span>Cấp độ: HSK {competition.level}</span>
-                </div>
-              </CardDescription>
-            </div>
-            <div className="text-right">
-              {isPending && (
-                <Badge className="bg-yellow-500 text-white">Chờ bắt đầu</Badge>
-              )}
-              {isActive && (
-                <Badge className="bg-green-500 text-white">Đang diễn ra</Badge>
-              )}
-              {isCompleted && (
-                <Badge className="bg-gray-500 text-white">Đã kết thúc</Badge>
-              )}
-              <p className="text-sm text-muted-foreground mt-2">{countdown}</p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="text-center">
-              <Trophy className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
-              <p className="text-2xl font-bold">{competition.numberOfQuestions}</p>
-              <p className="text-sm text-muted-foreground">Câu hỏi</p>
-            </div>
-            <div className="text-center">
-              <Clock className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-              <p className="text-2xl font-bold">{competition.totalTime}</p>
-              <p className="text-sm text-muted-foreground">Phút</p>
-            </div>
-            <div className="text-center">
-              <Users className="w-8 h-8 mx-auto mb-2 text-green-600" />
-              <p className="text-2xl font-bold">{competition.participants.length}</p>
-              <p className="text-sm text-muted-foreground">Người tham gia</p>
-            </div>
-            <div className="text-center">
-              <Calendar className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-              <p className="text-2xl font-bold">
-                {new Date(competition.startTime).toLocaleDateString('vi-VN', { 
-                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone 
-                })}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {new Date(competition.startTime).toLocaleTimeString('vi-VN', { 
-                  hour: '2-digit', 
-                  minute: '2-digit',
-                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone 
-                })}
-              </p>
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-3">
-            {canJoin && (
-              <Button onClick={handleJoinRequest} className="flex-1">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Xin tham gia
-              </Button>
-            )}
-            {hasPendingRequest && (
-              <Button disabled variant="secondary" className="flex-1">
-                <Clock className="w-4 h-4 mr-2" />
-                Đang chờ duyệt
-              </Button>
-            )}
-            {isParticipant && canStart && (
-              <Button onClick={handleStartCompetition} className="flex-1">
-                <Play className="w-4 h-4 mr-2" />
-                Bắt đầu thi
-              </Button>
-            )}
-            {isCompleted && (
-              <Button onClick={handleViewResults} variant="outline" className="flex-1">
-                <Trophy className="w-4 h-4 mr-2" />
-                Xem kết quả
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Participants Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Người tham gia ({competition.participants.length})</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSort}
-              className="flex items-center gap-2"
-            >
-              <ArrowUpDown className="w-4 h-4" />
-              Sắp xếp {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {competition.participants.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-gray-600">Chưa có người tham gia</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {sortedParticipants.map((participant) => (
-                <div key={participant._id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback>{participant.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{participant.name}</p>
-                      <p className="text-sm text-muted-foreground">HSK {participant.level}</p>
-                    </div>
-                  </div>
-                  {participant._id === competition.creator._id && (
-                    <Badge variant="secondary">
-                      <Crown className="w-3 h-3 mr-1" />
-                      Người tạo
+        <div className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-gray-100 shadow-xl relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-64 h-64 chinese-gradient opacity-5 rounded-bl-[4rem]" />
+           
+           <div className="relative z-10 space-y-10">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                 <div className="space-y-4">
+                    <Badge className="bg-primary/10 text-primary border-primary/20 rounded-lg px-3 py-1 font-bold text-xs uppercase tracking-widest">
+                       Đấu trường Hán ngữ • Cấp {competition.level}
                     </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">{competition.title}</h1>
+                    <div className="flex items-center space-x-3">
+                       <div className="w-10 h-10 rounded-xl chinese-gradient flex items-center justify-center text-white font-black shadow-lg">
+                          {competition.creator.name.charAt(0).toUpperCase()}
+                       </div>
+                       <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 leading-none mb-1">Được khởi tạo bởi</p>
+                          <p className="text-sm font-bold text-gray-700">{competition.creator.name}</p>
+                       </div>
+                    </div>
+                 </div>
 
-      {/* Join Requests Section - Only for creators */}
-      {isCreator && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Yêu cầu tham gia ({requests.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {requests.length === 0 ? (
-              <div className="text-center py-8">
-                <UserPlus className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">Chưa có yêu cầu tham gia</p>
+                 <div className="flex flex-wrap gap-3">
+                    {canJoin && (
+                      <Button onClick={handleJoinRequest} className="h-12 px-8 chinese-gradient text-white rounded-xl font-black shadow-lg shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all">
+                        <UserPlus className="w-4 h-4 mr-2" /> Tham chiến ngay
+                      </Button>
+                    )}
+                    {hasPendingRequest && (
+                      <Button disabled className="h-12 px-8 bg-amber-50 text-amber-600 rounded-xl font-black border-2 border-amber-100">
+                        <Clock className="w-4 h-4 mr-2" /> Đang chờ duyệt
+                      </Button>
+                    )}
+                    {isParticipant && canStart && (
+                      <Button onClick={handleStartCompetition} className="h-12 px-8 chinese-gradient text-white rounded-xl font-black shadow-lg shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all">
+                        <Play className="w-4 h-4 mr-2" /> Vào thi ngay
+                      </Button>
+                    )}
+                    {isCompleted && (
+                      <Button onClick={handleViewResults} variant="outline" className="h-12 px-8 rounded-xl font-black border-2 border-gray-100 hover:border-primary hover:text-primary transition-all">
+                        <Trophy className="w-4 h-4 mr-2" /> Xem bảng kết quả
+                      </Button>
+                    )}
+                 </div>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {requests.map((request) => (
-                  <div key={request._id} className="flex items-center justify-between p-4 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback>{request.requester.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{request.requester.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          HSK {request.requester.level} • {new Date(request.requestedAt).toLocaleString('vi-VN', {
-                            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                          })}
-                        </p>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-10 border-t border-gray-50">
+                 {[
+                   { icon: Trophy, label: 'Câu hỏi', value: `${competition.numberOfQuestions} câu`, color: 'text-yellow-600' },
+                   { icon: Clock, label: 'Thời gian', value: `${competition.totalTime} phút`, color: 'text-blue-600' },
+                   { icon: Users, label: 'Đấu thủ', value: `${competition.participants.length} người`, color: 'text-green-600' },
+                   { icon: Diamond, label: 'Lệ phí', value: `${(competition.cost || 10000).toLocaleString()} Xu`, color: 'text-amber-500' }
+                 ].map((item, i) => (
+                   <div key={i} className="text-center space-y-1">
+                      <div className={`w-10 h-10 rounded-xl ${item.color} bg-current/10 flex items-center justify-center mx-auto mb-2`}>
+                         <item.icon className="w-5 h-5" />
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white"
-                        onClick={() => openConfirmDialog('approve', request)}
-                        disabled={processingRequest === request._id}
-                      >
-                        <Check className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-500 text-red-500 hover:bg-red-50"
-                        onClick={() => openConfirmDialog('reject', request)}
-                        disabled={processingRequest === request._id}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{item.label}</p>
+                      <p className="text-sm font-black text-gray-900">{item.value}</p>
+                   </div>
+                 ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+           </div>
+        </div>
 
-      {/* Confirmation Dialog */}
+        <div className="grid lg:grid-cols-3 gap-8">
+           <div className="lg:col-span-2 space-y-6">
+              <div className="flex items-center justify-between">
+                 <h2 className="text-2xl font-black text-gray-900 flex items-center">
+                    <Users className="w-6 h-6 mr-2 text-primary" />
+                    Danh sách đấu thủ ({competition.participants.length})
+                 </h2>
+                 <Button variant="ghost" size="sm" onClick={handleSort} className="rounded-xl font-bold text-gray-400 text-xs uppercase">
+                    <ArrowUpDown className="w-3 h-3 mr-2" /> {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
+                 </Button>
+              </div>
+
+              <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-4">
+                 {competition.participants.length === 0 ? (
+                   <div className="text-center py-12 text-gray-400 italic">Chưa có ai tham gia.</div>
+                 ) : (
+                   <div className="grid sm:grid-cols-2 gap-4">
+                      {sortedParticipants.map((p) => (
+                        <div key={p._id} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 border border-gray-100 hover:bg-white hover:shadow-md transition-all">
+                           <div className="flex items-center space-x-3">
+                              <Avatar className="h-10 w-10 rounded-xl shadow-sm border border-white">
+                                 <AvatarFallback className="bg-gray-200 text-gray-500 font-bold text-xs">{p.name[0]}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                 <p className="text-sm font-bold text-gray-900 leading-none mb-1">{p.name}</p>
+                                 <p className="text-[10px] font-bold text-gray-400 uppercase">Level {p.level}</p>
+                              </div>
+                           </div>
+                           {p._id === competition.creator._id && <Crown className="w-4 h-4 text-yellow-500" />}
+                        </div>
+                      ))}
+                   </div>
+                 )}
+              </div>
+           </div>
+
+           {isCreator && (
+             <div className="space-y-6">
+                <h2 className="text-2xl font-black text-gray-900 flex items-center">
+                   <UserPlus className="w-6 h-6 mr-2 text-primary" />
+                   Xét duyệt ({requests.length})
+                </h2>
+                <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-4">
+                   {requests.length === 0 ? (
+                     <div className="text-center py-8">
+                        <p className="text-[10px] font-black uppercase text-gray-300 tracking-widest">Không có yêu cầu mới</p>
+                     </div>
+                   ) : (
+                     <div className="space-y-3">
+                        {requests.map((r) => (
+                          <div key={r._id} className="p-4 rounded-2xl border border-gray-100 space-y-4 bg-gray-50/30">
+                             <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">{r.requester.name[0]}</div>
+                                <div className="min-w-0">
+                                   <p className="text-xs font-black text-gray-900 truncate">{r.requester.name}</p>
+                                   <p className="text-[9px] font-bold text-gray-400">HSK {r.requester.level}</p>
+                                </div>
+                             </div>
+                             <div className="flex gap-2">
+                                <Button size="sm" onClick={() => openConfirmDialog('approve', r)} className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg h-8">
+                                   <Check className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => openConfirmDialog('reject', r)} className="flex-1 border-red-100 text-red-500 hover:bg-red-50 rounded-lg h-8">
+                                   <X className="w-3.5 h-3.5" />
+                                </Button>
+                             </div>
+                          </div>
+                        ))}
+                     </div>
+                   )}
+                </div>
+             </div>
+           )}
+        </div>
+      </div>
+
+      {/* Confirmation Dialog Redesign */}
       <Dialog open={confirmDialog.isOpen} onOpenChange={closeConfirmDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-500" />
-              Xác nhận hành động
-            </DialogTitle>
-            <DialogDescription>
-              {confirmDialog.type === 'approve' ? (
-                <>
-                  Bạn có chắc chắn muốn <strong>chấp nhận</strong> yêu cầu tham gia của{' '}
-                  <strong>{confirmDialog.request?.requester.name}</strong> không?
-                </>
-              ) : (
-                <>
-                  Bạn có chắc chắn muốn <strong>từ chối</strong> yêu cầu tham gia của{' '}
-                  <strong>{confirmDialog.request?.requester.name}</strong> không?
-                </>
-              )}
+        <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-sm">
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 ${confirmDialog.type === 'approve' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'}`}>
+             {confirmDialog.type === 'approve' ? <Check className="w-8 h-8" /> : <X className="w-8 h-8" />}
+          </div>
+          <DialogHeader className="text-center space-y-2">
+            <DialogTitle className="text-2xl font-black text-gray-900">Xác nhận thao tác</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-gray-500 leading-relaxed">
+               {confirmDialog.type === 'approve' ? 'Chấp nhận' : 'Từ chối'} quyền tham gia đấu trường của học viên <span className="text-gray-900 font-bold">{confirmDialog.request?.requester.name}</span>?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={closeConfirmDialog}>
-              Hủy
-            </Button>
+          <div className="flex flex-col gap-3 mt-8">
             <Button
               onClick={handleConfirmAction}
-              disabled={processingRequest === confirmDialog.request?._id}
-              className={
-                confirmDialog.type === 'approve'
-                  ? 'bg-green-500 hover:bg-green-600 text-white'
-                  : 'bg-red-500 hover:bg-red-600 text-white'
-              }
+              disabled={processingRequest !== null}
+              className={`h-12 rounded-xl font-black text-white shadow-lg ${confirmDialog.type === 'approve' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
             >
-              {processingRequest === confirmDialog.request?._id ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : confirmDialog.type === 'approve' ? (
-                <Check className="w-4 h-4 mr-2" />
-              ) : (
-                <X className="w-4 h-4 mr-2" />
-              )}
-              {confirmDialog.type === 'approve' ? 'Chấp nhận' : 'Từ chối'}
+              {processingRequest ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác nhận ngay'}
             </Button>
-          </DialogFooter>
+            <Button variant="ghost" onClick={closeConfirmDialog} className="h-12 rounded-xl font-bold text-gray-400">Quay lại</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

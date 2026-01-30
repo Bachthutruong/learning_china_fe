@@ -5,25 +5,26 @@ import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import { Progress } from '../components/ui/progress'
-import { 
-  // User, 
-  // Mail, 
-  Star, 
-  // Gem, 
-  TrendingUp, 
+import {
+  Star,
+  Gem,
+  TrendingUp,
   Calendar,
   Award,
   Target,
   BookOpen,
   TestTube,
   Trophy,
-  // Settings,
   Edit,
   Save,
   X,
   Loader2,
-  RotateCcw
+  RotateCcw,
+  Flame,
+  CheckCircle,
+  Zap
 } from 'lucide-react'
+import { Input } from '../components/ui/input'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { TopicQuiz } from '../components/TopicQuiz'
@@ -183,7 +184,7 @@ export const Profile = () => {
 
   const handleSave = async () => {
     try {
-      await api.put('/users/profile', { name: editedName });
+      await api.put('/auth/profile', { name: editedName });
       setUser({ ...user!, name: editedName });
       setIsEditing(false);
       toast.success("Cập nhật thành công! Thông tin cá nhân đã được cập nhật");
@@ -202,228 +203,212 @@ export const Profile = () => {
   const progressPercentage = (user?.experience || 0) / xpForNextLevel * 100
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Hồ sơ cá nhân</h1>
-          <p className="text-gray-600">Quản lý thông tin và theo dõi tiến độ học tập</p>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-12">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">Hồ sơ <span className="text-primary">Cá nhân</span></h1>
+            <p className="text-gray-500 font-medium">Nơi lưu giữ những cột mốc quan trọng trong hành trình học Hán ngữ.</p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsEditing(!isEditing)}
+            className="rounded-2xl border-2 font-bold h-12 px-6 hover:bg-primary/5 hover:text-primary transition-all"
+          >
+            {isEditing ? <X className="w-5 h-5 mr-2" /> : <Edit className="w-5 h-5 mr-2" />}
+            {isEditing ? 'Hủy chỉnh sửa' : 'Chỉnh sửa hồ sơ'}
+          </Button>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Profile Info */}
-          <div className="lg:col-span-1">
-            <Card className="mb-6">
-              <CardContent className="p-6 text-center">
-                <Avatar className="h-24 w-24 mx-auto mb-4">
-                  <AvatarImage src="" alt={user?.name} />
-                  <AvatarFallback className="text-3xl">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                
-                {isEditing ? (
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      value={editedName}
-                      onChange={(e) => setEditedName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <div className="flex gap-2 justify-center">
-                      <Button size="sm" onClick={handleSave}>
-                        <Save className="h-4 w-4 mr-1" />
-                        Lưu
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={handleCancel}>
-                        <X className="h-4 w-4 mr-1" />
-                        Hủy
-                      </Button>
+          {/* Left Column: Avatar & Quick Stats */}
+          <div className="space-y-8">
+            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl text-center relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-32 h-32 chinese-gradient opacity-5 rounded-bl-[4rem]" />
+               
+               <div className="relative z-10">
+                  <div className="relative inline-block mb-6">
+                    <Avatar className="h-32 w-32 rounded-[2.5rem] border-4 border-white shadow-2xl ring-4 ring-primary/10 transition-transform group-hover:scale-105 duration-500">
+                      <AvatarImage src="" alt={user?.name} />
+                      <AvatarFallback className="text-4xl font-black chinese-gradient text-white">
+                        {user?.name?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center border border-gray-100">
+                       <Award className="w-6 h-6 text-primary" />
                     </div>
                   </div>
-                ) : (
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{user?.name}</h2>
-                    <p className="text-gray-600 mb-4">{user?.email}</p>
-                    <Button variant="outline" onClick={() => setIsEditing(true)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Chỉnh sửa
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
-            {/* Stats */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                  Thống kê
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Cấp độ</span>
-                  <Badge variant="outline">Lv.{user?.level || 1}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Kinh nghiệm</span>
-                  <span className="font-semibold">{user?.experience || 0} XP</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Xu</span>
-                  <span className="font-semibold">{user?.coins || 0}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Chuỗi ngày</span>
-                  <span className="font-semibold">{user?.streak || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
+                  {isEditing ? (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top duration-300">
+                      <Input
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        className="text-center h-12 rounded-xl font-bold border-2 focus:border-primary"
+                      />
+                      <Button onClick={handleSave} className="w-full chinese-gradient h-12 rounded-xl font-black">
+                        <Save className="w-4 h-4 mr-2" /> Lưu thay đổi
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <h2 className="text-2xl font-black text-gray-900">{user?.name}</h2>
+                      <p className="text-sm text-gray-400 font-bold italic uppercase tracking-widest">{user?.email}</p>
+                    </div>
+                  )}
+               </div>
 
-            {/* Level Progress */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-green-600" />
-                  Tiến độ cấp độ
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Cấp {user?.level || 1}</span>
-                    <span>Cấp {(user?.level || 1) + 1}</span>
+               <div className="relative z-10 grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-gray-50">
+                  <div className="text-center">
+                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Cấp độ</p>
+                     <p className="text-xl font-black text-gray-900">Lv.{user?.level}</p>
                   </div>
-                  <Progress value={progressPercentage} className="h-2" />
-                  <div className="text-center text-sm text-gray-600">
-                    {user?.experience || 0} / {xpForNextLevel} XP
+                  <div className="text-center">
+                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Chuỗi ngày</p>
+                     <p className="text-xl font-black text-primary flex items-center justify-center">
+                        <Flame className="w-5 h-5 mr-1 fill-current" /> {user?.streak}
+                     </p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+               </div>
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-6">
+               <h3 className="text-xl font-black text-gray-900 flex items-center">
+                  <TrendingUp className="w-5 h-5 mr-2 text-primary" />
+                  Tiến độ hiện tại
+               </h3>
+               <div className="space-y-4">
+                  <div className="flex justify-between text-xs font-black uppercase tracking-widest text-gray-400">
+                     <span>{user?.experience} XP</span>
+                     <span>{xpForNextLevel} XP</span>
+                  </div>
+                  <div className="h-4 bg-gray-50 rounded-full overflow-hidden p-1 shadow-inner">
+                     <div 
+                       className="h-full chinese-gradient rounded-full transition-all duration-1000"
+                       style={{ width: `${progressPercentage}%` }}
+                     />
+                  </div>
+                  <p className="text-center text-xs font-bold text-gray-500 italic">
+                     Còn {(xpForNextLevel - (user?.experience || 0))} XP nữa để lên cấp mới
+                  </p>
+               </div>
+            </div>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Reports */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-blue-600" />
-                  Báo cáo của tôi
-                </CardTitle>
-                <CardDescription>Lịch sử các báo cáo lỗi bạn đã gửi</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    <span>Đang tải báo cáo...</span>
-                  </div>
-                ) : reports.length > 0 ? (
-                  <div className="space-y-4">
-                    {reports.map((report) => (
-                      <div key={report._id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{report.type}</Badge>
-                            <span className="font-medium text-sm">{report.category}</span>
-                          </div>
-                          <Badge variant={getStatusBadgeVariant(report.status)}>
-                            {getStatusText(report.status)}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          <strong>Mô tả:</strong> {report.description}
+          {/* Right Column: Achievements & Activities */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Learning Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               {[
+                 { label: 'Từ vựng', value: learningStats.vocabularyLearned, icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-50' },
+                 { label: 'Bài test', value: learningStats.testsCompleted, icon: TestTube, color: 'text-green-600', bg: 'bg-green-50' },
+                 { label: 'Cuộc thi', value: learningStats.competitionsJoined, icon: Trophy, color: 'text-amber-600', bg: 'bg-amber-50' }
+               ].map((stat, i) => (
+                 <div key={i} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center space-x-4 group hover:shadow-md transition-all">
+                    <div className={`w-14 h-14 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center shrink-0 transition-transform group-hover:rotate-6`}>
+                       <stat.icon className="w-7 h-7" />
+                    </div>
+                    <div>
+                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{stat.label}</p>
+                       <p className="text-2xl font-black text-gray-900">{stat.value}</p>
+                    </div>
+                 </div>
+               ))}
+            </div>
+
+            {/* Achievements Section */}
+            <div className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-gray-100 shadow-xl space-y-8">
+               <h3 className="text-xl font-black text-gray-900 flex items-center">
+                  <Star className="w-5 h-5 mr-2 text-amber-500 fill-current" />
+                  Danh hiệu danh giá
+               </h3>
+               
+               <div className="grid md:grid-cols-2 gap-4">
+                  {achievements.map((achievement, index) => (
+                    <div 
+                      key={index} 
+                      className={`flex items-center space-x-4 p-5 rounded-3xl border transition-all ${
+                        achievement.completed 
+                        ? 'bg-white border-primary/20 shadow-md ring-1 ring-primary/5' 
+                        : 'bg-gray-50/50 border-gray-100 grayscale opacity-60'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                        achievement.completed ? 'chinese-gradient text-white shadow-lg' : 'bg-gray-200 text-gray-500'
+                      }`}>
+                        <Award className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`font-bold text-sm truncate ${achievement.completed ? 'text-gray-900' : 'text-gray-500'}`}>
+                          {achievement.title}
+                        </h4>
+                        <p className="text-[10px] text-gray-500 font-medium line-clamp-1 italic">
+                          {achievement.description}
                         </p>
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <span>{new Date(report.createdAt).toLocaleDateString()}</span>
-                          {report.rewardExperience && report.rewardCoins && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-green-600">+{report.rewardExperience} XP</span>
-                              <span className="text-blue-600">+{report.rewardCoins} xu</span>
-                            </div>
-                          )}
+                      </div>
+                      {achievement.completed && (
+                        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                          <CheckCircle className="w-4 h-4 text-white" />
                         </div>
+                      )}
+                    </div>
+                  ))}
+               </div>
+            </div>
+
+            {/* Reports Section */}
+            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
+               <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-black text-gray-900 flex items-center">
+                    <Target className="w-5 h-5 mr-2 text-primary" />
+                    Lịch sử đóng góp
+                  </h3>
+                  <Badge variant="outline" className="rounded-xl border-gray-200 font-bold text-gray-400">
+                    {reports.length} Báo cáo
+                  </Badge>
+               </div>
+
+               {loading ? (
+                 <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                 </div>
+               ) : reports.length > 0 ? (
+                 <div className="space-y-4">
+                    {reports.map((report) => (
+                      <div key={report._id} className="p-6 rounded-3xl bg-gray-50/50 border border-gray-100 hover:bg-white hover:shadow-lg transition-all space-y-3">
+                         <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                               <Badge className="rounded-xl px-3 py-1 font-bold text-[10px] uppercase tracking-widest">{report.type}</Badge>
+                               <span className="text-xs font-black text-gray-400">{new Date(report.createdAt).toLocaleDateString('vi-VN')}</span>
+                            </div>
+                            <Badge variant={getStatusBadgeVariant(report.status)} className="rounded-xl font-black uppercase text-[9px]">
+                               {getStatusText(report.status)}
+                            </Badge>
+                         </div>
+                         <p className="text-sm text-gray-700 font-medium leading-relaxed italic">"{report.description}"</p>
+                         {(report.rewardExperience || report.rewardCoins) && (
+                           <div className="pt-2 flex items-center space-x-4">
+                              <span className="text-[10px] font-black text-green-600 flex items-center">
+                                 <Zap className="w-3 h-3 mr-1" /> +{report.rewardExperience} XP
+                              </span>
+                              <span className="text-[10px] font-black text-amber-500 flex items-center">
+                                 <Gem className="w-3 h-3 mr-1" /> +{report.rewardCoins} Xu
+                              </span>
+                           </div>
+                         )}
                       </div>
                     ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p>Bạn chưa có báo cáo nào</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Achievements */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-yellow-600" />
-                  Thành tích
-                </CardTitle>
-                <CardDescription>Danh hiệu và thành tích bạn đã đạt được</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {achievements.map((achievement, index) => {
-                    const RawIcon: any = (achievement as any).icon
-                    return (
-                      <div
-                        key={index}
-                        className={`flex items-center space-x-3 p-3 rounded-lg ${
-                          achievement.completed 
-                            ? 'bg-green-50 border border-green-200' 
-                            : 'bg-gray-50'
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          achievement.completed ? 'bg-green-500' : 'bg-gray-300'
-                        }`}>
-                          {typeof RawIcon === 'function' ? (
-                            <RawIcon className={`h-5 w-5 ${
-                              achievement.completed ? 'text-white' : 'text-gray-500'
-                            }`} />
-                          ) : React.isValidElement(RawIcon) ? (
-                            RawIcon
-                          ) : (
-                            <span className={`text-lg ${
-                              achievement.completed ? 'text-white' : 'text-gray-700'
-                            }`}>{typeof RawIcon === 'string' ? RawIcon : '🏅'}</span>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <h4 className={`font-medium ${
-                            achievement.completed ? 'text-green-800' : 'text-gray-700'
-                          }`}>
-                            {achievement.title}
-                          </h4>
-                          <p className={`text-sm ${
-                            achievement.completed ? 'text-green-600' : 'text-gray-500'
-                          }`}>
-                            {achievement.description}
-                          </p>
-                          {achievement.completed && achievement.date && (
-                            <p className="text-xs text-green-600 mt-1">
-                              Đạt được: {achievement.date}
-                            </p>
-                          )}
-                        </div>
-                        {achievement.completed && (
-                          <div className="text-green-500">
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                 </div>
+               ) : (
+                 <div className="text-center py-12 space-y-4">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200">
+                       <Edit className="w-8 h-8" />
+                    </div>
+                    <p className="text-gray-400 font-bold italic">Bạn chưa thực hiện báo cáo đóng góp nào.</p>
+                 </div>
+               )}
+            </div>
 
             {/* Personal Topics and Vocabularies */}
             <Card>

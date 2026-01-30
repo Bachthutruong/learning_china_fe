@@ -6,7 +6,7 @@ import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 // import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { RadioGroup, RadioGroupItem } from './ui/radio-group'
-import { Flag, Send, X } from 'lucide-react'
+import { Flag, Loader2 } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -75,25 +75,31 @@ export const ReportErrorDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Flag className="h-5 w-5 text-orange-500" />
-            Báo cáo lỗi
-          </DialogTitle>
-          <DialogDescription>
-            Giúp chúng tôi cải thiện chất lượng nội dung. Báo cáo lỗi cho: <strong>"{itemContent}"</strong>
-          </DialogDescription>
+      <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-lg">
+        <DialogHeader className="text-center space-y-4 mb-8">
+           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+              <Flag className="w-8 h-8 text-primary" />
+           </div>
+           <DialogTitle className="text-3xl font-black text-gray-900 tracking-tight">Báo cáo nội dung</DialogTitle>
+           <DialogDescription className="text-gray-500 font-medium leading-relaxed">
+              Bạn phát hiện sai sót trong: <span className="text-gray-900 font-bold">"{itemContent}"</span>? Hãy cho chúng tôi biết để Jiudi hoàn thiện hơn.
+           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-3">
-            <Label>Lý do báo cáo *</Label>
-            <RadioGroup value={reason} onValueChange={setReason}>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="space-y-4">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Lý do báo cáo *</Label>
+            <RadioGroup value={reason} onValueChange={setReason} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {reportReasons.map((reasonOption) => (
-                <div key={reasonOption} className="flex items-center space-x-2">
-                  <RadioGroupItem value={reasonOption} id={reasonOption} />
-                  <Label htmlFor={reasonOption} className="text-sm">
+                <div 
+                  key={reasonOption} 
+                  className={`flex items-center space-x-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                    reason === reasonOption ? 'border-primary bg-primary/5 shadow-sm' : 'border-gray-50 bg-gray-50/30 hover:border-gray-100 hover:bg-white'
+                  }`}
+                  onClick={() => setReason(reasonOption)}
+                >
+                  <RadioGroupItem value={reasonOption} id={reasonOption} className="shrink-0" />
+                  <Label htmlFor={reasonOption} className="text-sm font-bold text-gray-700 cursor-pointer flex-1">
                     {reasonOption}
                   </Label>
                 </div>
@@ -102,33 +108,32 @@ export const ReportErrorDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Mô tả chi tiết (tùy chọn)</Label>
+            <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Mô tả chi tiết (tùy chọn)</Label>
             <Textarea
               id="description"
-              placeholder="Mô tả chi tiết về lỗi bạn phát hiện..."
+              placeholder="Hãy mô tả rõ hơn về lỗi để chúng tôi dễ dàng kiểm tra..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[120px] rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-medium"
               rows={3}
             />
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
-              <X className="mr-2 h-4 w-4" />
-              Hủy
+          <div className="flex gap-4 pt-4">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={handleClose}
+              className="flex-1 h-12 rounded-xl font-bold text-gray-400"
+            >
+              Hủy bỏ
             </Button>
-            <Button type="submit" disabled={loading || !reason}>
-              {loading ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Đang gửi...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Gửi báo cáo
-                </>
-              )}
+            <Button 
+              type="submit" 
+              disabled={loading || !reason}
+              className="flex-1 chinese-gradient h-12 rounded-xl font-black text-white shadow-lg shadow-primary/20"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Gửi báo cáo ngay'}
             </Button>
           </div>
         </form>

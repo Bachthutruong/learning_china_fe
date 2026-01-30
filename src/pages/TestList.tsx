@@ -1,29 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Button } from '../components/ui/button'
-import { 
-  Coins, 
+import {
+  Coins,
   Star,
   Brain,
   Zap,
-  Trophy,
   Crown,
-  Sparkles,
-  Rocket,
-  Target,
-  Award,
-  TrendingUp,
-  Lightbulb,
-  CheckCircle,
-  Diamond,
-  Flame,
-  Gamepad2,
-  Shield,
-  Sword,
-  Users,
   Calendar,
-  BarChart3
+  BarChart3,
+  TestTube,
+  Gem
 } from 'lucide-react'
+import { Badge } from '../components/ui/badge'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
@@ -124,350 +113,220 @@ export const TestList = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Enhanced Header */}
-          <div className="text-center mb-12">
-            <div className="relative inline-block mb-6">
-              <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4">
-                🧪 Bài Test
-              </h1>
-              <div className="absolute -top-4 -right-4">
-                <Sparkles className="h-10 w-10 text-yellow-400 animate-bounce" />
-              </div>
-              <div className="absolute -bottom-2 -left-2">
-                <Brain className="h-8 w-8 text-purple-400 animate-pulse" />
-              </div>
-              <div className="absolute top-2 -left-6">
-                <Trophy className="h-6 w-6 text-orange-400 animate-ping" />
-              </div>
-            </div>
-            
-            <p className="text-xl text-gray-700 font-medium mb-8">
-              Làm bài test theo cấp độ để kiểm tra kiến thức và nhận thưởng
-            </p>
-            
-            {user && (
-              <div className="flex flex-wrap justify-center gap-6 mb-8">
-                <div className="group relative">
-                  <div className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                    <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full">
-                      <Coins className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <span className="font-bold text-lg">Xu: {user.coins.toLocaleString()}</span>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Diamond className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm text-blue-600">Tiền tệ</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute -top-2 -right-2">
-                    <Zap className="h-5 w-5 text-yellow-500 animate-bounce" />
-                  </div>
-                </div>
-                
-                <div className="group relative">
-                  <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                    <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full">
-                      <Crown className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <span className="font-bold text-lg">Cấp: {userLevel}</span>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute -top-2 -right-2">
-                    <Award className="h-5 w-5 text-yellow-500 animate-pulse" />
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="mt-8">
-              <Button 
-                onClick={handleStartTest}
-                disabled={!user || user.coins < 10000}
-                className={`text-2xl px-12 py-6 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 ${
-                  !user || user.coins < 10000
-                    ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 hover:from-purple-600 hover:via-pink-600 hover:to-blue-600 text-white'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  {!user ? (
-                    <>
-                      <Shield className="h-8 w-8" />
-                      <span>Đăng nhập để làm test</span>
-                    </>
-                  ) : user.coins < 10000 ? (
-                    <>
-                      <Target className="h-8 w-8" />
-                      <span>Không đủ xu (cần 10,000)</span>
-                    </>
-                  ) : (
-                    <>
-                      <Rocket className="h-8 w-8 mr-2" />
-                      <span>🚀 Bắt đầu Test</span>
-                      <Sparkles className="h-6 w-6" />
-                    </>
-                  )}
-                </div>
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-12">
+        {/* Header Section */}
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
+           <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+              <TestTube className="w-4 h-4 text-primary" />
+              <span className="text-primary text-xs font-bold uppercase tracking-widest">Hệ thống khảo thí</span>
+           </div>
+           <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+              Luyện tập & <span className="text-primary">Kiểm tra</span>
+           </h1>
+           <p className="text-gray-500 font-medium">
+              Hệ thống bài test thông minh tự động điều chỉnh theo trình độ của bạn, giúp tối ưu hóa việc ghi nhớ.
+           </p>
+        </div>
 
-          {/* Enhanced Level Info */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            {/* Current Level Card */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-8 rounded-3xl shadow-xl border-2 border-blue-200">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl">
-                  <Crown className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-blue-900">Cấp độ hiện tại: {userLevel}</h3>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Star className="h-5 w-5 text-yellow-500 fill-current" />
-                    <Star className="h-5 w-5 text-yellow-500 fill-current" />
-                    <Star className="h-5 w-5 text-yellow-500 fill-current" />
-                    <Star className="h-5 w-5 text-yellow-500 fill-current" />
-                    <Star className="h-5 w-5 text-yellow-500 fill-current" />
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white/50 p-6 rounded-2xl">
-                <div className="flex items-start gap-3">
-                  <Lightbulb className="h-6 w-6 text-yellow-500 mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="text-blue-800 font-medium mb-2">
-                      💡 Trả lời đúng hết tất cả câu hỏi ở cấp độ này để lên cấp!
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-green-700">Tiến bộ liên tục</span>
+        {/* User Stats Summary */}
+        <div className="grid md:grid-cols-2 gap-8">
+           <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 chinese-gradient opacity-5 rounded-bl-[4rem]" />
+              <div className="relative z-10 flex items-center space-x-6">
+                 <div className="w-20 h-20 chinese-gradient rounded-[2rem] flex items-center justify-center shadow-lg rotate-3 group-hover:rotate-0 transition-transform">
+                    <Crown className="w-10 h-10 text-white" />
+                 </div>
+                 <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Trình độ hiện tại</p>
+                    <h3 className="text-3xl font-black text-gray-900">Cấp độ {userLevel}</h3>
+                    <div className="flex items-center space-x-1 text-amber-500">
+                       <Star className="w-4 h-4 fill-current" />
+                       <Star className="w-4 h-4 fill-current" />
+                       <Star className="w-4 h-4 fill-current" />
+                       <span className="text-xs font-bold ml-2 text-gray-400">Đạt 85% tiến độ</span>
                     </div>
-                  </div>
-                </div>
+                 </div>
               </div>
-            </div>
+           </div>
 
-            {/* Proficiency Test Card */}
-            <div className="bg-gradient-to-br from-purple-50 to-pink-100 p-8 rounded-3xl shadow-xl border-2 border-purple-200">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl">
-                  <Sword className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-purple-900">Test năng lực</h3>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Flame className="h-5 w-5 text-orange-500" />
-                    <span className="text-sm text-orange-600">Thử thách cao</span>
-                  </div>
-                </div>
+           <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500 opacity-5 rounded-bl-[4rem]" />
+              <div className="relative z-10 flex items-center space-x-6">
+                 <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center shadow-sm group-hover:rotate-3 transition-transform">
+                    <Coins className="w-10 h-10 text-amber-500 fill-current" />
+                 </div>
+                 <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Ngân sách học tập</p>
+                    <h3 className="text-3xl font-black text-gray-900">{user?.coins.toLocaleString()} Xu</h3>
+                    <p className="text-xs font-bold text-gray-400 italic">Cần 10,000 Xu cho mỗi lượt Test</p>
+                 </div>
               </div>
-              <div className="bg-white/50 p-6 rounded-2xl">
-                <div className="flex items-start gap-3">
-                  <Rocket className="h-6 w-6 text-purple-500 mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="text-purple-800 font-medium mb-2">
-                      🚀 Muốn nhảy cấp? Hãy làm Test năng lực!
-                    </p>
-                    <Link 
-                      to="/proficiency" 
-                      className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
-                    >
-                      <Gamepad2 className="h-5 w-5" />
-                      Bắt đầu thử thách
-                      <Sparkles className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+           </div>
+        </div>
 
-          {/* Test Rules & Rewards */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-100 p-8 rounded-3xl shadow-xl border-2 border-green-200 mb-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-3 bg-white/50 px-6 py-3 rounded-2xl mb-4">
-                <Award className="h-6 w-6 text-green-500" />
-                <span className="font-bold text-green-700 text-lg">Quy tắc & Phần thưởng</span>
+        {/* CTA and Logic Cards */}
+        <div className="grid lg:grid-cols-3 gap-8">
+           <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              
+              <div className="relative z-10 space-y-8 flex flex-col items-center text-center">
+                 <div className="space-y-4">
+                    <h2 className="text-3xl font-black text-gray-900">Sẵn sàng vượt cấp?</h2>
+                    <p className="text-gray-500 font-medium max-w-md">Bài test tổng hợp bao gồm đầy đủ các kỹ năng: Nhận diện mặt chữ, Phiên âm, Ngữ pháp và Đọc hiểu.</p>
+                 </div>
+
+                 <Button 
+                   onClick={handleStartTest}
+                   disabled={!user || user.coins < 10000}
+                   className={`h-16 px-12 rounded-2xl font-black text-xl shadow-2xl transition-all transform hover:-translate-y-1 ${
+                     !user || user.coins < 10000
+                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                       : 'chinese-gradient text-white shadow-primary/20 hover:shadow-primary/30'
+                   }`}
+                 >
+                   {user && user.coins < 10000 ? 'Không đủ số dư' : 'Bắt đầu bài Test ngay'}
+                 </Button>
+
+                 <div className="flex items-center space-x-8 pt-4">
+                    <div className="text-center">
+                       <p className="text-xl font-black text-gray-900">20</p>
+                       <p className="text-[10px] font-bold text-gray-400 uppercase">Câu hỏi</p>
+                    </div>
+                    <div className="w-px h-8 bg-gray-100" />
+                    <div className="text-center">
+                       <p className="text-xl font-black text-gray-900">30</p>
+                       <p className="text-[10px] font-bold text-gray-400 uppercase">Phút làm</p>
+                    </div>
+                    <div className="w-px h-8 bg-gray-100" />
+                    <div className="text-center">
+                       <p className="text-xl font-black text-green-600">+2000</p>
+                       <p className="text-[10px] font-bold text-gray-400 uppercase">XP Thưởng</p>
+                    </div>
+                 </div>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="p-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl mb-4 inline-block">
-                  <Coins className="h-8 w-8 text-white" />
-                </div>
-                <h4 className="font-bold text-blue-800 mb-2">Chi phí test</h4>
-                <p className="text-blue-600 font-semibold text-lg">10,000 xu</p>
+           </div>
+
+           <div className="bg-primary rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-xl shadow-primary/20 group">
+              <div className="absolute inset-0 chinese-gradient opacity-90" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+              
+              <div className="relative z-10 h-full flex flex-col justify-between">
+                 <div className="space-y-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                       <Brain className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-black leading-tight">Test Năng lực AI</h3>
+                    <p className="text-white/70 text-sm font-medium leading-relaxed">Muốn bỏ qua các bài học căn bản? Hãy thực hiện bài test năng lực để nhảy thẳng tới trình độ hiện tại của bạn.</p>
+                 </div>
+                 
+                 <Link to="/proficiency">
+                    <Button className="w-full h-14 bg-white text-primary hover:bg-gray-100 rounded-xl font-black shadow-lg transform group-hover:-translate-y-1 transition-all">
+                       Thử thách ngay
+                    </Button>
+                 </Link>
+              </div>
+           </div>
+        </div>
+
+        {/* Statistics Section */}
+        <div className="space-y-8">
+           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                 <h2 className="text-2xl font-black text-gray-900 flex items-center">
+                    <BarChart3 className="w-6 h-6 mr-2 text-primary" />
+                    Bảng xếp hạng tháng
+                 </h2>
+                 <p className="text-gray-500 font-medium">Top học viên có thành tích xuất sắc nhất trong kỳ thi.</p>
               </div>
               
-              <div className="text-center">
-                <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl mb-4 inline-block">
-                  <CheckCircle className="h-8 w-8 text-white" />
-                </div>
-                <h4 className="font-bold text-green-800 mb-2">Phần thưởng</h4>
-                <p className="text-green-600 font-semibold text-lg">100 xu + 100 XP/câu đúng</p>
+              <div className="flex items-center space-x-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+                 <Calendar className="w-4 h-4 text-gray-400 ml-2" />
+                 <input
+                   type="month"
+                   value={`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`}
+                   onChange={handleMonthChange}
+                   className="text-xs font-black uppercase tracking-widest text-gray-600 bg-transparent border-none focus:ring-0 cursor-pointer"
+                 />
               </div>
-              
-              <div className="text-center">
-                <div className="p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl mb-4 inline-block">
-                  <Target className="h-8 w-8 text-white" />
-                </div>
-                <h4 className="font-bold text-purple-800 mb-2">Mục tiêu</h4>
-                <p className="text-purple-600 font-semibold text-lg">Trả lời đúng tất cả câu hỏi</p>
-              </div>
-            </div>
-          </div>
+           </div>
 
-          {/* Test Statistics Section */}
-          <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-8 rounded-3xl shadow-xl border-2 border-indigo-200 mb-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-3 bg-white/50 px-6 py-3 rounded-2xl mb-4">
-                <BarChart3 className="h-6 w-6 text-indigo-500" />
-                <span className="font-bold text-indigo-700 text-lg">Thống kê người làm bài test</span>
-              </div>
-            </div>
-
-            {/* Filter Section */}
-            <div className="mb-6 flex flex-wrap items-center justify-center gap-4">
-              <Button
-                onClick={handleThisMonth}
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 py-2 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105"
-              >
-                <Calendar className="h-5 w-5 mr-2" />
-                Tháng này
-              </Button>
-              
-              <div className="flex items-center gap-3 bg-white/70 px-4 py-2 rounded-xl shadow-md">
-                <Calendar className="h-5 w-5 text-indigo-500" />
-                <input
-                  type="month"
-                  value={`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`}
-                  onChange={handleMonthChange}
-                  className="bg-transparent border-none outline-none text-indigo-700 font-medium cursor-pointer"
-                />
-              </div>
-            </div>
-
-            {/* Statistics Summary */}
-            {statistics && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-white/70 p-4 rounded-2xl shadow-md text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Users className="h-5 w-5 text-blue-500" />
-                    <span className="font-bold text-blue-700">Tổng người dùng</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-800">{statistics.totalUsers}</p>
-                </div>
-                
-                <div className="bg-white/70 p-4 rounded-2xl shadow-md text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    <span className="font-bold text-yellow-700">Tổng bài test</span>
-                  </div>
-                  <p className="text-2xl font-bold text-yellow-800">{statistics.totalTests}</p>
-                </div>
-                
-                <div className="bg-white/70 p-4 rounded-2xl shadow-md text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Calendar className="h-5 w-5 text-purple-500" />
-                    <span className="font-bold text-purple-700">Tháng</span>
-                  </div>
-                  <p className="text-lg font-bold text-purple-800 capitalize">{statistics.monthName} {statistics.year}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Statistics Table */}
-            <div className="bg-white/70 rounded-2xl shadow-lg overflow-hidden">
-              {loading ? (
-                <div className="p-8 text-center">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
-                  <p className="mt-4 text-indigo-600">Đang tải thống kê...</p>
-                </div>
-              ) : statistics && statistics.statistics.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold">STT</th>
-                        <th className="px-4 py-3 text-left font-semibold">Tên người dùng</th>
-                        <th className="px-4 py-3 text-left font-semibold">Email</th>
-                        <th className="px-4 py-3 text-center font-semibold">Cấp độ</th>
-                        <th className="px-4 py-3 text-center font-semibold">Số bài test</th>
-                        <th className="px-4 py-3 text-center font-semibold">Tổng câu hỏi</th>
-                        <th className="px-4 py-3 text-center font-semibold">Đúng</th>
-                        <th className="px-4 py-3 text-center font-semibold">Sai</th>
-                        <th className="px-4 py-3 text-center font-semibold">Điểm TB</th>
-                        <th className="px-4 py-3 text-center font-semibold">Xu nhận</th>
-                        <th className="px-4 py-3 text-center font-semibold">XP nhận</th>
-                      </tr>
+           <div className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl">
+              <div className="overflow-x-auto">
+                 <table className="w-full text-left">
+                    <thead>
+                       <tr className="bg-gray-50/50 border-b border-gray-100">
+                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Thứ hạng</th>
+                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Học viên</th>
+                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-center">Số bài Test</th>
+                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-center">Độ chính xác</th>
+                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Phần thưởng</th>
+                       </tr>
                     </thead>
-                    <tbody>
-                      {statistics.statistics.map((stat, index) => (
-                        <tr 
-                          key={stat.userId} 
-                          className={`border-b border-indigo-100 hover:bg-indigo-50 transition-colors ${
-                            index % 2 === 0 ? 'bg-white' : 'bg-indigo-50/30'
-                          }`}
-                        >
-                          <td className="px-4 py-3 font-medium text-indigo-700">{index + 1}</td>
-                          <td className="px-4 py-3 font-medium text-indigo-800">{stat.userName}</td>
-                          <td className="px-4 py-3 text-sm text-indigo-600">{stat.userEmail}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                              <Crown className="h-4 w-4" />
-                              {stat.userLevel}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center font-semibold text-indigo-700">{stat.totalTests}</td>
-                          <td className="px-4 py-3 text-center text-indigo-600">{stat.totalQuestions}</td>
-                          <td className="px-4 py-3 text-center font-semibold text-green-600">{stat.totalCorrect}</td>
-                          <td className="px-4 py-3 text-center font-semibold text-red-600">{stat.totalWrong}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${
-                              stat.averageScore >= 80 ? 'bg-green-100 text-green-700' :
-                              stat.averageScore >= 60 ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {stat.averageScore}%
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center gap-1 text-blue-600 font-semibold">
-                              <Coins className="h-4 w-4" />
-                              {stat.totalCoinsEarned.toLocaleString()}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center gap-1 text-purple-600 font-semibold">
-                              <Star className="h-4 w-4" />
-                              {stat.totalExperienceEarned.toLocaleString()}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                    <tbody className="divide-y divide-gray-100">
+                       {loading ? (
+                         [1, 2, 3].map(i => (
+                           <tr key={i} className="animate-pulse">
+                              <td colSpan={5} className="px-8 py-6 h-16 bg-gray-50/20" />
+                           </tr>
+                         ))
+                       ) : statistics && statistics.statistics.length > 0 ? (
+                         statistics.statistics.map((stat, idx) => (
+                           <tr key={stat.userId} className="group hover:bg-gray-50/50 transition-colors">
+                              <td className="px-8 py-6">
+                                 <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${
+                                   idx === 0 ? 'bg-yellow-400 text-white shadow-lg' :
+                                   idx === 1 ? 'bg-gray-300 text-white shadow-lg' :
+                                   idx === 2 ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-400'
+                                 }`}>
+                                    {idx + 1}
+                                 </span>
+                              </td>
+                              <td className="px-8 py-6">
+                                 <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 rounded-xl chinese-gradient flex items-center justify-center text-white font-black">
+                                       {stat.userName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                       <p className="text-sm font-black text-gray-900">{stat.userName}</p>
+                                       <Badge className="bg-primary/5 text-primary text-[9px] uppercase font-black border-none h-4 px-1.5">Lv.{stat.userLevel}</Badge>
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="px-8 py-6 text-center">
+                                 <span className="text-sm font-black text-gray-900">{stat.totalTests}</span>
+                              </td>
+                              <td className="px-8 py-6 text-center">
+                                 <div className="flex flex-col items-center space-y-1">
+                                    <span className={`text-sm font-black ${stat.averageScore >= 80 ? 'text-green-600' : 'text-amber-600'}`}>
+                                       {stat.averageScore}%
+                                    </span>
+                                    <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                       <div className={`h-full ${stat.averageScore >= 80 ? 'bg-green-500' : 'bg-amber-500'}`} style={{ width: `${stat.averageScore}%` }} />
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="px-8 py-6 text-right">
+                                 <div className="space-y-0.5">
+                                    <p className="text-sm font-black text-amber-500 flex items-center justify-end">
+                                       <Gem className="w-3 h-3 mr-1" /> {stat.totalCoinsEarned.toLocaleString()}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-primary flex items-center justify-end">
+                                       <Zap className="w-3 h-3 mr-1 fill-current" /> {stat.totalExperienceEarned.toLocaleString()} XP
+                                    </p>
+                                 </div>
+                              </td>
+                           </tr>
+                         ))
+                       ) : (
+                         <tr>
+                            <td colSpan={5} className="px-8 py-12 text-center text-gray-400 font-bold italic">Chưa có dữ liệu thống kê cho tháng này.</td>
+                         </tr>
+                       )}
                     </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-8 text-center">
-                  <Users className="h-12 w-12 text-indigo-300 mx-auto mb-4" />
-                  <p className="text-indigo-600 font-medium">Không có dữ liệu thống kê cho tháng này</p>
-                </div>
-              )}
-            </div>
-          </div>
-
+                 </table>
+              </div>
+           </div>
         </div>
       </div>
     </div>

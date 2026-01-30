@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { 
@@ -9,15 +8,18 @@ import {
   ArrowRight,
   Play,
   Pause,
+  Brain,
+  Lightbulb,
+  Trophy,
+  Star
 } from 'lucide-react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { ReportErrorDialog } from './ReportErrorDialog'
 
 interface Vocabulary {
   _id: string
   word: string
   pinyin: string
-  zhuyin?: string
   meaning: string
   partOfSpeech: string
   level: number
@@ -26,9 +28,7 @@ interface Vocabulary {
   synonyms: string[]
   antonyms: string[]
   imageUrl?: string
-  audio?: string
   audioUrl?: string
-  videoUrl?: string
   questions?: QuizQuestion[]
 }
 
@@ -41,7 +41,7 @@ interface QuizQuestion {
 
 interface VocabularyStudyCardProps {
   vocabulary: Vocabulary
-  onStatusChange: any
+  onStatusChange: (status: 'learned' | 'studying' | 'skipped') => Promise<void>
   status?: 'learned' | 'studying' | 'skipped'
 }
 
@@ -85,13 +85,6 @@ export const VocabularyStudyCard = ({
     }
   }, [showDetails])
   
-  useEffect(() => {
-    const audioEl = audioRef.current
-    if (!audioEl) return
-    // In case metadata already loaded before handlers bind
-    if (isFinite(audioEl.duration)) setDuration(audioEl.duration)
-  }, [vocabulary.audioUrl])
-
   const formatTime = (timeSec: number) => {
     if (!isFinite(timeSec)) return '0:00'
     const minutes = Math.floor(timeSec / 60)
@@ -99,24 +92,17 @@ export const VocabularyStudyCard = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
-  const handleSeekAtClientX = (clientX: number) => {
+  const handleSeekClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!progressBarRef.current || !audioRef.current || duration === 0) return
     const rect = progressBarRef.current.getBoundingClientRect()
-    const clamped = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    const clamped = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
     const newTime = clamped * duration
     audioRef.current.currentTime = newTime
     setCurrentTime(newTime)
   }
 
-  const handleSeekClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    handleSeekAtClientX(e.clientX)
-  }
-  
-  // No audio controls; simplified view
-
-  const handleStatusChange = (status: 'learned' | 'studying' | 'skipped') => {
-    if (status === 'learned') {
-      // Luôn yêu cầu khảo bài khi đánh dấu đã thuộc/học tiếp
+  const handleStatusChange = (newStatus: 'learned' | 'studying' | 'skipped') => {
+    if (newStatus === 'learned') {
       setShowQuiz(true)
       setQuizAnswers([])
       setQuizCompleted(false)
@@ -125,7 +111,7 @@ export const VocabularyStudyCard = ({
       setShowAnswer(false)
       return
     }
-    onStatusChange(status)
+    onStatusChange(newStatus)
   }
 
   const handleQuizAnswer = (answerIndex: number) => {
@@ -134,16 +120,11 @@ export const VocabularyStudyCard = ({
     setQuizAnswers(newAnswers)
   }
 
-  const handleCheckAnswer = () => {
-    setShowAnswer(true)
-  }
-
   const handleNextQuiz = () => {
     setShowAnswer(false)
     if (currentQuizIndex < vocabulary.questions!.length - 1) {
       setCurrentQuizIndex(currentQuizIndex + 1)
     } else {
-      // Calculate score
       const correctAnswers = vocabulary.questions!.filter((q, index) => 
         quizAnswers[index] === q.correctAnswer
       ).length
@@ -153,387 +134,159 @@ export const VocabularyStudyCard = ({
     }
   }
 
-  const handlePreviousQuiz = () => {
-    setShowAnswer(false)
-    if (currentQuizIndex > 0) {
-      setCurrentQuizIndex(currentQuizIndex - 1)
-    }
-  }
-
   const handleFinishQuiz = async () => {
     setShowQuiz(false)
-    // Chỉ đánh dấu "đã thuộc" nếu trả lời đúng tất cả câu hỏi
-    if (quizScore === 100) {
-      // Gọi onStatusChange để cập nhật trạng thái và nhận rewards
-      await onStatusChange('learned')
-    } else {
-      // Nếu không đúng hết thì đánh dấu "cần học thêm"
-      await onStatusChange('studying')
-    }
+    if (quizScore === 100) await onStatusChange('learned')
+    else await onStatusChange('studying')
   }
 
   const currentQuiz = vocabulary.questions?.[currentQuizIndex]
 
   return (
     <>
-      <Card className="w-full max-w-5xl mx-auto border shadow-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-        <CardHeader className="px-6 py-10">
-          <CardTitle className="text-6xl font-extrabold text-white text-center">
-            {vocabulary.word}
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className="p-6 bg-transparent">
-          {/* Actions: Học, Đã thuộc, Cần học thêm, Bỏ qua, Báo lỗi */}
-          <div className="flex justify-center">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                size="sm"
-                onClick={() => setShowDetails(true)}
-                className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <BookOpen className="w-5 h-5 mr-1" />
-                Học
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleStatusChange('learned')}
-                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                <CheckCircle className="w-5 h-5 mr-1" />
-                {status === 'learned' ? 'Học tiếp' : 'Đã thuộc'}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleStatusChange('studying')}
-                className="h-10 px-4 bg-orange-500 hover:bg-orange-600 text-white"
-              >
-                Cần học thêm
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleStatusChange('skipped')}
-                className="h-10 px-4 bg-gray-500 hover:bg-gray-600 text-white"
-              >
-                Bỏ qua
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowReport(true)}
-                className="h-10 px-4 border-orange-300 text-orange-700 hover:bg-orange-50"
-              >
-                Báo lỗi
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Vocabulary Details Dialog */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-4xl border-0 shadow-2xl bg-white">
-          <div className="space-y-6 p-1">
-            {/* Title card */}
-            <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-blue-200">
-              <div className="text-3xl font-bold text-gray-900">{vocabulary.word}</div>
-              <div className="text-blue-700/80 mt-1">
-                {vocabulary.pinyin} {vocabulary.zhuyin && `• ${vocabulary.zhuyin}`} • {vocabulary.partOfSpeech}
+      <div className="w-full max-w-4xl mx-auto">
+        <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden relative group">
+           <div className="absolute top-0 right-0 w-64 h-64 chinese-gradient opacity-5 rounded-bl-[8rem]" />
+           
+           <div className="p-12 md:p-20 text-center space-y-12">
+              <div className="space-y-4 animate-in fade-in zoom-in duration-700">
+                 <h2 className="text-8xl md:text-9xl font-black text-gray-900 tracking-tight">{vocabulary.word}</h2>
+                 <p className="text-2xl md:text-3xl font-bold text-primary italic font-serif uppercase tracking-widest">{vocabulary.pinyin}</p>
               </div>
-            </div>
 
-            {/* Media section: show image/video and audio if available */}
-            {(vocabulary.imageUrl || (vocabulary as any).videoUrl) && (
-              <div className="flex justify-center">
-                {((vocabulary as any).videoUrl) ? (
-                  <video
-                    controls
-                    src={(vocabulary as any).videoUrl as string}
-                    className="w-full max-w-3xl rounded-lg border border-gray-200"
-                  />
-                ) : (
-                  <img
-                    src={vocabulary.imageUrl!}
-                    alt={vocabulary.word}
-                    className="max-w-full h-80 object-contain rounded-lg border border-gray-200"
-                  />
-                )}
+              <div className="flex flex-wrap justify-center gap-4">
+                 <Button size="lg" onClick={() => setShowDetails(true)} className="h-14 px-8 bg-gray-900 text-white rounded-2xl font-black shadow-xl hover:bg-black transition-all">
+                   <BookOpen className="w-5 h-5 mr-2" /> Khám phá chi tiết
+                 </Button>
+                 <Button size="lg" onClick={() => handleStatusChange('learned')} className="h-14 px-8 chinese-gradient text-white rounded-2xl font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all">
+                   <CheckCircle className="w-5 h-5 mr-2" /> {status === 'learned' ? 'Ôn tập lại' : 'Tôi đã thuộc từ này'}
+                 </Button>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-3 pt-4">
+                 <Button variant="ghost" onClick={() => handleStatusChange('studying')} className="rounded-xl font-bold text-orange-600 hover:bg-orange-50">Cần học thêm</Button>
+                 <Button variant="ghost" onClick={() => handleStatusChange('skipped')} className="rounded-xl font-bold text-gray-400 hover:bg-gray-50">Bỏ qua từ này</Button>
+                 <Button variant="ghost" onClick={() => setShowReport(true)} className="rounded-xl font-bold text-red-400 hover:bg-red-50">Báo lỗi</Button>
+              </div>
+           </div>
+
+           <div className="bg-gray-50/50 p-6 border-t border-gray-100 flex justify-between items-center px-12">
+              <div className="flex items-center space-x-2">
+                 <Badge className="bg-primary/10 text-primary border-primary/20 rounded-lg px-3 py-1 font-black text-[10px] uppercase tracking-widest">Level {vocabulary.level}</Badge>
+                 <Badge variant="outline" className="rounded-lg px-3 py-1 font-bold text-[10px] uppercase tracking-widest text-gray-400">{vocabulary.partOfSpeech}</Badge>
+              </div>
+              <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Jiudi Learning System</p>
+           </div>
+        </div>
+      </div>
+
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-4xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
+          <div className="chinese-gradient p-8 md:p-12 text-white relative">
+             <div className="relative z-10 space-y-2">
+                <h3 className="text-5xl font-black">{vocabulary.word}</h3>
+                <div className="flex items-center space-x-4 opacity-90 font-bold">
+                   <span className="text-xl tracking-widest uppercase">{vocabulary.pinyin}</span>
+                   <span className="w-1.5 h-1.5 bg-white/50 rounded-full" />
+                   <span className="text-lg">{vocabulary.partOfSpeech}</span>
+                </div>
+             </div>
+          </div>
+
+          <div className="p-8 md:p-12 space-y-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            {vocabulary.imageUrl && (
+              <div className="flex justify-center group">
+                <img src={vocabulary.imageUrl} alt={vocabulary.word} className="max-w-full h-80 object-cover rounded-[2rem] shadow-2xl border-4 border-white ring-1 ring-gray-100" />
               </div>
             )}
 
             {vocabulary.audioUrl && (
-              <div className="flex flex-col items-center gap-3">
-                <audio
-                  ref={audioRef}
-                  src={vocabulary.audioUrl}
-                  preload="metadata"
-                  onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
-                  onDurationChange={() => setDuration(audioRef.current?.duration || 0)}
-                  onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
-                  onEnded={() => setIsPlaying(false)}
-                  className="hidden"
-                />
-                <div className="w-full max-w-3xl">
-                  <div className="p-1 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500">
-                    <div className="flex items-center gap-4 rounded-xl px-4 py-3 bg-gradient-to-r from-purple-400 to-pink-400">
-                      <button
-                        onClick={handlePlayPause}
-                        className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center bg-white/30 hover:bg-white/40 text-white"
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
-                      >
-                        {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                      </button>
-                      <div className="flex-1 flex items-center gap-4">
-                        <div
-                          ref={progressBarRef}
-                          className="relative h-3 w-full rounded-full bg-white/30 cursor-pointer"
-                          onClick={handleSeekClick}
-                        >
-                          <div
-                            className="absolute left-0 top-0 h-3 rounded-full bg-white/60"
-                            style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-                          />
-                          <div
-                            className="absolute -top-1.5 h-6 w-6 rounded-full bg-blue-500 shadow border border-white"
-                            style={{ left: `calc(${duration ? (currentTime / duration) * 100 : 0}% - 12px)` }}
-                          />
-                        </div>
-                        <div className="shrink-0 text-white font-semibold tracking-wide">
-                          {`${formatTime(currentTime)} / ${formatTime(duration)}`}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex items-center space-x-6">
+                <button onClick={handlePlayPause} className="w-16 h-16 rounded-2xl chinese-gradient flex items-center justify-center text-white shadow-lg hover:scale-105 transition-transform shrink-0">
+                  {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 fill-current" />}
+                </button>
+                <div className="flex-1 space-y-2">
+                   <div className="flex justify-between text-[10px] font-black uppercase text-gray-400"><span>Phát âm mẫu</span><span className="font-mono">{formatTime(currentTime)} / {formatTime(duration)}</span></div>
+                   <div ref={progressBarRef} onClick={handleSeekClick} className="h-2 bg-gray-200 rounded-full overflow-hidden cursor-pointer">
+                      <div className="h-full chinese-gradient transition-all duration-100" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }} />
+                   </div>
                 </div>
+                <audio ref={audioRef} src={vocabulary.audioUrl} onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)} onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)} onEnded={() => setIsPlaying(false)} className="hidden" />
               </div>
             )}
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200">
-              <h4 className="font-bold text-lg text-blue-800 mb-3">📖 Nghĩa:</h4>
-              <p className="text-xl text-gray-800">{vocabulary.meaning}</p>
+
+            <div className="grid md:grid-cols-2 gap-8">
+               <div className="space-y-4">
+                  <h4 className="text-sm font-black uppercase text-primary flex items-center"><span className="w-6 h-0.5 bg-primary mr-2" /> Nghĩa của từ</h4>
+                  <p className="text-2xl font-bold text-gray-900">{vocabulary.meaning}</p>
+               </div>
+               {vocabulary.examples.length > 0 && (
+                 <div className="space-y-4">
+                    <h4 className="text-sm font-black uppercase text-blue-600 flex items-center"><span className="w-6 h-0.5 bg-blue-600 mr-2" /> Ví dụ minh họa</h4>
+                    <ul className="space-y-3">{vocabulary.examples.map((ex, i) => <li key={i} className="text-sm text-gray-600 font-medium bg-blue-50/50 p-3 rounded-xl border border-blue-50">{ex}</li>)}</ul>
+                 </div>
+               )}
             </div>
-
-            {vocabulary.examples.length > 0 && (
-              <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                <h4 className="font-bold text-lg text-green-800 mb-3">💡 Ví dụ:</h4>
-                <ul className="space-y-2">
-                  {vocabulary.examples.map((example, index) => (
-                    <li key={index} className="text-gray-700 text-lg">• {example}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {vocabulary.synonyms.length > 0 && (
-              <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
-                <h4 className="font-bold text-lg text-purple-800 mb-3">🔗 Từ đồng nghĩa:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {vocabulary.synonyms.map((synonym, index) => (
-                    <Badge key={index} className="bg-purple-100 text-purple-700 border-purple-200">{synonym}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {vocabulary.antonyms.length > 0 && (
-              <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
-                <h4 className="font-bold text-lg text-orange-800 mb-3">⚡ Từ trái nghĩa:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {vocabulary.antonyms.map((antonym, index) => (
-                    <Badge key={index} className="bg-orange-100 text-orange-700 border-orange-200">{antonym}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
-          <div className="flex justify-end gap-4 p-1 pt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDetails(false)}
-              className="px-6 py-3 text-lg border-2 border-gray-300 hover:border-gray-400"
-            >
-              Đóng
-            </Button>
-            {/* <Button 
-              onClick={() => {
-                setShowDetails(false)
-                handleStatusChange('studying')
-              }}
-              className="px-6 py-3 text-lg bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-            >
-              Thêm vào danh sách học
-            </Button> */}
+          <div className="p-8 border-t border-gray-100 flex justify-end">
+            <Button variant="outline" onClick={() => setShowDetails(false)} className="h-12 px-8 rounded-xl font-bold border-2 border-gray-100 hover:border-primary hover:text-primary transition-all">Đóng cửa sổ</Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <ReportErrorDialog
-        isOpen={showReport}
-        onClose={() => setShowReport(false)}
-        itemType="vocabulary"
-        itemId={vocabulary._id}
-        itemContent={vocabulary.word}
-      />
+      <ReportErrorDialog isOpen={showReport} onClose={() => setShowReport(false)} itemType="vocabulary" itemId={vocabulary._id} itemContent={vocabulary.word} />
 
-      {/* Quiz Dialog */}
       <Dialog open={showQuiz} onOpenChange={setShowQuiz}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader className="text-center pb-4">
-            <DialogTitle className="text-2xl font-bold text-gray-800">Khảo bài: {vocabulary.word}</DialogTitle>
-            {vocabulary.questions && vocabulary.questions.length > 0 && (
-              <DialogDescription className="text-gray-600">
-                Câu {currentQuizIndex + 1}/{vocabulary.questions.length}
-              </DialogDescription>
-            )}
+        <DialogContent className="max-w-2xl rounded-[2.5rem] p-10 border-none shadow-2xl">
+          <DialogHeader className="text-center space-y-4 mb-8">
+             <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto"><Brain className="w-8 h-8 text-primary" /></div>
+             <DialogTitle className="text-3xl font-black">Kiểm tra: {vocabulary.word}</DialogTitle>
+             {vocabulary.questions && <p className="text-xs font-black uppercase text-gray-400">Câu hỏi {currentQuizIndex + 1} của {vocabulary.questions.length}</p>}
           </DialogHeader>
 
-          {/* No-questions state: không cộng điểm, chỉ thông báo */}
           {(!vocabulary.questions || vocabulary.questions.length === 0) ? (
-            <div className="text-center space-y-4 py-6">
-              <div className="text-4xl">ℹ️</div>
-              <div className="text-lg text-gray-700">
-                Chưa có câu hỏi khảo bài cho từ này. Không thể cộng điểm khi học lại.
-              </div>
-              <Button onClick={() => setShowQuiz(false)} className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white">
-                Đóng
-              </Button>
+            <div className="text-center py-10 space-y-6">
+              <p className="text-gray-500 font-medium italic">Từ vựng này chưa có dữ liệu khảo bài. Bạn có thể đánh dấu thuộc ngay.</p>
+              <Button onClick={handleFinishQuiz} className="chinese-gradient h-14 px-10 rounded-2xl font-black text-white shadow-xl">Xác nhận đã thuộc</Button>
             </div>
-          ) : (
-          !quizCompleted ? (
-            <div className="space-y-4">
-              {/* Question */}
-              <div className="p-4 bg-gray-50 rounded-lg border">
-                <div className="text-lg font-medium text-gray-800">
-                  {currentQuiz?.question}
-                </div>
+          ) : !quizCompleted ? (
+            <div className="space-y-8">
+              <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100">
+                <p className="text-xl font-bold text-gray-900 text-center">{currentQuiz?.question}</p>
               </div>
-
-              {/* Options */}
-              <div className="space-y-2">
-                {currentQuiz?.options.map((option, index) => {
-                  const isSelected = quizAnswers[currentQuizIndex] === index
-                  const isCorrect = index === currentQuiz?.correctAnswer
-                  const isWrong = isSelected && !isCorrect
-                  
-                  return (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      className={`w-full justify-start text-left h-auto py-3 ${
-                        showAnswer 
-                          ? isCorrect 
-                            ? 'bg-green-100 border-green-500 text-green-800' 
-                            : isWrong
-                              ? 'bg-red-100 border-red-500 text-red-800'
-                              : 'bg-gray-50 border-gray-200'
-                          : isSelected
-                            ? 'bg-blue-50 border-blue-300'
-                            : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => handleQuizAnswer(index)}
-                    >
-                      <span className="mr-3 font-medium text-gray-600">
-                        {String.fromCharCode(65 + index)}.
-                      </span>
-                      <span className="flex-1">{option}</span>
-                      {showAnswer && isCorrect && (
-                        <span className="ml-2 text-green-600 font-bold">✓</span>
-                      )}
-                      {showAnswer && isWrong && (
-                        <span className="ml-2 text-red-600 font-bold">✗</span>
-                      )}
-                    </Button>
-                  )
-                })}
+              <div className="grid gap-3">
+                {currentQuiz?.options.map((option, index) => (
+                  <button key={index} disabled={showAnswer} onClick={() => handleQuizAnswer(index)} className={`flex items-center p-5 rounded-2xl border-2 transition-all text-left ${showAnswer && index === currentQuiz?.correctAnswer ? 'border-green-500 bg-green-50' : quizAnswers[currentQuizIndex] === index ? 'border-primary bg-primary/5' : 'border-gray-100 hover:bg-gray-50'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm mr-4 shrink-0 ${showAnswer && index === currentQuiz?.correctAnswer ? 'bg-green-500 text-white' : quizAnswers[currentQuizIndex] === index ? 'chinese-gradient text-white' : 'bg-gray-100 text-gray-400'}`}>{String.fromCharCode(65 + index)}</div>
+                    <span className={`font-bold ${quizAnswers[currentQuizIndex] === index || (showAnswer && index === currentQuiz?.correctAnswer) ? 'text-gray-900' : 'text-gray-500'}`}>{option}</span>
+                    {showAnswer && index === currentQuiz?.correctAnswer && <CheckCircle className="ml-auto w-5 h-5 text-green-500" />}
+                  </button>
+                ))}
               </div>
-
-              {/* Check Answer Button */}
-              {!showAnswer && quizAnswers[currentQuizIndex] !== undefined && (
-                <div className="text-center">
-                  <Button
-                    onClick={handleCheckAnswer}
-                    className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    Kiểm tra
-                  </Button>
-                </div>
-              )}
-
-              {/* Answer Explanation */}
               {showAnswer && currentQuiz?.explanation && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-sm text-blue-800">
-                    <span className="font-medium">Giải thích:</span> {currentQuiz.explanation}
-                  </div>
+                <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex items-start space-x-3">
+                   <Lightbulb className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                   <p className="text-xs text-blue-900 font-medium leading-relaxed">{currentQuiz.explanation}</p>
                 </div>
               )}
-
-              {/* Navigation */}
-              <div className="flex justify-between pt-4">
-                <Button
-                  variant="outline"
-                  onClick={handlePreviousQuiz}
-                  disabled={currentQuizIndex === 0}
-                  className="px-4 py-2"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Trước
-                </Button>
-                {showAnswer && (
-                  <Button
-                    onClick={handleNextQuiz}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {currentQuizIndex === vocabulary.questions!.length - 1 ? 'Kết thúc' : 'Tiếp theo'}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                )}
+              <div className="flex justify-between items-center pt-4">
+                <Button variant="ghost" onClick={() => currentQuizIndex > 0 && setCurrentQuizIndex(currentQuizIndex - 1)} disabled={currentQuizIndex === 0} className="rounded-xl font-bold text-gray-400"><ArrowLeft className="w-4 h-4 mr-2" /> Quay lại</Button>
+                {!showAnswer ? <Button disabled={quizAnswers[currentQuizIndex] === undefined} onClick={() => setShowAnswer(true)} className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg">Kiểm tra đáp án</Button> : <Button onClick={handleNextQuiz} className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg">{currentQuizIndex === vocabulary.questions!.length - 1 ? 'Xem kết quả' : 'Câu tiếp theo'} <ArrowRight className="w-4 h-4 ml-2" /></Button>}
               </div>
             </div>
           ) : (
-            <div className="text-center space-y-4 py-6">
-              {quizScore === 100 ? (
-                <>
-                  <div className="text-4xl">🎉</div>
-                  <div className="text-4xl font-bold text-green-600">
-                    {quizScore}%
-                  </div>
-                  <div className="text-xl font-semibold text-green-800">
-                    Xuất sắc! Bạn đã thuộc từ này!
-                  </div>
-                  <div className="text-gray-600">
-                    Trả lời đúng tất cả {vocabulary.questions!.length} câu hỏi
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-4xl">😔</div>
-                  <div className="text-4xl font-bold text-orange-600">
-                    {quizScore}%
-                  </div>
-                  <div className="text-xl font-semibold text-orange-800">
-                    Chưa đạt yêu cầu
-                  </div>
-                  <div className="text-gray-600">
-                    Cần trả lời đúng 100% để đánh dấu "đã thuộc"
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Từ này sẽ được thêm vào danh sách "cần học thêm"
-                  </div>
-                </>
-              )}
-              <Button 
-                onClick={handleFinishQuiz} 
-                className={`px-6 py-3 ${
-                  quizScore === 100 
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-orange-600 hover:bg-orange-700 text-white'
-                }`}
-              >
-                {quizScore === 100 ? 'Hoàn thành' : 'Tiếp tục học'}
-              </Button>
+            <div className="text-center space-y-8 py-10">
+              <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl ${quizScore === 100 ? 'chinese-gradient' : 'bg-orange-500'} text-white`}>
+                 {quizScore === 100 ? <Trophy className="w-12 h-12" /> : <Star className="w-12 h-12" />}
+              </div>
+              <div className="space-y-2">
+                 <div className={`text-6xl font-black ${quizScore === 100 ? 'text-green-600' : 'text-orange-600'}`}>{quizScore}%</div>
+                 <h4 className="text-2xl font-black text-gray-900">{quizScore === 100 ? 'Xuất sắc! Đã thuộc từ.' : 'Cần ôn tập thêm!'}</h4>
+                 <p className="text-gray-500 font-medium">Bạn đã trả lời đúng {vocabulary.questions!.filter((q, i) => quizAnswers[i] === q.correctAnswer).length}/{vocabulary.questions!.length} câu hỏi.</p>
+              </div>
+              <Button onClick={handleFinishQuiz} className={`w-full h-14 rounded-2xl font-black text-lg shadow-xl transition-all ${quizScore === 100 ? 'chinese-gradient text-white shadow-primary/20 hover:shadow-primary/30' : 'bg-gray-900 text-white hover:bg-black'}`}>{quizScore === 100 ? 'Hoàn thành bài khảo' : 'Tiếp tục luyện tập'}</Button>
             </div>
-          )
           )}
         </DialogContent>
       </Dialog>

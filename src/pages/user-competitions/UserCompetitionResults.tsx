@@ -129,120 +129,115 @@ export const UserCompetitionResults = () => {
   const { competition, results } = data
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate(`/user-competitions/${id}`)}
-        className="mb-4"
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Quay lại
-      </Button>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-4xl mx-auto space-y-10">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(`/user-competitions/${id}`)}
+            className="rounded-xl font-bold text-gray-500 hover:text-primary hover:bg-primary/5"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại thông tin
+          </Button>
+          
+          <Badge className="bg-primary/10 text-primary border-primary/20 rounded-xl px-4 py-1.5 font-black uppercase tracking-widest text-[10px]">
+             Kết thúc trận đấu
+          </Badge>
+        </div>
 
-      {/* Competition Info */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-2xl">{competition.title}</CardTitle>
-          <CardDescription>
-            Người tạo: {competition.creator.name} • 
-            Kết thúc: {new Date(competition.endTime).toLocaleString('vi-VN')}
-          </CardDescription>
-        </CardHeader>
-      </Card>
+        {/* Competition Title Header */}
+        <div className="text-center space-y-4">
+           <h1 className="text-4xl font-black text-gray-900 tracking-tight">{competition.title}</h1>
+           <div className="flex items-center justify-center space-x-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
+              <span>Người tạo: {competition.creator.name}</span>
+              <span className="w-1 h-1 bg-gray-300 rounded-full" />
+              <span>{new Date(competition.endTime).toLocaleDateString('vi-VN')}</span>
+           </div>
+        </div>
 
-      {/* My Result (if participated) */}
-      {myResult && (
-        <Card className="mb-6 border-primary">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center justify-between">
-              <span>Kết quả của bạn</span>
-              {getRankBadge(myResult.rank)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <Trophy className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
-                <p className="text-2xl font-bold">#{myResult.rank}</p>
-                <p className="text-sm text-muted-foreground">Xếp hạng</p>
-              </div>
-              <div className="text-center">
-                <Target className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                <p className="text-2xl font-bold">{myResult.score}%</p>
-                <p className="text-sm text-muted-foreground">Điểm số</p>
-              </div>
-              <div className="text-center">
-                <Award className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                <p className="text-2xl font-bold">
-                  {myResult.correctAnswers}/{myResult.totalQuestions}
-                </p>
-                <p className="text-sm text-muted-foreground">Câu đúng</p>
-              </div>
-              <div className="text-center">
-                <Clock className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                <p className="text-2xl font-bold">{formatTime(myResult.timeSpent)}</p>
-                <p className="text-sm text-muted-foreground">Thời gian</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {/* My Highlight Result */}
+        {myResult && (
+          <div className="bg-white rounded-[3rem] p-10 border-2 border-primary shadow-2xl shadow-primary/10 relative overflow-hidden group">
+             <div className="absolute top-0 right-0 w-64 h-64 chinese-gradient opacity-10 rounded-bl-[8rem]" />
+             
+             <div className="relative z-10 flex flex-col items-center text-center space-y-8">
+                <div className="relative">
+                   <div className="w-24 h-24 chinese-gradient rounded-[2rem] flex items-center justify-center shadow-xl rotate-3">
+                      <Trophy className="w-12 h-12 text-white" />
+                   </div>
+                   <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-white w-10 h-10 rounded-xl flex items-center justify-center font-black border-4 border-white shadow-lg">
+                      {myResult.rank}
+                   </div>
+                </div>
 
-      {/* Leaderboard */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Bảng xếp hạng</CardTitle>
-          <CardDescription>
-            Tổng cộng {results.length} người tham gia
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {results.length === 0 ? (
-            <div className="text-center py-8">
-              <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-gray-600">Chưa có kết quả</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {results.map((result) => {
-                const isMe = result.user._id === user?.id
-                return (
-                  <div
-                    key={result.user._id}
-                    className={`flex items-center justify-between p-4 rounded-lg ${
-                      isMe ? 'bg-primary/10 border border-primary' : 'bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10">
-                        {getRankIcon(result.rank)}
-                      </div>
-                      <Avatar>
-                        <AvatarFallback>{result.user.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">
-                          {result.user.name}
-                          {isMe && <Badge variant="secondary" className="ml-2">Bạn</Badge>}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          HSK {result.user.level}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg">{result.score}%</p>
-                      <p className="text-sm text-muted-foreground">
-                        {result.correctAnswers}/{result.totalQuestions} câu • {formatTime(result.timeSpent)}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <div>
+                   <h2 className="text-3xl font-black text-gray-900 mb-1">Thành tích của bạn</h2>
+                   <p className="text-sm font-bold text-primary uppercase tracking-[0.2em]">
+                      {myResult.rank === 1 ? 'Quán quân Đấu trường' : myResult.rank <= 3 ? 'Top cao thủ' : 'Chiến binh nỗ lực'}
+                   </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-8 w-full max-w-lg pt-8 border-t border-gray-100">
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase text-gray-400">Độ chính xác</p>
+                      <p className="text-2xl font-black text-gray-900">{myResult.score}%</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase text-gray-400">Câu đúng</p>
+                      <p className="text-2xl font-black text-green-600">{myResult.correctAnswers}/{myResult.totalQuestions}</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase text-gray-400">Thời gian</p>
+                      <p className="text-2xl font-black text-blue-600">{formatTime(myResult.timeSpent)}</p>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {/* Global Leaderboard for this competition */}
+        <div className="space-y-6">
+           <h3 className="text-2xl font-black text-gray-900 flex items-center">
+              <Medal className="w-6 h-6 mr-2 text-primary" />
+              Bảng xếp hạng chung cuộc
+           </h3>
+
+           <div className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl">
+              <div className="p-4 md:p-8 space-y-3">
+                 {results.length === 0 ? (
+                   <div className="text-center py-12 text-gray-400 italic">Chưa có kết quả.</div>
+                 ) : (
+                   results.map((r) => {
+                     const isMe = r.user._id === user?.id
+                     return (
+                       <div key={r.user._id} className={`flex items-center p-5 rounded-2xl border transition-all ${
+                         isMe ? 'bg-primary/5 border-primary/20 shadow-md ring-1 ring-primary/5' : 'bg-gray-50/50 border-gray-100'
+                       }`}>
+                          <div className="w-12 flex justify-center shrink-0">
+                             {getRankIcon(r.rank)}
+                          </div>
+                          <Avatar className="h-12 w-12 rounded-xl shadow-sm border border-white">
+                             <AvatarFallback className="bg-gray-200 text-gray-500 font-black">{r.user.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="ml-6 flex-1 min-w-0">
+                             <div className="flex items-center space-x-2 mb-1">
+                                <p className="font-black text-gray-900 truncate">{r.user.name}</p>
+                                {isMe && <Badge className="bg-primary text-[8px] font-black uppercase h-4 px-1.5 border-none">Bạn</Badge>}
+                             </div>
+                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Level {r.user.level} • {formatTime(r.timeSpent)}</p>
+                          </div>
+                          <div className="text-right">
+                             <p className={`text-lg font-black ${isMe ? 'text-primary' : 'text-gray-900'}`}>{r.score}%</p>
+                             <p className="text-[10px] font-bold text-gray-400 uppercase">{r.correctAnswers} Correct</p>
+                          </div>
+                       </div>
+                     )
+                   })
+                 )}
+              </div>
+           </div>
+        </div>
+      </div>
     </div>
   )
 }

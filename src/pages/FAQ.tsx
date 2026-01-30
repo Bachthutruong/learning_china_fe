@@ -1,17 +1,15 @@
-import { Card, CardContent} from '../components/ui/card'
+import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { 
   Search, 
   ChevronDown, 
-  ChevronUp,
   HelpCircle,
   BookOpen,
   TestTube,
-  // Trophy,
-  User
+  User,
+  Star
 } from 'lucide-react'
-import { useState } from 'react'
 
 const faqCategories = [
   {
@@ -120,55 +118,57 @@ export const FAQ = () => {
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Câu hỏi thường gặp</h1>
-          <p className="text-gray-600">Tìm câu trả lời cho các câu hỏi phổ biến</p>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-4xl mx-auto space-y-12">
+        {/* Header Section */}
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
+           <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+              <HelpCircle className="w-4 h-4 text-primary" />
+              <span className="text-primary text-xs font-bold uppercase tracking-widest">Câu hỏi thường gặp</span>
+           </div>
+           <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">Giải đáp <span className="text-primary">Thắc mắc</span></h1>
+           <p className="text-gray-500 font-medium">Mọi điều bạn cần biết về lộ trình học tập, hệ thống điểm thưởng và cách vận hành của Jiudi Learning.</p>
         </div>
 
-        {/* Search */}
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        {/* Search & Categories */}
+        <div className="space-y-8">
+           <div className="relative group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-primary transition-colors" />
               <input
                 type="text"
-                placeholder="Tìm kiếm câu hỏi..."
+                placeholder="Nhập từ khóa cần tìm kiếm (ví dụ: XP, nạp xu, bài test...)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full h-16 pl-14 pr-6 bg-white border border-gray-100 rounded-[2rem] shadow-xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-gray-700"
               />
-            </div>
-          </CardContent>
-        </Card>
+           </div>
 
-        {/* Categories */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Danh mục</h2>
-          <div className="flex flex-wrap gap-4 mb-6">
-            <Button
-              variant={selectedCategory === 'all' ? 'default' : 'outline'}
-              onClick={() => setSelectedCategory('all')}
-            >
-              Tất cả
-            </Button>
-            {faqCategories.map((category) => {
-              const Icon = category.icon
-              return (
-                <Button
-                  key={category.id}
-                  variant={selectedCategory === category.id ? 'default' : 'outline'}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className="flex items-center gap-2"
+           <div className="flex flex-wrap justify-center gap-3">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                  selectedCategory === 'all'
+                    ? 'chinese-gradient text-white shadow-lg'
+                    : 'bg-white text-gray-400 border border-gray-100 hover:bg-gray-50'
+                }`}
+              >
+                Tất cả chủ đề
+              </button>
+              {faqCategories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`flex items-center space-x-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    selectedCategory === cat.id
+                      ? 'chinese-gradient text-white shadow-lg'
+                      : 'bg-white text-gray-400 border border-gray-100 hover:bg-gray-50 hover:text-gray-600'
+                  }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  {category.title}
-                </Button>
-              )
-            })}
-          </div>
+                  <cat.icon className="w-3.5 h-3.5" />
+                  <span>{cat.title}</span>
+                </button>
+              ))}
+           </div>
         </div>
 
         {/* FAQ Items */}
@@ -178,65 +178,72 @@ export const FAQ = () => {
             const category = faqCategories.find(cat => cat.id === faq.category)
             
             return (
-              <Card key={faq.id} className="hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-6">
-                  <div 
-                    className="cursor-pointer"
-                    onClick={() => toggleExpanded(faq.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          {category && (
-                            <Badge variant="outline" className="flex items-center gap-1">
-                              <category.icon className="h-3 w-3" />
+              <div 
+                key={faq.id} 
+                className={`bg-white rounded-[2rem] border transition-all duration-300 overflow-hidden ${
+                  isExpanded ? 'border-primary shadow-xl ring-4 ring-primary/5' : 'border-gray-100 shadow-sm hover:shadow-md'
+                }`}
+              >
+                <div 
+                  className="p-6 md:p-8 cursor-pointer group"
+                  onClick={() => toggleExpanded(faq.id)}
+                >
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center space-x-3">
+                         {category && (
+                           <Badge variant="outline" className="rounded-lg px-2 py-0.5 border-primary/20 text-primary text-[8px] font-black uppercase tracking-widest">
                               {category.title}
-                            </Badge>
-                          )}
-                          <span className="text-sm text-gray-500">{faq.helpful}% hữu ích</span>
-                        </div>
-                        <h3 className="font-semibold text-gray-900 text-lg">{faq.question}</h3>
+                           </Badge>
+                         )}
+                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center">
+                            <Star className="w-3 h-3 mr-1 text-amber-400 fill-current" /> {faq.helpful}% tin cậy
+                         </span>
                       </div>
-                      {isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-gray-400" />
-                      )}
+                      <h3 className={`text-lg md:text-xl font-black transition-colors ${isExpanded ? 'text-primary' : 'text-gray-900 group-hover:text-primary'}`}>
+                         {faq.question}
+                      </h3>
+                    </div>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isExpanded ? 'chinese-gradient text-white rotate-180' : 'bg-gray-50 text-gray-400'}`}>
+                       <ChevronDown className="w-5 h-5" />
                     </div>
                   </div>
-                  
-                  {isExpanded && (
-                    <div className="mt-4 pt-4 border-t">
-                      <p className="text-gray-700 leading-relaxed">{faq.answer}</p>
-                      <div className="flex items-center gap-4 mt-4">
-                        <Button variant="outline" size="sm">
-                          Hữu ích
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Không hữu ích
-                        </Button>
-                      </div>
+                </div>
+                
+                {isExpanded && (
+                  <div className="px-6 md:px-8 pb-8 animate-in slide-in-from-top duration-300">
+                    <div className="pt-6 border-t border-gray-50">
+                       <p className="text-gray-600 leading-relaxed font-medium text-base">
+                          {faq.answer}
+                       </p>
+                       <div className="mt-8 flex items-center justify-between">
+                          <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Thông tin này có hữu ích?</p>
+                          <div className="flex space-x-2">
+                             <Button variant="ghost" size="sm" className="rounded-lg font-bold text-xs text-green-600 hover:bg-green-50">Cực kỳ hữu ích</Button>
+                             <Button variant="ghost" size="sm" className="rounded-lg font-bold text-xs text-red-400 hover:bg-red-50">Vẫn còn thắc mắc</Button>
+                          </div>
+                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>
 
         {filteredFAQs.length === 0 && (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <HelpCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Không tìm thấy câu hỏi</h3>
-              <p className="text-gray-600 mb-4">Hãy thử tìm kiếm với từ khóa khác hoặc liên hệ với chúng tôi</p>
-              <Button>Liên hệ hỗ trợ</Button>
-            </CardContent>
-          </Card>
+          <div className="bg-white p-20 rounded-[3rem] border border-gray-100 shadow-sm text-center space-y-6">
+             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
+                <Search className="w-10 h-10" />
+             </div>
+             <div className="space-y-2">
+                <h3 className="text-2xl font-black text-gray-900">Không tìm thấy kết quả</h3>
+                <p className="text-gray-500 font-medium">Thử thay đổi từ khóa hoặc bộ lọc danh mục.</p>
+             </div>
+             <Button className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg">Gửi câu hỏi của bạn</Button>
+          </div>
         )}
       </div>
     </div>
   )
 }
-
-

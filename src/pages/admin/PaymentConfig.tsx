@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { 
-  Settings, 
   Save, 
   Loader2,
   QrCode,
-  Upload,
-  X
+  Upload
 } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
@@ -200,210 +198,135 @@ export const PaymentConfigPage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cấu hình thanh toán</h1>
-          <p className="text-gray-600">Cấu hình thông tin thanh toán và tỷ lệ quy đổi xu</p>
+    <div className="space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
+             <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg">
+                <QrCode className="w-6 h-6" />
+             </div>
+             Cổng thanh toán
+          </h1>
+          <p className="text-gray-500 font-medium">Cấu hình thông tin tài khoản nhận tiền và tỷ giá quy đổi Xu cho học viên.</p>
         </div>
+        
+        <Button onClick={handleSubmit} disabled={isSaving} className="chinese-gradient h-11 px-8 rounded-xl font-black text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-1">
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+          Lưu cấu hình hệ thống
+        </Button>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-6 w-6 text-blue-500" />
-              Thông tin thanh toán
-            </CardTitle>
-            <CardDescription>
-              Cấu hình thông tin ngân hàng, QR code và tỷ lệ quy đổi xu
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Taiwan (TWD) */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Tài khoản Đài Loan (TWD)</h3>
-                {/* TW QR */}
-                <div className="space-y-2">
-                  <Label>Ảnh QR Code (TWD)</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <input
-                      type="file"
-                      id="twQr"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, 'tw')}
-                      className="hidden"
-                      disabled={isUploading}
-                    />
-                    {twQr ? (
-                      <div className="space-y-4">
-                        <div className="w-32 h-32 mx-auto border border-gray-300 rounded overflow-hidden bg-gray-100">
-                          <img src={twQr} alt="TW QR" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex gap-2 justify-center">
-                          <Button type="button" variant="outline" onClick={() => document.getElementById('twQr')?.click()} disabled={isUploading}>
-                            {isUploading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang upload...</>) : (<><Upload className="h-4 w-4 mr-2" />Thay đổi ảnh</>)}
-                          </Button>
-                          <Button type="button" variant="outline" onClick={() => setTwQr('')} disabled={isUploading} className="text-red-600 hover:text-red-700">
-                            <X className="h-4 w-4 mr-2" />Xóa ảnh
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <QrCode className="h-12 w-12 mx-auto text-gray-400" />
-                        <div>
-                          <p className="text-sm text-gray-600 mb-2">Chọn ảnh QR code để upload</p>
-                          <Button type="button" variant="outline" onClick={() => document.getElementById('twQr')?.click()} disabled={isUploading}>
-                            {isUploading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang upload...</>) : (<><Upload className="h-4 w-4 mr-2" />Chọn ảnh</>)}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tỷ lệ (xu/TWD)</Label>
-                    <Input type="number" step="0.01" min="0.01" value={twRate} onChange={(e) => setTwRate(e.target.value)} placeholder="Ví dụ: 10" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tên ngân hàng</Label>
-                    <Input value={twBankName} onChange={(e) => setTwBankName(e.target.value)} placeholder="Taiwan Bank" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Số tài khoản</Label>
-                    <Input value={twBankAccount} onChange={(e) => setTwBankAccount(e.target.value)} placeholder="Số tài khoản" required />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Chủ tài khoản</Label>
-                  <Input value={twAccountHolder} onChange={(e) => setTwAccountHolder(e.target.value)} placeholder="Tên chủ tài khoản" required />
-                </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium mb-2">Preview (TWD)</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="text-sm text-gray-700">
-                      <p><strong>Ngân hàng:</strong> {twBankName || 'Chưa nhập'}</p>
-                      <p><strong>Số tài khoản:</strong> {twBankAccount || 'Chưa nhập'}</p>
-                      <p><strong>Chủ tài khoản:</strong> {twAccountHolder || 'Chưa nhập'}</p>
-                      <p className="mt-1"><strong>Tỷ lệ:</strong> 1 TWD = {twRate || '0'} xu</p>
-                    </div>
-                    <div className="text-center">
-                      {twQr ? (
-                        <img src={twQr} alt="TW QR" className="w-24 h-24 mx-auto border rounded" />
-                      ) : (
-                        <div className="w-24 h-24 mx-auto border rounded bg-gray-100 flex items-center justify-center">
-                          <QrCode className="h-8 w-8 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+      <div className="grid lg:grid-cols-2 gap-8">
+         {/* Taiwan (TWD) */}
+         <div className="bg-white rounded-[3rem] p-8 md:p-10 border border-gray-100 shadow-xl space-y-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 opacity-5 rounded-bl-[4rem]" />
+            <h3 className="text-2xl font-black text-gray-900 flex items-center">
+               <div className="w-2 h-6 bg-blue-500 rounded-full mr-3" />
+               Tài khoản Đài Loan (TWD)
+            </h3>
 
-              {/* Vietnam (VND) */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Tài khoản Việt Nam (VND)</h3>
-                {/* VN QR */}
-                <div className="space-y-2">
-                  <Label>Ảnh QR Code (VND)</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <input
-                      type="file"
-                      id="vnQr"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, 'vn')}
-                      className="hidden"
-                      disabled={isUploading}
-                    />
-                    {vnQr ? (
-                      <div className="space-y-4">
-                        <div className="w-32 h-32 mx-auto border border-gray-300 rounded overflow-hidden bg-gray-100">
-                          <img src={vnQr} alt="VN QR" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex gap-2 justify-center">
-                          <Button type="button" variant="outline" onClick={() => document.getElementById('vnQr')?.click()} disabled={isUploading}>
-                            {isUploading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang upload...</>) : (<><Upload className="h-4 w-4 mr-2" />Thay đổi ảnh</>)}
-                          </Button>
-                          <Button type="button" variant="outline" onClick={() => setVnQr('')} disabled={isUploading} className="text-red-600 hover:text-red-700">
-                            <X className="h-4 w-4 mr-2" />Xóa ảnh
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <QrCode className="h-12 w-12 mx-auto text-gray-400" />
-                        <div>
-                          <p className="text-sm text-gray-600 mb-2">Chọn ảnh QR code để upload</p>
-                          <Button type="button" variant="outline" onClick={() => document.getElementById('vnQr')?.click()} disabled={isUploading}>
-                            {isUploading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang upload...</>) : (<><Upload className="h-4 w-4 mr-2" />Chọn ảnh</>)}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+            <div className="space-y-6">
+               <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Mã QR Thanh toán</Label>
+                  <div 
+                    onClick={() => !isUploading && document.getElementById('twQr')?.click()}
+                    className={`relative h-48 rounded-[2rem] border-2 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden ${
+                      twQr ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100 bg-gray-50/50 hover:border-blue-300 hover:bg-white'
+                    }`}
+                  >
+                     <input type="file" id="twQr" className="hidden" onChange={(e) => handleFileChange(e, 'tw')} accept="image/*" />
+                     {isUploading ? (
+                       <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                     ) : twQr ? (
+                       <img src={twQr} className="h-full w-full object-contain" alt="TW QR" />
+                     ) : (
+                       <div className="text-center">
+                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-[10px] font-black uppercase text-gray-400">Tải lên mã QR TWD</p>
+                       </div>
+                     )}
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tỷ lệ (xu/VND)</Label>
-                    <Input type="number" value={vnRate} onChange={(e) => setVnRate(e.target.value)} placeholder="Ví dụ: 0.001" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tên ngân hàng</Label>
-                    <Input value={vnBankName} onChange={(e) => setVnBankName(e.target.value)} placeholder="Vietcombank" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Số tài khoản</Label>
-                    <Input value={vnBankAccount} onChange={(e) => setVnBankAccount(e.target.value)} placeholder="Số tài khoản" required />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Chủ tài khoản</Label>
-                  <Input value={vnAccountHolder} onChange={(e) => setVnAccountHolder(e.target.value)} placeholder="Tên chủ tài khoản" required />
-                </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium mb-2">Preview (VND)</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="text-sm text-gray-700">
-                      <p><strong>Ngân hàng:</strong> {vnBankName || 'Chưa nhập'}</p>
-                      <p><strong>Số tài khoản:</strong> {vnBankAccount || 'Chưa nhập'}</p>
-                      <p><strong>Chủ tài khoản:</strong> {vnAccountHolder || 'Chưa nhập'}</p>
-                      <p className="mt-1"><strong>Tỷ lệ:</strong> 1 VND = {vnRate || '0'} xu</p>
-                    </div>
-                    <div className="text-center">
-                      {vnQr ? (
-                        <img src={vnQr} alt="VN QR" className="w-24 h-24 mx-auto border rounded" />
-                      ) : (
-                        <div className="w-24 h-24 mx-auto border rounded bg-gray-100 flex items-center justify-center">
-                          <QrCode className="h-8 w-8 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+               </div>
 
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={isSaving}
-                className="w-full"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang lưu...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Lưu cấu hình
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+               <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Tỷ lệ quy đổi (Xu/TWD)</Label>
+                     <Input type="number" value={twRate} onChange={(e) => setTwRate(e.target.value)} className="h-12 rounded-xl border-gray-50 bg-gray-50 focus:bg-white font-black" />
+                  </div>
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Tên ngân hàng</Label>
+                     <Input value={twBankName} onChange={(e) => setTwBankName(e.target.value)} className="h-12 rounded-xl border-gray-50 bg-gray-50 focus:bg-white font-bold" />
+                  </div>
+               </div>
+
+               <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Số tài khoản</Label>
+                     <Input value={twBankAccount} onChange={(e) => setTwBankAccount(e.target.value)} className="h-12 rounded-xl border-gray-50 bg-gray-50 focus:bg-white font-black text-blue-600" />
+                  </div>
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Chủ tài khoản</Label>
+                     <Input value={twAccountHolder} onChange={(e) => setTwAccountHolder(e.target.value)} className="h-12 rounded-xl border-gray-50 bg-gray-50 focus:bg-white font-bold" />
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         {/* Vietnam (VND) */}
+         <div className="bg-white rounded-[3rem] p-8 md:p-10 border border-gray-100 shadow-xl space-y-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500 opacity-5 rounded-bl-[4rem]" />
+            <h3 className="text-2xl font-black text-gray-900 flex items-center">
+               <div className="w-2 h-6 bg-red-500 rounded-full mr-3" />
+               Tài khoản Việt Nam (VND)
+            </h3>
+
+            <div className="space-y-6">
+               <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Mã QR Thanh toán</Label>
+                  <div 
+                    onClick={() => !isUploading && document.getElementById('vnQr')?.click()}
+                    className={`relative h-48 rounded-[2rem] border-2 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden ${
+                      vnQr ? 'border-red-200 bg-red-50/30' : 'border-gray-100 bg-gray-50/50 hover:border-red-300 hover:bg-white'
+                    }`}
+                  >
+                     <input type="file" id="vnQr" className="hidden" onChange={(e) => handleFileChange(e, 'vn')} accept="image/*" />
+                     {isUploading ? (
+                       <Loader2 className="w-8 h-8 animate-spin text-red-500" />
+                     ) : vnQr ? (
+                       <img src={vnQr} className="h-full w-full object-contain" alt="VN QR" />
+                     ) : (
+                       <div className="text-center">
+                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-[10px] font-black uppercase text-gray-400">Tải lên mã QR VND</p>
+                       </div>
+                     )}
+                  </div>
+               </div>
+
+               <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Tỷ lệ quy đổi (Xu/VND)</Label>
+                     <Input type="number" value={vnRate} onChange={(e) => setVnRate(e.target.value)} className="h-12 rounded-xl border-gray-50 bg-gray-50 focus:bg-white font-black" />
+                  </div>
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Tên ngân hàng</Label>
+                     <Input value={vnBankName} onChange={(e) => setVnBankName(e.target.value)} className="h-12 rounded-xl border-gray-50 bg-gray-50 focus:bg-white font-bold" />
+                  </div>
+               </div>
+
+               <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Số tài khoản</Label>
+                     <Input value={vnBankAccount} onChange={(e) => setVnBankAccount(e.target.value)} className="h-12 rounded-xl border-gray-50 bg-gray-50 focus:bg-white font-black text-red-600" />
+                  </div>
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Chủ tài khoản</Label>
+                     <Input value={vnAccountHolder} onChange={(e) => setVnAccountHolder(e.target.value)} className="h-12 rounded-xl border-gray-50 bg-gray-50 focus:bg-white font-bold" />
+                  </div>
+               </div>
+            </div>
+         </div>
       </div>
     </div>
   )

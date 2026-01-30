@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { Card } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-// import { Progress } from '../components/ui/progress'
+import { Badge } from '../components/ui/badge'
 import { 
   Star, 
   Zap, 
@@ -14,7 +14,8 @@ import {
   Trophy,
   Target,
   Award,
-  Loader2
+  Loader2,
+  CheckCircle
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
@@ -24,367 +25,69 @@ export const Dashboard = () => {
   const { user, setUser } = useAuth()
   const [isCheckingIn, setIsCheckingIn] = useState(false)
   const [isRecalculating, setIsRecalculating] = useState(false)
-  const [levelInfo, setLevelInfo] = useState<{
-    currentLevel: number
-    nextLevel?: number
-    requiredXP?: number
-    progress?: number
-  } | null>(null)
+  const [levelInfo, setLevelInfo] = useState<{ currentLevel: number; requiredXP?: number; progress?: number; nextLevel?: number } | null>(null)
 
-  useEffect(() => {
-    fetchLevelInfo()
-  }, [])
-
-  const fetchLevelInfo = async () => {
-    try {
-      const response = await api.get('/users/profile')
-      if (response.data.user.levelInfo) {
-        setLevelInfo(response.data.user.levelInfo)
-      }
-      // Also update user level in context
-      if (response.data.user.level && user) {
-        setUser({
-          ...user,
-          level: response.data.user.level
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching level info:', error)
-    }
-  }
-
-  const xpForNextLevel = levelInfo?.requiredXP || 250
-  const progressPercentage = levelInfo?.progress || ((user?.experience || 0) / xpForNextLevel * 100)
+  useEffect(() => { (async () => { try { const res = await api.get('/users/profile'); setLevelInfo(res.data.user.levelInfo); if (res.data.user.level && user) setUser({ ...user, level: res.data.user.level }) } catch {} })() }, [])
 
   const handleCheckIn = async () => {
     try {
-      setIsCheckingIn(true)
-      const response = await api.post('/users/checkin')
-      
-      // Update user data with new values
-      if (user) {
-        setUser({
-          ...user,
-          level: response.data.user.level,
-          experience: response.data.user.experience,
-          coins: response.data.user.coins,
-          streak: response.data.user.streak
-        })
-      }
-      
-      // Refresh level info after check-in
-      await fetchLevelInfo()
-      
-      let message = `Check-in thành công! +${response.data.rewards.experience} XP, +${response.data.rewards.coins} xu`
-      if (response.data.rewards.milestoneBonus) {
-        message += `\n🎉 Milestone bonus: +${response.data.rewards.milestoneBonus} XP!`
-      }
-      toast.success(message)
-    } catch (error: any) {
-      console.error('Check-in error:', error)
-      if (error.response?.status === 400) {
-        toast.error('Bạn đã check-in hôm nay rồi!')
-      } else {
-        toast.error('Có lỗi xảy ra khi check-in')
-      }
-    } finally {
-      setIsCheckingIn(false)
-    }
+      setIsCheckingIn(true); const res = await api.post('/users/checkin')
+      if (user) setUser({ ...user, level: res.data.user.level, experience: res.data.user.experience, coins: res.data.user.coins, streak: res.data.user.streak })
+      toast.success('Check-in thành công!')
+    } catch { toast.error('Bạn đã check-in hôm nay rồi') } finally { setIsCheckingIn(false) }
   }
 
-  const handleRecalculateLevel = async () => {
+  const handleRecalculate = async () => {
     try {
-      setIsRecalculating(true)
-      const response = await api.post('/users/recalculate-level')
-      
-      // Update user data with new values
-      if (user) {
-        setUser({
-          ...user,
-          level: response.data.user.level,
-          experience: response.data.user.experience,
-          coins: response.data.user.coins
-        })
-      }
-      
-      // Update level info
-      setLevelInfo(response.data.levelInfo)
-      
-      let message = 'Cấp độ đã được tính lại!'
-      if (response.data.leveledUp) {
-        message += ` 🎉 Chúc mừng! Bạn đã lên cấp ${response.data.newLevel}!`
-      } else if (response.data.level !== user?.level) {
-        message += ` 📊 Cấp độ đã được điều chỉnh về cấp ${response.data.level}!`
-      }
-      
-      // Show debug info in console
-      if (response.data.debug) {
-        console.log('Debug level info:', response.data.debug)
-        console.log('Available levels:', response.data.debug.allLevels)
-        console.log('User experience:', response.data.debug.userExperience)
-        console.log('Previous level:', response.data.debug.previousLevel)
-      }
-      
-      toast.success(message)
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra')
-    } finally {
-      setIsRecalculating(false)
-    }
+      setIsRecalculating(true); const res = await api.post('/users/recalculate-level')
+      if (user) setUser({ ...user, level: res.data.user.level, experience: res.data.user.experience, coins: res.data.user.coins })
+      setLevelInfo(res.data.levelInfo); toast.success('Đã cập nhật cấp độ')
+    } catch { toast.error('Lỗi cập nhật') } finally { setIsRecalculating(false) }
   }
-
-  const quickActions = [
-    {
-      title: 'Học từ vựng',
-      description: 'Khám phá từ vựng mới',
-      icon: BookOpen,
-      href: '/vocabulary',
-      color: 'from-blue-500 to-cyan-500',
-      action: 'learn'
-    },
-    {
-      title: 'Làm bài test',
-      description: 'Kiểm tra kiến thức',
-      icon: TestTube,
-      href: '/tests',
-      color: 'from-purple-500 to-pink-500',
-      action: 'test'
-    },
-    {
-      title: 'Test năng lực',
-      description: 'Đánh giá trình độ',
-      icon: Target,
-      href: '/proficiency',
-      color: 'from-green-500 to-emerald-500',
-      action: 'proficiency'
-    },
-    {
-      title: 'Cuộc thi',
-      description: 'Tham gia thi đấu',
-      icon: Trophy,
-      href: '/competition',
-      color: 'from-orange-500 to-red-500',
-      action: 'competition'
-    }
-  ]
-
-  const handleQuickAction = async (action: string) => {
-    try {
-      // Track user activity for analytics
-      await api.post('/analytics/track', {
-        action: action,
-        timestamp: new Date().toISOString(),
-        userId: user?.id
-      })
-    } catch (error) {
-      console.error('Failed to track activity:', error)
-      // Don't show error to user as this is not critical
-    }
-  }
-
-  const achievements = [
-    { title: 'Người mới bắt đầu', description: 'Hoàn thành bài học đầu tiên', icon: Award, completed: true },
-    { title: 'Học viên chăm chỉ', description: 'Học 7 ngày liên tiếp', icon: Calendar, completed: false },
-    { title: 'Thí sinh xuất sắc', description: 'Đạt 90% trong bài test', icon: Star, completed: false },
-    { title: 'Nhà vô địch', description: 'Thắng cuộc thi', icon: Trophy, completed: false }
-  ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Chào mừng trở lại, {user?.name?.split(' ')[0]}! 👋
-          </h1>
-          <p className="text-gray-600">Đây là tóm tắt hành trình học tập của bạn.</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-yellow-400 to-orange-500 text-white border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cấp độ</CardTitle>
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4" />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-6 px-2 bg-white/20 hover:bg-white/30 text-white border-white/30"
-                  onClick={handleRecalculateLevel}
-                  disabled={isRecalculating}
-                >
-                  {isRecalculating ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Tính lại'}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{user?.level || 1}</div>
-              <p className="text-xs opacity-90">
-                {levelInfo?.nextLevel ? `Cấp độ tiếp theo ở ${xpForNextLevel} XP` : 'Đã đạt cấp độ tối đa'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-400 to-emerald-500 text-white border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Kinh nghiệm (XP)</CardTitle>
-              <Zap className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{user?.experience || 0}</div>
-              <div className="mt-2 h-2 bg-white/20 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-white transition-all duration-300" 
-                  style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-400 to-cyan-500 text-white border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Xu</CardTitle>
-              <Gem className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{user?.coins || 0}</div>
-              <p className="text-xs opacity-90">Sử dụng trong cửa hàng</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-400 to-pink-500 text-white border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Chuỗi ngày</CardTitle>
-              <Calendar className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{user?.streak || 0}</div>
-              <p className="text-xs opacity-90">Ngày học liên tiếp</p>
-            </CardContent>
-          </Card>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex justify-between items-end">
+          <div><h1 className="text-4xl font-black text-gray-900">Chào mừng, {user?.name?.split(' ')[0]}!</h1><p className="text-gray-500 font-medium">Bứt phá giới hạn Hán ngữ của bạn hôm nay.</p></div>
+          <div className="flex bg-white p-2 rounded-2xl border gap-4 px-6">
+             <div className="text-center"><p className="text-[10px] font-black text-gray-400">STREAK</p><p className="text-xl font-black text-primary flex items-center"><Zap className="w-4 h-4 mr-1 fill-current" /> {user?.streak || 0}</p></div>
+             <div className="text-center"><p className="text-[10px] font-black text-gray-400">XU</p><p className="text-xl font-black text-amber-500 flex items-center"><Gem className="w-4 h-4 mr-1 fill-current" /> {user?.coins || 0}</p></div>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Quick Actions */}
-          <div className="lg:col-span-2">
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                  Hành động nhanh
-                </CardTitle>
-                <CardDescription>
-                  Tiếp tục hành trình học tập của bạn
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {quickActions.map((action) => {
-                    const Icon = action.icon
-                    return (
-                      <Link 
-                        key={action.title} 
-                        to={action.href}
-                        onClick={() => handleQuickAction(action.action)}
-                      >
-                        <Card className="group hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 cursor-pointer">
-                          <CardContent className="p-6">
-                            <div className="flex items-center space-x-4">
-                              <div className={`w-12 h-12 bg-gradient-to-r ${action.color} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                                <Icon className="h-6 w-6 text-white" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-gray-900">{action.title}</h3>
-                                <p className="text-sm text-gray-600">{action.description}</p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    )
-                  })}
+          <Card className="lg:col-span-2 rounded-[2.5rem] p-8 border shadow-xl relative overflow-hidden">
+             <div className="relative z-10 flex items-center gap-8">
+                <div className="relative w-24 h-24 flex items-center justify-center chinese-gradient rounded-full text-white font-black text-3xl shadow-lg">{user?.level || 1}</div>
+                <div className="flex-1 space-y-4">
+                   <div><h3 className="text-xl font-bold">Tiến độ Level</h3><p className="text-sm text-gray-500">{(levelInfo?.requiredXP || 0) - (user?.experience || 0)} XP nữa để lên cấp.</p></div>
+                   <div className="h-3 bg-gray-100 rounded-full overflow-hidden"><div className="h-full chinese-gradient transition-all" style={{ width: `${levelInfo?.progress || 0}%` }} /></div>
                 </div>
-              </CardContent>
-            </Card>
+                <Button variant="outline" onClick={handleRecalculate} disabled={isRecalculating} className="rounded-xl font-bold">{isRecalculating ? <Loader2 className="animate-spin" /> : <TrendingUp className="mr-2" />} Đồng bộ</Button>
+             </div>
+          </Card>
 
-            {/* Daily Check-in */}
-            <Card className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Check-in hàng ngày
-                </CardTitle>
-                <CardDescription className="text-blue-100">
-                  Nhận phần thưởng mỗi ngày để duy trì chuỗi học tập
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold mb-1">+10 XP & +5 Xu</div>
-                    <p className="text-blue-100">Phần thưởng hôm nay</p>
-                  </div>
-                  <Button 
-                    className="bg-white text-blue-600 hover:bg-blue-50"
-                    onClick={handleCheckIn}
-                    disabled={isCheckingIn}
-                  >
-                    {isCheckingIn ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Đang xử lý...
-                      </>
-                    ) : (
-                      'Check-in ngay'
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          <div onClick={handleCheckIn} className="bg-primary rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl cursor-pointer group">
+             <div className="absolute inset-0 chinese-gradient opacity-90" /><div className="relative z-10 h-full flex flex-col justify-between">
+                <div className="flex justify-between"><Calendar /><Badge className="bg-white/20">Daily</Badge></div>
+                <div><h3 className="text-2xl font-black">Check-in</h3><p className="text-white/70 text-sm">Nhận thưởng mỗi ngày.</p></div>
+                <Button className="bg-white text-primary rounded-xl font-black">{isCheckingIn ? <Loader2 className="animate-spin" /> : 'Check-in ngay'}</Button>
+             </div>
           </div>
+        </div>
 
-          {/* Achievements */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-yellow-600" />
-                  Thành tích
-                </CardTitle>
-                <CardDescription>
-                  Theo dõi tiến độ và mở khóa thành tích
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {achievements.map((achievement, index) => {
-                  const Icon = achievement.icon
-                  return (
-                    <div key={index} className={`flex items-center space-x-3 p-3 rounded-lg ${achievement.completed ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${achievement.completed ? 'bg-green-500' : 'bg-gray-300'}`}>
-                        <Icon className={`h-5 w-5 ${achievement.completed ? 'text-white' : 'text-gray-500'}`} />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className={`font-medium ${achievement.completed ? 'text-green-800' : 'text-gray-700'}`}>
-                          {achievement.title}
-                        </h4>
-                        <p className={`text-sm ${achievement.completed ? 'text-green-600' : 'text-gray-500'}`}>
-                          {achievement.description}
-                        </p>
-                      </div>
-                      {achievement.completed && (
-                        <div className="text-green-500">
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </CardContent>
-            </Card>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+           {[ { t: 'Học từ vựng', i: BookOpen, h: '/vocabulary-learning', c: 'bg-blue-500' }, { t: 'Làm bài test', i: TestTube, h: '/tests', c: 'bg-purple-500' }, { t: 'Năng lực', i: Target, h: '/proficiency', c: 'bg-green-500' }, { t: 'Giải đấu', i: Trophy, h: '/competition', c: 'bg-orange-500' } ].map((a, i) => (
+             <Link key={i} to={a.h} className="group"><div className="bg-white p-6 rounded-[2rem] border shadow-sm group-hover:shadow-xl transition-all text-center"><div className={`w-12 h-12 ${a.c} rounded-xl mx-auto flex items-center justify-center text-white shadow-lg mb-4`}><a.i /></div><h4 className="font-bold text-gray-900 group-hover:text-primary">{a.t}</h4></div></Link>
+           ))}
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+           <div className="lg:col-span-2 space-y-6"><h2 className="text-xl font-black flex items-center"><Star className="mr-2 text-amber-500 fill-current" /> Thành tích</h2><div className="grid sm:grid-cols-2 gap-4">{[ { t: 'Người mới', i: Award }, { t: 'Chăm chỉ', i: Calendar } ].map((a, i) => (
+             <div key={i} className="bg-white p-5 rounded-3xl border shadow-sm flex items-center space-x-4"><div className="w-12 h-12 rounded-xl chinese-gradient text-white flex items-center justify-center"><a.i /></div><h4 className="font-bold">{a.t}</h4><div className="ml-auto text-green-500"><CheckCircle className="w-5 h-5" /></div></div>
+           ))}</div></div>
+           <div className="space-y-6"><h2 className="text-xl font-black flex items-center"><TrendingUp className="mr-2 text-blue-600" /> Lịch sử</h2><div className="bg-white rounded-[2rem] p-6 border shadow-sm space-y-4"> { [ { l: 'Bài Test', x: '+50' }, { l: 'Từ vựng', x: '+30' } ].map((h, i) => <div key={i} className="flex justify-between font-bold"><span>{h.l}</span><span className="text-green-600">{h.x} XP</span></div>) } <Button variant="ghost" className="w-full">Xem tất cả</Button></div></div>
         </div>
       </div>
     </div>

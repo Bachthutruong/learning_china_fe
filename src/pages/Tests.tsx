@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Card, CardContent} from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Progress } from '../components/ui/progress'
 import { Dialog, DialogContent, DialogFooter, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle } from '../components/ui/dialog'
 import { 
-  Target, 
   RotateCcw,
   ChevronRight,
   Loader2,
@@ -12,25 +10,20 @@ import {
   Brain,
   Zap,
   Star,
-  Award,
   TrendingUp,
-  BookOpen,
   Lightbulb,
   CheckCircle,
   XCircle,
-  Trophy,
   Sparkles,
   Rocket,
   Gamepad2,
   Target as TargetIcon,
-  Flame,
-  Crown,
-  Diamond
 } from 'lucide-react'
 import { api } from '../services/api'
-// import { useAuth } from '../contexts/AuthContext'
 import { ReportErrorDialog } from '../components/ReportErrorDialog'
 import toast from 'react-hot-toast'
+import { Input } from '../components/ui/input'
+import { Badge } from '../components/ui/badge'
 
 type QuestionType = 'multiple-choice' | 'fill-blank' | 'reading-comprehension' | 'sentence-order'
 
@@ -47,7 +40,6 @@ interface QuestionItem {
 }
 
 export const Tests = () => {
-  // const { user } = useAuth()
   const [questions, setQuestions] = useState<QuestionItem[]>([])
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   const [selectedOption, setSelectedOption] = useState<number | string | number[] | null>(null)
@@ -72,7 +64,6 @@ export const Tests = () => {
   useEffect(() => {
     fetchUserLevel()
     fetchNextQuestions()
-    // restore history from localStorage
     try {
       const raw = localStorage.getItem('tests.sessions')
       if (raw) setSessions(JSON.parse(raw))
@@ -81,7 +72,6 @@ export const Tests = () => {
 
   const fetchUserLevel = async () => {
     try {
-      // reuse users/me if exists; fallback: get questions progress returns level
       const res = await api.get('/questions/progress')
       setUserLevel(res.data.level || 1)
     } catch (error) {
@@ -100,7 +90,6 @@ export const Tests = () => {
       setSelectedOption(null)
       setLastResult(null)
       setStatuses(new Array((qs as any[]).length).fill('unanswered'))
-      // start new local session
       const newSession = {
         id: `${Date.now()}`,
         startedAt: Date.now(),
@@ -124,7 +113,6 @@ export const Tests = () => {
     }
   }
 
-  // Build up to 4 display options and keep mapping to original indexes
   useEffect(() => {
     const q = currentQuestion
     if (!q || q.questionType !== 'multiple-choice' || !q.options || q.options.length === 0) {
@@ -135,13 +123,11 @@ export const Tests = () => {
     const correctIdx = typeof q.correctAnswer === 'number' ? q.correctAnswer : 0
 
     const otherIndexes = totalOptions.map((_, i) => i).filter(i => i !== correctIdx)
-    // pick up to 3 other indexes
     for (let i = otherIndexes.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[otherIndexes[i], otherIndexes[j]] = [otherIndexes[j], otherIndexes[i]]
     }
     const picked = [correctIdx, ...otherIndexes.slice(0, Math.max(0, 3))]
-    // shuffle picked for display
     for (let i = picked.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[picked[i], picked[j]] = [picked[j], picked[i]]
@@ -154,7 +140,6 @@ export const Tests = () => {
   const submitCurrent = async () => {
     if (!currentQuestion) return
     
-    // Check if answer is provided based on question type
     if (currentQuestion.questionType === 'multiple-choice' && selectedOption === null) return
     if (currentQuestion.questionType === 'fill-blank' && (!selectedOption || (typeof selectedOption === 'string' && selectedOption.trim() === ''))) return
     if (currentQuestion.questionType === 'reading-comprehension' && selectedOption === null) return
@@ -167,18 +152,15 @@ export const Tests = () => {
       })
       const correct = !!res.data.correct
       setLastResult({ correct, explanation: res.data.explanation || undefined })
-      // Update status for current question
       setStatuses(prev => {
         const copy = [...prev]
         copy[currentIndex] = correct ? 'correct' : 'wrong'
         return copy
       })
-      // Update practice stats and session
       setTotalAnswered(v => v + 1)
       if (correct) {
         setTotalCorrect(v => v + 1)
         setEarnedXp(v => v + 5)
-        // optional coins: +0 here; keep coins for correct as 0 to avoid confusion, or +0
       } else {
         setTotalWrong(v => v + 1)
       }
@@ -206,7 +188,6 @@ export const Tests = () => {
 
   const nextQuestion = () => {
     if (questions.length === 0) return
-    // Find next not-correct question after current index
     const total = questions.length
     for (let step = 1; step <= total; step++) {
       const idx = (currentIndex + step) % total
@@ -217,12 +198,9 @@ export const Tests = () => {
         return
       }
     }
-    // All questions are correct → fetch new batch (likely higher cấp ở backend)
     toast.success('Bạn đã trả lời đúng tất cả! Đang tải câu hỏi tiếp theo...')
     fetchNextQuestions()
   }
-
-  // no timer needed for bank-mode
 
   if (loading) {
     return (
@@ -234,337 +212,187 @@ export const Tests = () => {
             <Zap className="h-4 w-4 text-orange-400 absolute top-2 -left-2 animate-ping" />
           </div>
           <p className="text-gray-700 font-medium text-lg">Đang tải câu hỏi thông minh...</p>
-          <div className="flex justify-center mt-4 space-x-2">
-            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-          </div>
         </div>
       </div>
     )
   }
   if (activeTab === 'practice' && currentQuestion) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Enhanced Progress Card */}
-          <Card className="mb-6 border-0 shadow-xl bg-gradient-to-r from-purple-100 to-pink-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full">
-                    <Crown className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-lg text-purple-800">Cấp {userLevel}</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full">
-                    <TargetIcon className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-lg text-blue-800">
-                      Câu {currentIndex + 1} / {questions.length}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Flame className="h-4 w-4 text-orange-500" />
-                      <span className="text-sm text-orange-600">Đang luyện tập</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="relative">
-                <Progress 
-                  value={((currentIndex + 1) / Math.max(questions.length, 1)) * 100} 
-                  className="h-3 bg-white/50 rounded-full"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-bold text-purple-700">
-                    {Math.round(((currentIndex + 1) / Math.max(questions.length, 1)) * 100)}%
-                  </span>
-                </div>
-              </div>
-              {/* Stats summary */}
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                <div className="px-3 py-2 bg-white/60 rounded">Đã làm: <span className="font-semibold">{totalAnswered}</span></div>
-                <div className="px-3 py-2 bg-green-50 rounded text-green-700">Đúng: <span className="font-semibold">{totalCorrect}</span></div>
-                <div className="px-3 py-2 bg-red-50 rounded text-red-700">Sai: <span className="font-semibold">{totalWrong}</span></div>
-                <div className="px-3 py-2 bg-yellow-50 rounded text-yellow-700">XP: <span className="font-semibold">{earnedXp}</span> • Xu: <span className="font-semibold">{earnedCoins}</span></div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+        <div className="max-w-5xl mx-auto space-y-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl">
+            <div className="flex items-center space-x-4">
+               <div className="w-12 h-12 chinese-gradient rounded-2xl flex items-center justify-center shadow-lg">
+                  <Gamepad2 className="w-6 h-6 text-white" />
+               </div>
+               <div>
+                  <h2 className="text-xl font-black text-gray-900">Luyện tập thông minh</h2>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Cấp độ {userLevel}</p>
+               </div>
+            </div>
 
-          {/* Enhanced Question Card */}
-          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-t-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-full">
-                    <Brain className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl text-white">Câu hỏi {currentIndex + 1}</CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <BookOpen className="h-4 w-4 text-blue-200" />
-                      <span className="text-sm text-blue-100">Luyện tập thông minh</span>
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowReportDialog(true)}
-                  className="bg-white/20 border-white/30 text-white hover:bg-white/30 hover:text-white"
-                >
-                  <Flag className="h-4 w-4 mr-1" />
-                  Báo lỗi
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-8 space-y-6">
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-l-4 border-purple-400">
-                <div className="flex items-start gap-3">
-                  <Lightbulb className="h-6 w-6 text-yellow-500 mt-1 flex-shrink-0" />
-                  <p className="text-lg font-medium text-gray-800 leading-relaxed">{currentQuestion.question}</p>
-                </div>
-              </div>
-              
-              {currentQuestion.questionType === 'multiple-choice' && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Target className="h-5 w-5 text-purple-500" />
-                    <span className="font-semibold text-purple-700">Chọn đáp án đúng:</span>
-                  </div>
-                  {displayOptions.map((option, index) => (
-                    <Button
-                      key={index}
-                      variant={selectedOption === option.originalIndex ? 'default' : 'outline'}
-                      className={`w-full justify-start h-auto py-6 text-left transition-all duration-200 transform hover:scale-[1.02] ${
-                        selectedOption === option.originalIndex 
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
-                          : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-2 hover:border-purple-300'
-                      }`}
-                      onClick={() => setSelectedOption(option.originalIndex)}
-                    >
-                      <div className="flex items-center w-full">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 font-bold ${
-                          selectedOption === option.originalIndex 
-                            ? 'bg-white/20 text-white' 
-                            : 'bg-purple-100 text-purple-600'
-                        }`}>
-                          {String.fromCharCode(65 + index)}
-                        </div>
-                        <span className="text-base">{option.text}</span>
-                        {selectedOption === option.originalIndex && (
-                          <CheckCircle className="h-5 w-5 ml-auto text-white" />
-                        )}
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              )}
-
-              {/* Fill Blank Question */}
-              {currentQuestion.questionType === 'fill-blank' && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Target className="h-5 w-5 text-purple-500" />
-                    <span className="font-semibold text-purple-700">Điền từ vào chỗ trống:</span>
-                  </div>
-                  <input
-                    type="text"
-                    value={typeof selectedOption === 'string' ? selectedOption : ''}
-                    onChange={(e) => setSelectedOption(e.target.value)}
-                    placeholder="Nhập đáp án của bạn..."
-                    className="w-full p-4 border-2 border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg"
+            <div className="flex-1 max-w-md mx-4">
+               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                  <span>Tiến độ đợt học</span>
+                  <span>{currentIndex + 1} / {questions.length}</span>
+               </div>
+               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full chinese-gradient rounded-full transition-all duration-500"
+                    style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
                   />
-                </div>
-              )}
+               </div>
+            </div>
 
-              {/* Reading Comprehension Question */}
-              {currentQuestion.questionType === 'reading-comprehension' && (
+            <div className="flex items-center space-x-4">
+               <div className="text-center px-4 border-r border-gray-100">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Đúng</p>
+                  <p className="text-lg font-black text-green-600">{totalCorrect}</p>
+               </div>
+               <div className="text-center px-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">XP Nhận</p>
+                  <p className="text-lg font-black text-primary flex items-center">
+                     <Zap className="w-4 h-4 mr-1 fill-current" /> {earnedXp}
+                  </p>
+               </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-gray-100 shadow-xl space-y-10 relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+             
+             <div className="relative z-10 space-y-8">
                 <div className="space-y-4">
-                  {/* Passage */}
-                  {currentQuestion.passage && (
-                    <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
-                      <div className="flex items-center gap-2 mb-3">
-                        <BookOpen className="h-5 w-5 text-blue-600" />
-                        <span className="font-semibold text-blue-700">Đoạn văn:</span>
-                      </div>
-                      <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {currentQuestion.passage}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Question and Options */}
-                  {currentQuestion.options && currentQuestion.options.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Target className="h-5 w-5 text-purple-500" />
-                        <span className="font-semibold text-purple-700">Chọn đáp án đúng:</span>
-                      </div>
-                      {displayOptions.map((option, index) => (
-                        <Button
+                   <div className="flex items-center justify-between">
+                      <Badge className="bg-primary/10 text-primary border-primary/20 rounded-lg px-3 py-1 font-bold text-xs uppercase tracking-widest">
+                         Câu hỏi {currentIndex + 1} • {currentQuestion.questionType.replace('-', ' ')}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowReportDialog(true)}
+                        className="text-gray-400 hover:text-primary rounded-xl"
+                      >
+                         <Flag className="w-4 h-4 mr-2" />
+                         <span className="text-xs font-bold uppercase">Báo lỗi</span>
+                      </Button>
+                   </div>
+                   
+                   <div className="space-y-6">
+                      {currentQuestion.passage && (
+                        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 text-gray-700 leading-relaxed font-medium">
+                           {currentQuestion.passage}
+                        </div>
+                      )}
+                      <h3 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight">
+                         {currentQuestion.question}
+                      </h3>
+                   </div>
+                </div>
+
+                <div className="grid gap-4">
+                   {currentQuestion.questionType === 'multiple-choice' && displayOptions.map((option, index) => {
+                      const isSelected = selectedOption === option.originalIndex
+                      const isAnswered = lastResult !== null
+                      const isCorrect = isAnswered && option.originalIndex === (currentQuestion.correctAnswer as number)
+                      const isWrong = isAnswered && isSelected && !lastResult.correct
+
+                      return (
+                        <button
                           key={index}
-                          variant={selectedOption === option.originalIndex ? 'default' : 'outline'}
-                          className={`w-full justify-start h-auto py-6 text-left transition-all duration-200 transform hover:scale-[1.02] ${
-                            selectedOption === option.originalIndex 
-                              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
-                              : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-2 hover:border-purple-300'
-                          }`}
+                          disabled={isAnswered}
                           onClick={() => setSelectedOption(option.originalIndex)}
+                          className={`flex items-center p-6 rounded-2xl border-2 transition-all group text-left ${
+                            isCorrect ? 'border-green-500 bg-green-50 shadow-md ring-4 ring-green-50' :
+                            isWrong ? 'border-red-500 bg-red-50' :
+                            isSelected ? 'border-primary bg-primary/5 shadow-md ring-4 ring-primary/5' :
+                            'border-gray-100 hover:border-primary/30 hover:bg-gray-50'
+                          }`}
                         >
-                          <div className="flex items-center w-full">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 font-bold ${
-                              selectedOption === option.originalIndex 
-                                ? 'bg-white/20 text-white' 
-                                : 'bg-purple-100 text-purple-600'
-                            }`}>
+                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mr-6 shrink-0 transition-colors ${
+                             isCorrect ? 'bg-green-500 text-white' :
+                             isWrong ? 'bg-red-500 text-white' :
+                             isSelected ? 'chinese-gradient text-white' : 
+                             'bg-gray-100 text-gray-400 group-hover:bg-primary/10 group-hover:text-primary'
+                           }`}>
                               {String.fromCharCode(65 + index)}
-                            </div>
-                            <span className="text-base">{option.text}</span>
-                            {selectedOption === option.originalIndex && (
-                              <CheckCircle className="h-5 w-5 ml-auto text-white" />
-                            )}
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                           </div>
+                           <span className={`text-lg font-bold ${isSelected || isCorrect || isWrong ? 'text-gray-900' : 'text-gray-600'}`}>{option.text}</span>
+                           {isCorrect && <CheckCircle className="ml-auto w-6 h-6 text-green-500" />}
+                           {isWrong && <XCircle className="ml-auto w-6 h-6 text-red-500" />}
+                        </button>
+                      )
+                   })}
 
-              {/* Sentence Order Question */}
-              {currentQuestion.questionType === 'sentence-order' && currentQuestion.options && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Target className="h-5 w-5 text-purple-500" />
-                    <span className="font-semibold text-purple-700">Sắp xếp các câu theo thứ tự đúng:</span>
+                   {currentQuestion.questionType === 'fill-blank' && (
+                     <div className="pt-4 space-y-4">
+                        <Input
+                          type="text"
+                          disabled={lastResult !== null}
+                          value={typeof selectedOption === 'string' ? selectedOption : ''}
+                          onChange={(e) => setSelectedOption(e.target.value)}
+                          placeholder="Nhập đáp án của bạn..."
+                          className="h-16 rounded-2xl border-2 border-gray-100 bg-gray-50/50 focus:bg-white focus:border-primary transition-all text-xl font-bold px-8 shadow-inner"
+                        />
+                        {lastResult && (
+                           <div className={`p-4 rounded-xl font-bold ${lastResult.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                              Đáp án đúng: {currentQuestion.correctAnswer}
+                           </div>
+                        )}
+                     </div>
+                   )}
+                </div>
+
+                {lastResult && lastResult.explanation && (
+                  <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100 flex items-start space-x-4">
+                     <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                        <Lightbulb className="w-5 h-5 text-amber-600" />
+                     </div>
+                     <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Giải thích chi tiết</p>
+                        <p className="text-sm text-amber-900 font-medium leading-relaxed">{lastResult.explanation}</p>
+                     </div>
                   </div>
-                  {displayOptions.map((option, index) => (
-                    <div
-                      key={index}
-                      className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-[1.02] ${
-                        Array.isArray(selectedOption) && selectedOption.includes(option.originalIndex)
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500 shadow-lg'
-                          : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-purple-300'
-                      }`}
-                      onClick={() => {
-                        const currentAnswer = Array.isArray(selectedOption) ? selectedOption : []
-                        const newAnswer = currentAnswer.includes(option.originalIndex)
-                          ? currentAnswer.filter((i: number) => i !== option.originalIndex)
-                          : [...currentAnswer, option.originalIndex]
-                        setSelectedOption(newAnswer)
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                          Array.isArray(selectedOption) && selectedOption.includes(option.originalIndex)
-                            ? 'bg-white/20 text-white'
-                            : 'bg-purple-100 text-purple-600'
-                        }`}>
-                          {index + 1}
-                        </div>
-                        <span className="text-base">{option.text}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                )}
+             </div>
 
-              {lastResult && (
-                <div className={`p-6 rounded-xl border-2 ${
-                  lastResult.correct 
-                    ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
-                    : 'bg-gradient-to-r from-red-50 to-pink-50 border-red-200'
-                }`}>
-                  <div className="flex items-center gap-3 mb-3">
-                    {lastResult.correct ? (
-                      <div className="p-2 bg-green-500 rounded-full">
-                        <CheckCircle className="h-6 w-6 text-white" />
-                      </div>
-                    ) : (
-                      <div className="p-2 bg-red-500 rounded-full">
-                        <XCircle className="h-6 w-6 text-white" />
-                      </div>
-                    )}
-                    <span className={`text-lg font-bold ${
-                      lastResult.correct ? 'text-green-700' : 'text-red-700'
-                    }`}>
-                      {lastResult.correct ? '🎉 Chính xác! +5 XP' : '❌ Chưa chính xác'}
-                    </span>
-                  </div>
-                  {lastResult.explanation && (
-                    <div className="bg-white/50 p-4 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <Lightbulb className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <span className="font-semibold text-gray-700">Giải thích:</span>
-                          <p className="text-gray-600 mt-1">{lastResult.explanation}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex justify-between gap-4">
-                <Button 
-                  variant="outline" 
+             <div className="relative z-10 pt-8 border-t border-gray-100 flex items-center justify-between">
+                <Button
+                  variant="ghost"
                   onClick={nextQuestion}
-                  className="flex-1 py-6 text-lg font-semibold border-2 border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400 transition-all duration-200"
+                  className="rounded-xl font-bold text-gray-500 h-12"
                 >
-                  <RotateCcw className="mr-3 h-5 w-5" /> 
-                  Bỏ qua
+                   <RotateCcw className="mr-2 h-4 w-4" /> Bỏ qua câu này
                 </Button>
 
-                {lastResult ? (
-                  <Button 
-                    onClick={nextQuestion} 
-                    className="flex-1 py-6 text-lg font-semibold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                  >
-                    <Rocket className="mr-3 h-5 w-5" />
-                    Câu tiếp theo 
-                    <ChevronRight className="ml-3 h-5 w-5" />
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={submitCurrent} 
-                    disabled={selectedOption === null || submitting} 
-                    className="flex-1 py-6 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                        Đang nộp...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="mr-3 h-5 w-5" />
-                        Nộp đáp án
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex items-center space-x-3">
+                   {lastResult ? (
+                     <Button
+                       onClick={nextQuestion}
+                       className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg shadow-primary/20 transform hover:-translate-y-1 transition-all"
+                     >
+                        Câu tiếp theo <ChevronRight className="ml-2 h-4 w-4" />
+                     </Button>
+                   ) : (
+                     <Button
+                       onClick={submitCurrent}
+                       disabled={selectedOption === null || submitting}
+                       className="chinese-gradient h-12 px-10 rounded-xl font-black text-white shadow-lg shadow-primary/20 transform hover:-translate-y-1 transition-all"
+                     >
+                        {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Nộp đáp án'}
+                     </Button>
+                   )}
+                </div>
+             </div>
+          </div>
         </div>
       </div>
     )
   }
 
-  // History tab
   if (activeTab === 'history') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4">
+      <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
         <div className="max-w-5xl mx-auto space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">Lịch sử luyện tập</h2>
@@ -591,7 +419,6 @@ export const Tests = () => {
               )}
             </CardContent>
           </Card>
-          {/* Session detail dialog */}
           <Dialog open={showSessionDetail.open} onOpenChange={(open) => { if (!open) setShowSessionDetail({ open: false }) }}>
             <DialogContent className="max-w-3xl">
               <UIDialogHeader><UIDialogTitle>Chi tiết phiên</UIDialogTitle></UIDialogHeader>
@@ -617,116 +444,82 @@ export const Tests = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Enhanced Header */}
-        <div className="mb-8 text-center">
-          <div className="relative inline-block">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4">
-              🧠 Luyện tập thông minh
-            </h1>
-            <div className="absolute -top-2 -right-2">
-              <Sparkles className="h-8 w-8 text-yellow-400 animate-bounce" />
-            </div>
-            <div className="absolute -bottom-2 -left-2">
-              <Brain className="h-6 w-6 text-purple-400 animate-pulse" />
-            </div>
-          </div>
-          <p className="text-xl text-gray-700 font-medium">
-            Ưu tiên câu hỏi bạn chưa làm hoặc làm sai trước ở cấp độ hiện tại
-          </p>
-          <div className="flex justify-center mt-4">
-            <div className="flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full">
-              <TrendingUp className="h-5 w-5 text-green-500" />
-              <span className="text-sm font-semibold text-green-700">Học tập thông minh</span>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-5xl mx-auto space-y-12">
+        <div className="text-center space-y-4">
+           <div className="w-16 h-16 chinese-gradient rounded-2xl flex items-center justify-center mx-auto shadow-lg rotate-3 mb-6">
+              <TargetIcon className="w-8 h-8 text-white" />
+           </div>
+           <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">Luyện tập <span className="text-primary">Thông minh</span></h1>
+           <p className="text-gray-500 font-medium max-w-2xl mx-auto">
+              Hệ thống tự động ưu tiên các kiến thức bạn chưa vững, giúp tối ưu hóa thời gian và hiệu quả học tập.
+           </p>
         </div>
 
-        {/* Enhanced Summary Card */}
-        <Card className="mb-8 border-0 shadow-2xl bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100">
-          <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-3 text-2xl">
-              <div className="p-2 bg-white/20 rounded-full">
-                <Crown className="h-8 w-8" />
+        <div className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-gray-100 shadow-xl relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-colors" />
+           
+           <div className="relative z-10 flex flex-col items-center text-center space-y-8">
+              <div className="space-y-2">
+                 <div className="flex items-center justify-center space-x-2 text-amber-500 mb-2">
+                    <Star className="w-5 h-5 fill-current" />
+                    <Star className="w-5 h-5 fill-current" />
+                    <Star className="w-5 h-5 fill-current" />
+                 </div>
+                 <h3 className="text-2xl font-black text-gray-900">Sẵn sàng nâng cao trình độ?</h3>
+                 <p className="text-gray-500 font-medium">Hiện tại bạn đang ở <span className="text-primary font-black uppercase tracking-widest">Cấp độ {userLevel}</span></p>
               </div>
-              <div>
-                <span>Cấp hiện tại: {userLevel}</span>
-                <div className="flex items-center gap-1 mt-1">
-                  <Star className="h-4 w-4 text-yellow-300 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-300 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-300 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-300 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-300 fill-current" />
-                </div>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
-            <div className="text-center">
-              <div className="mb-6">
-                <div className="inline-flex items-center gap-3 bg-white/50 px-6 py-3 rounded-full mb-4">
-                  <Gamepad2 className="h-6 w-6 text-purple-500" />
-                  <span className="font-semibold text-purple-700">Sẵn sàng luyện tập?</span>
-                </div>
-                <p className="text-gray-600 mb-6">
-                  Hệ thống sẽ tự động chọn những câu hỏi phù hợp nhất với trình độ của bạn
-                </p>
-              </div>
-              <div className="flex justify-center gap-3">
-                <Button 
-                  onClick={fetchNextQuestions} 
-                className="bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 hover:from-purple-600 hover:via-pink-600 hover:to-blue-600 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                >
-                  <Rocket className="mr-3 h-6 w-6" />
-                  🚀 Bắt đầu luyện tập
-                  <Sparkles className="ml-3 h-5 w-5" />
-                </Button>
-                <Button variant="outline" onClick={() => setActiveTab('history')}>Lịch sử</Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Enhanced Empty State */}
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-purple-50">
-          <CardContent className="text-center py-16">
-            <div className="relative inline-block mb-6">
-              <div className="p-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
-                <BookOpen className="h-16 w-16 text-purple-500" />
+              <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+                 <Button 
+                   onClick={fetchNextQuestions} 
+                   className="flex-1 h-14 chinese-gradient rounded-2xl font-black text-white text-lg shadow-xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all"
+                 >
+                    <Rocket className="mr-3 h-6 w-6" /> Bắt đầu luyện tập
+                 </Button>
+                 <Button 
+                   onClick={() => setActiveTab('history')}
+                   variant="outline"
+                   className="flex-1 h-14 rounded-2xl font-black text-lg border-2 border-gray-200 hover:border-primary hover:text-primary transition-all"
+                 >
+                    Lịch sử học
+                 </Button>
               </div>
-              <div className="absolute -top-2 -right-2">
-                <Diamond className="h-8 w-8 text-yellow-400 animate-bounce" />
+
+              <div className="grid grid-cols-3 gap-8 w-full pt-8 border-t border-gray-100">
+                 <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Ưu tiên</p>
+                    <p className="text-sm font-bold text-gray-700">Câu chưa làm</p>
+                 </div>
+                 <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Tự động</p>
+                    <p className="text-sm font-bold text-gray-700">Điều chỉnh cấp độ</p>
+                 </div>
+                 <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Phần thưởng</p>
+                    <p className="text-sm font-bold text-gray-700">+5 XP / Câu đúng</p>
+                 </div>
               </div>
-              <div className="absolute -bottom-2 -left-2">
-                <Trophy className="h-6 w-6 text-orange-400 animate-pulse" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-3">
-              🎯 Sẵn sàng cho thử thách?
-            </h3>
-            <p className="text-lg text-gray-600 mb-6">
-              Nhấn "Bắt đầu luyện tập" để khởi động hành trình học tập thông minh của bạn!
-            </p>
-            <div className="flex justify-center gap-4">
-              <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full">
-                <CheckCircle className="h-5 w-5" />
-                <span className="font-semibold">Tự động điều chỉnh</span>
-              </div>
-              <div className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full">
-                <Brain className="h-5 w-5" />
-                <span className="font-semibold">Học tập thông minh</span>
-              </div>
-              <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full">
-                <Award className="h-5 w-5" />
-                <span className="font-semibold">Tiến bộ liên tục</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+           </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+           {[
+             { title: 'Tập trung', desc: 'Hệ thống lọc bỏ các câu hỏi bạn đã thành thạo.', icon: Brain, color: 'text-purple-600' },
+             { title: 'Thử thách', desc: 'Đưa ra các câu hỏi khó dần theo trình độ thực tế.', icon: Zap, color: 'text-blue-600' },
+             { title: 'Tiến bộ', desc: 'Tích lũy XP để mở khóa các cấp độ cao hơn.', icon: TrendingUp, color: 'text-green-600' }
+           ].map((item, i) => (
+             <div key={i} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-3">
+                <div className={`w-10 h-10 rounded-xl ${item.color} bg-current/10 flex items-center justify-center`}>
+                   <item.icon className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-gray-900">{item.title}</h4>
+                <p className="text-xs text-gray-500 leading-relaxed font-medium">{item.desc}</p>
+             </div>
+           ))}
+        </div>
       </div>
 
-      {/* Report Error Dialog */}
       <ReportErrorDialog
         isOpen={showReportDialog}
         onClose={() => setShowReportDialog(false)}

@@ -1,25 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Textarea } from '../../components/ui/textarea'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
-import { 
-  BookOpen, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Search, 
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Badge } from '../../components/ui/badge'
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
   Target,
   Loader2,
-  ChevronDown,
-  ChevronRight,
-  X,
-  CheckCircle,
-  AlertCircle,
-  ChevronLeft,
-  ChevronUp
+  X
 } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
@@ -77,10 +72,8 @@ export const AdminProficiencyQuestions = () => {
     questionType: 'multiple-choice'
   })
   const [formLoading, setFormLoading] = useState(false)
-  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('table')
 
   useEffect(() => {
     fetchLevels()
@@ -262,21 +255,6 @@ export const AdminProficiencyQuestions = () => {
     }))
   }
 
-  const toggleQuestionExpansion = (questionId: string) => {
-    const newExpanded = new Set(expandedQuestions)
-    if (newExpanded.has(questionId)) {
-      newExpanded.delete(questionId)
-    } else {
-      newExpanded.add(questionId)
-    }
-    setExpandedQuestions(newExpanded)
-  }
-
-  const getLevelName = (levelNumber: number) => {
-    const level = levels.find(l => (l.level || l.number) === levelNumber)
-    return level ? `Cấp ${levelNumber}: ${level.name}` : `Cấp ${levelNumber}`
-  }
-
   const getLevelColor = (levelNumber: number) => {
     const level = levels.find(l => (l.level || l.number) === levelNumber)
     return level?.color || 'bg-gray-500'
@@ -284,12 +262,6 @@ export const AdminProficiencyQuestions = () => {
 
   // Pagination logic using backend data
   const totalPages = Math.ceil(totalQuestions / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = Math.min(startIndex + itemsPerPage, totalQuestions)
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-  }
 
   const handleItemsPerPageChange = (items: number) => {
     setItemsPerPage(items)
@@ -327,512 +299,253 @@ export const AdminProficiencyQuestions = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quản lý câu hỏi Test năng lực</h1>
-          <p className="text-gray-600">Quản lý ngân hàng câu hỏi theo cấp độ</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
+             <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg">
+                <Target className="w-6 h-6" />
+             </div>
+             Câu hỏi năng lực
+          </h1>
+          <p className="text-gray-500 font-medium">Kho câu hỏi chuyên sâu phục vụ hệ thống bài test năng lực AI.</p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-              <Plus className="mr-2 h-4 w-4" />
-              Thêm câu hỏi
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Tạo câu hỏi mới</DialogTitle>
-              <DialogDescription>
-                Thêm câu hỏi vào ngân hàng câu hỏi test năng lực
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateQuestion} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="level">Cấp độ *</Label>
-                  <select
-                    className="w-full p-2 border rounded-lg"
-                    value={formData.level}
-                    onChange={(e) => setFormData(prev => ({ ...prev, level: parseInt(e.target.value) }))}
-                    required
-                  >
-                    <option value="">Chọn cấp độ...</option>
-                    {levels.map((level) => (
-                      <option key={level._id} value={level.level || level.number}>
-                        Cấp {level.level || level.number}: {level.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="questionType">Loại câu hỏi *</Label>
-                  <select
-                    className="w-full p-2 border rounded-lg"
-                    value={formData.questionType}
-                    onChange={(e) => setFormData(prev => ({ ...prev, questionType: e.target.value as any }))}
-                    required
-                  >
-                    <option value="multiple-choice">Trắc nghiệm</option>
-                    <option value="fill-blank">Điền từ</option>
-                    <option value="reading-comprehension">Đọc hiểu</option>
-                    <option value="sentence-order">Sắp xếp câu</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="question">Câu hỏi *</Label>
-                <Textarea
-                  id="question"
-                  value={formData.question}
-                  onChange={(e) => setFormData(prev => ({ ...prev, question: e.target.value }))}
-                  placeholder="Nhập câu hỏi..."
-                  rows={3}
-                  required
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-lg font-semibold">Phương án trả lời</Label>
-                  <Button type="button" onClick={addOption} size="sm">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Thêm phương án
-                  </Button>
-                </div>
-                {formData.options.map((option, index) => (
-                  <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.correctAnswer.includes(index)}
-                        onChange={() => toggleCorrectAnswer(index)}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm font-medium">
-                        {String.fromCharCode(65 + index)}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        value={option}
-                        onChange={(e) => updateOption(index, e.target.value)}
-                        placeholder={`Phương án ${String.fromCharCode(65 + index)}`}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeOption(index)}
-                      disabled={formData.options.length <= 2}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="explanation">Giải thích</Label>
-                <Textarea
-                  id="explanation"
-                  value={formData.explanation}
-                  onChange={(e) => setFormData(prev => ({ ...prev, explanation: e.target.value }))}
-                  placeholder="Giải thích cho câu trả lời đúng..."
-                  rows={2}
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  Hủy
-                </Button>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang tạo...
-                    </>
-                  ) : (
-                    'Tạo câu hỏi'
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        
+        <Button onClick={() => setShowCreateDialog(true)} className="chinese-gradient h-11 px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20">
+          <Plus className="mr-2 h-4 w-4" /> Thêm câu hỏi
+        </Button>
       </div>
 
-      {/* Filters and Controls */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Tìm kiếm câu hỏi..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Label>Lọc theo cấp độ:</Label>
-            <select
-              className="p-2 border rounded-lg"
-              value={selectedLevel || ''}
-              onChange={(e) => handleLevelChange(e.target.value ? parseInt(e.target.value) : null)}
-            >
-              <option value="">Tất cả cấp độ</option>
-              {levels.map((level) => (
-                <option key={level._id} value={level.level || level.number}>
-                  Cấp {level.level || level.number}: {level.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Label>Hiển thị:</Label>
-            <select
-              className="p-2 border rounded-lg"
-              value={itemsPerPage}
-              onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('table')}
-            >
-              Bảng
-            </Button>
-            <Button
-              variant={viewMode === 'card' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('card')}
-            >
-              Thẻ
-            </Button>
-          </div>
-        </div>
+      {/* Control Bar */}
+      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl space-y-6">
+         <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+            <div className="flex-1 relative group">
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-primary transition-colors" />
+               <Input
+                 placeholder="Tìm kiếm nội dung câu hỏi..."
+                 value={searchTerm}
+                 onChange={(e) => handleSearchChange(e.target.value)}
+                 className="h-12 pl-11 rounded-xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+               />
+            </div>
+            
+            <div className="flex items-center gap-4">
+               <Select value={selectedLevel?.toString() || 'all'} onValueChange={(v) => handleLevelChange(v === 'all' ? null : parseInt(v))}>
+                  <SelectTrigger className="w-44 h-12 rounded-xl border-gray-100 font-bold bg-gray-50/50">
+                     <SelectValue placeholder="Tất cả cấp độ" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                     <SelectItem value="all">Tất cả trình độ</SelectItem>
+                     {levels.map((l) => <SelectItem key={l._id} value={(l.level || l.number).toString()}>Cấp {l.level || l.number}: {l.name}</SelectItem>)}
+                  </SelectContent>
+               </Select>
+
+               <div className="flex items-center space-x-2">
+                  <span className="text-[10px] font-black uppercase text-gray-400">Hiển thị</span>
+                  <Select value={itemsPerPage.toString()} onValueChange={(v) => handleItemsPerPageChange(parseInt(v))}>
+                     <SelectTrigger className="w-20 h-10 rounded-xl border-gray-100 font-black text-[10px]">
+                        <SelectValue />
+                     </SelectTrigger>
+                     <SelectContent className="rounded-xl">
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                     </SelectContent>
+                  </Select>
+               </div>
+            </div>
+         </div>
       </div>
 
-      {/* Questions List */}
-      {viewMode === 'table' ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cấp độ
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Loại
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Câu hỏi
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Đáp án đúng
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Thao tác
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {questions.map((question) => (
-                  <>
-                    <tr key={question._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getLevelColor(question.level)}`}>
-                            <Target className="h-4 w-4 text-white" />
+      {/* Questions List Rendering */}
+      <div className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl">
+         <div className="overflow-x-auto">
+            <table className="w-full text-left">
+               <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-100">
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Câu hỏi</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Loại & Cấp độ</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-center">Đáp án đúng</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Thao tác</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-gray-100">
+                  {questions.map((q) => (
+                    <tr key={q._id} className="group hover:bg-gray-50/50 transition-colors">
+                       <td className="px-8 py-6 max-w-sm">
+                          <p className="text-sm font-bold text-gray-900 line-clamp-2 leading-relaxed">{q.question}</p>
+                       </td>
+                       <td className="px-8 py-6">
+                          <div className="space-y-1.5">
+                             <Badge variant="outline" className="rounded-lg font-black text-[8px] uppercase tracking-widest border-gray-200 text-gray-400">
+                                {q.questionType}
+                             </Badge>
+                             <div className="flex items-center space-x-2">
+                                <div className={`w-2 h-2 rounded-full ${getLevelColor(q.level)}`} />
+                                <span className="text-[10px] font-black text-gray-900 uppercase">Level {q.level}</span>
+                             </div>
                           </div>
-                          <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900">
-                              {getLevelName(question.level)}
-                            </div>
+                       </td>
+                       <td className="px-8 py-6 text-center">
+                          <div className="flex justify-center gap-1">
+                             {q.correctAnswer.map((a, i) => (
+                               <Badge key={i} className="bg-green-50 text-green-600 border-none rounded-lg font-black text-[10px]">{String.fromCharCode(65 + a)}</Badge>
+                             ))}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {question.questionType === 'multiple-choice' && 'Trắc nghiệm'}
-                          {question.questionType === 'fill-blank' && 'Điền từ'}
-                          {question.questionType === 'reading-comprehension' && 'Đọc hiểu'}
-                          {question.questionType === 'sentence-order' && 'Sắp xếp câu'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 max-w-xs truncate">
-                          {question.question}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex gap-1">
-                          {question.correctAnswer.map((answer, index) => (
-                            <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              {String.fromCharCode(65 + answer)}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleQuestionExpansion(question._id)}
-                          >
-                            {expandedQuestions.has(question._id) ? 
-                              <ChevronUp className="h-4 w-4" /> : 
-                              <ChevronDown className="h-4 w-4" />
-                            }
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(question)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteQuestion(question._id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
+                       </td>
+                       <td className="px-8 py-6 text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                             <Button variant="ghost" size="sm" onClick={() => openEditDialog(q)} className="w-9 h-9 rounded-xl hover:bg-blue-50 hover:text-blue-600"><Edit className="w-4 h-4" /></Button>
+                             <Button variant="ghost" size="sm" onClick={() => handleDeleteQuestion(q._id)} className="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                          </div>
+                       </td>
                     </tr>
-                    {expandedQuestions.has(question._id) && (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-4 bg-gray-50">
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="text-sm font-semibold">Câu hỏi:</Label>
-                              <p className="text-gray-700 mt-1">{question.question}</p>
-                            </div>
-                            
-                            <div>
-                              <Label className="text-sm font-semibold">Phương án:</Label>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                                {question.options.map((option, index) => (
-                                  <div key={index} className={`flex items-center gap-2 p-2 rounded-lg ${
-                                    question.correctAnswer.includes(index) 
-                                      ? 'bg-green-50 border border-green-200' 
-                                      : 'bg-gray-50 border border-gray-200'
-                                  }`}>
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                                      question.correctAnswer.includes(index) 
-                                        ? 'bg-green-500 text-white' 
-                                        : 'bg-gray-300 text-gray-600'
-                                    }`}>
-                                      {question.correctAnswer.includes(index) ? 
-                                        <CheckCircle className="h-4 w-4" /> : 
-                                        <AlertCircle className="h-4 w-4" />
-                                      }
-                                    </div>
-                                    <span className="text-sm font-medium">
-                                      {String.fromCharCode(65 + index)}.
-                                    </span>
-                                    <span className="text-sm">{option}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {question.explanation && (
-                              <div>
-                                <Label className="text-sm font-semibold">Giải thích:</Label>
-                                <p className="text-gray-700 mt-1">{question.explanation}</p>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {questions.map((question) => (
-            <Card key={question._id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${getLevelColor(question.level)}`}>
-                      <Target className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold text-gray-900">
-                        {getLevelName(question.level)}
-                      </CardTitle>
-                      <CardDescription>
-                        {question.questionType === 'multiple-choice' && 'Trắc nghiệm'}
-                        {question.questionType === 'fill-blank' && 'Điền từ'}
-                        {question.questionType === 'reading-comprehension' && 'Đọc hiểu'}
-                        {question.questionType === 'sentence-order' && 'Sắp xếp câu'}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleQuestionExpansion(question._id)}
-                    >
-                      {expandedQuestions.has(question._id) ? 
-                        <ChevronDown className="h-4 w-4" /> : 
-                        <ChevronRight className="h-4 w-4" />
-                      }
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditDialog(question)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteQuestion(question._id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              {expandedQuestions.has(question._id) && (
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-semibold">Câu hỏi:</Label>
-                    <p className="text-gray-700 mt-1">{question.question}</p>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-semibold">Phương án:</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                      {question.options.map((option, index) => (
-                        <div key={index} className={`flex items-center gap-2 p-2 rounded-lg ${
-                          question.correctAnswer.includes(index) 
-                            ? 'bg-green-50 border border-green-200' 
-                            : 'bg-gray-50 border border-gray-200'
-                        }`}>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            question.correctAnswer.includes(index) 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-gray-300 text-gray-600'
-                          }`}>
-                            {question.correctAnswer.includes(index) ? 
-                              <CheckCircle className="h-4 w-4" /> : 
-                              <AlertCircle className="h-4 w-4" />
-                            }
-                          </div>
-                          <span className="text-sm font-medium">
-                            {String.fromCharCode(65 + index)}.
-                          </span>
-                          <span className="text-sm">{option}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {question.explanation && (
-                    <div>
-                      <Label className="text-sm font-semibold">Giải thích:</Label>
-                      <p className="text-gray-700 mt-1">{question.explanation}</p>
-                    </div>
+                  ))}
+                  {questions.length === 0 && !loading && (
+                    <tr><td colSpan={4} className="px-8 py-20 text-center text-gray-400 font-bold italic">Không tìm thấy câu hỏi nào.</td></tr>
                   )}
-                </CardContent>
-              )}
-            </Card>
-          ))}
-        </div>
-      )}
+               </tbody>
+            </table>
+         </div>
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <Button
-              variant="outline"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Trước
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              Sau
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Hiển thị <span className="font-medium">{startIndex + 1}</span> đến{' '}
-                <span className="font-medium">{endIndex}</span> trong{' '}
-                <span className="font-medium">{totalQuestions}</span> kết quả
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                <Button
-                  variant="outline"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="rounded-l-md"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? 'default' : 'outline'}
-                    onClick={() => handlePageChange(page)}
-                    className="rounded-none"
-                  >
-                    {page}
-                  </Button>
-                ))}
-                <Button
-                  variant="outline"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="rounded-r-md"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </nav>
-            </div>
-          </div>
+        <div className="flex items-center justify-center space-x-4 mt-8">
+           <Button variant="ghost" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="rounded-xl font-bold text-xs uppercase text-gray-400 hover:text-primary">Trang trước</Button>
+           <div className="bg-white px-6 py-2 rounded-2xl border border-gray-100 shadow-sm font-black text-sm text-gray-900">
+              Trang {currentPage} / {totalPages}
+           </div>
+           <Button variant="ghost" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="rounded-xl font-bold text-xs uppercase text-gray-400 hover:text-primary">Trang sau</Button>
         </div>
       )}
+
+      {/* Create Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Thêm câu hỏi mới</DialogTitle>
+            <DialogDescription>
+              Tạo câu hỏi mới cho bài test năng lực
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateQuestion} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-level">Cấp độ *</Label>
+                <select
+                  className="w-full p-2 border rounded-lg"
+                  value={formData.level}
+                  onChange={(e) => setFormData(prev => ({ ...prev, level: parseInt(e.target.value) }))}
+                  required
+                >
+                  <option value="">Chọn cấp độ...</option>
+                  {levels.map((level) => (
+                    <option key={level._id} value={level.level || level.number}>
+                      Cấp {level.level || level.number}: {level.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-questionType">Loại câu hỏi *</Label>
+                <select
+                  className="w-full p-2 border rounded-lg"
+                  value={formData.questionType}
+                  onChange={(e) => setFormData(prev => ({ ...prev, questionType: e.target.value as any }))}
+                  required
+                >
+                  <option value="multiple-choice">Trắc nghiệm</option>
+                  <option value="fill-blank">Điền từ</option>
+                  <option value="reading-comprehension">Đọc hiểu</option>
+                  <option value="sentence-order">Sắp xếp câu</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-question">Câu hỏi *</Label>
+              <Textarea
+                id="create-question"
+                value={formData.question}
+                onChange={(e) => setFormData(prev => ({ ...prev, question: e.target.value }))}
+                placeholder="Nhập câu hỏi..."
+                rows={3}
+                required
+              />
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">Phương án trả lời</Label>
+                <Button type="button" onClick={addOption} size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Thêm phương án
+                </Button>
+              </div>
+              {formData.options.map((option, index) => (
+                <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.correctAnswer.includes(index)}
+                      onChange={() => toggleCorrectAnswer(index)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium">
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      value={option}
+                      onChange={(e) => updateOption(index, e.target.value)}
+                      placeholder={`Phương án ${String.fromCharCode(65 + index)}`}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeOption(index)}
+                    disabled={formData.options.length <= 2}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-explanation">Giải thích</Label>
+              <Textarea
+                id="create-explanation"
+                value={formData.explanation}
+                onChange={(e) => setFormData(prev => ({ ...prev, explanation: e.target.value }))}
+                placeholder="Giải thích cho câu trả lời đúng..."
+                rows={2}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Hủy
+              </Button>
+              <Button type="submit" disabled={formLoading}>
+                {formLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang tạo...
+                  </>
+                ) : (
+                  'Tạo câu hỏi'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
@@ -975,23 +688,6 @@ export const AdminProficiencyQuestions = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      {questions.length === 0 && !loading && (
-        <Card className="text-center py-12">
-          <CardContent>
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">
-              {searchTerm || selectedLevel ? 'Không tìm thấy câu hỏi nào' : 'Chưa có câu hỏi nào'}
-            </h3>
-            <p className="text-gray-500">
-              {searchTerm || selectedLevel 
-                ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm'
-                : 'Hãy thêm câu hỏi đầu tiên'
-              }
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

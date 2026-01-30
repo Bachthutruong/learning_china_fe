@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react'
-// import { useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -8,14 +6,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { 
   Plus, 
   Trash2, 
-  // Settings,
-  Save,
   Loader2,
   Award,
-  Users
+  Users,
+  Target,
+  X
 } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
+import { Badge } from '../../components/ui/badge'
 
 interface RankPoint {
   rank: number
@@ -41,7 +40,6 @@ interface ScoringConfig {
 }
 
 export const CompetitionScoringConfigPage = () => {
-  // const navigate = useNavigate()
   const [configs, setConfigs] = useState<ScoringConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -94,8 +92,6 @@ export const CompetitionScoringConfigPage = () => {
     }
   }
 
-  // Activation no longer needed; using all configs
-
   const handleCreateNew = () => {
     setEditingConfig(null)
     setFormData({
@@ -120,7 +116,7 @@ export const CompetitionScoringConfigPage = () => {
     setShowFormDialog(true)
   }
 
-  const addScoringRule = () => {
+  const addRule = () => {
     setFormData({
       ...formData,
       scoringRules: [
@@ -130,22 +126,22 @@ export const CompetitionScoringConfigPage = () => {
     })
   }
 
-  const removeScoringRule = (index: number) => {
+  const removeRule = (index: number) => {
     setFormData({
       ...formData,
       scoringRules: formData.scoringRules.filter((_, i) => i !== index)
     })
   }
 
-  const updateScoringRule = (index: number, field: 'minParticipants' | 'maxParticipants', value: number) => {
+  const updateRule = (index: number, field: string, value: any) => {
     const newRules = [...formData.scoringRules]
-    newRules[index][field] = value
+    newRules[index] = { ...newRules[index], [field]: value }
     setFormData({ ...formData, scoringRules: newRules })
   }
 
   const addRankPoint = (ruleIndex: number) => {
     const newRules = [...formData.scoringRules]
-    const maxRank = newRules[ruleIndex].rankPoints.length > 0 
+    const maxRank = newRules[ruleIndex].rankPoints.length > 0
       ? Math.max(...newRules[ruleIndex].rankPoints.map(rp => rp.rank)) + 1
       : 1
     newRules[ruleIndex].rankPoints.push({ rank: maxRank, points: 0 })
@@ -209,291 +205,197 @@ export const CompetitionScoringConfigPage = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Cấu hình Logic Điểm</h1>
-            <p className="text-gray-600">Cấu hình điểm số dựa trên số người tham gia và thứ hạng</p>
-          </div>
-          <Button onClick={handleCreateNew} className="bg-gradient-to-r from-blue-600 to-purple-600">
-            <Plus className="mr-2 h-4 w-4" />
-            Tạo cấu hình mới
-          </Button>
+    <div className="space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
+             <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg">
+                <Target className="w-6 h-6" />
+             </div>
+             Logic tính điểm
+          </h1>
+          <p className="text-gray-500 font-medium">Cấu hình hệ thống tính điểm Rank dựa trên quy mô phòng thi và thứ hạng đạt được.</p>
         </div>
+        
+        <Button onClick={handleCreateNew} className="chinese-gradient h-11 px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-1">
+          <Plus className="mr-2 h-4 w-4" /> Khởi tạo kịch bản điểm
+        </Button>
+      </div>
 
-        {configs.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Award className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600">Chưa có cấu hình nào</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-6">
-            {configs.map((config) => (
-              <Card key={config._id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
-                        {config.name}
-                      </CardTitle>
-                      {config.description && (
-                        <CardDescription className="mt-2">{config.description}</CardDescription>
-                      )}
-                      {(config.effectiveFrom || config.effectiveTo) && (
-                        <div className="text-xs text-gray-600 mt-2">
-                          Hiệu lực: {config.effectiveFrom ? new Date(config.effectiveFrom).toLocaleString('vi-VN') : '—'} → {config.effectiveTo ? new Date(config.effectiveTo).toLocaleString('vi-VN') : '—'}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(config)}
-                      >
-                        Chỉnh sửa
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteConfig(config._id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+      {/* Configs List Rendering */}
+      {configs.length === 0 ? (
+        <div className="bg-white p-20 rounded-[3rem] border border-gray-100 shadow-sm text-center space-y-6">
+           <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
+              <Award className="w-10 h-10" />
+           </div>
+           <div className="space-y-2">
+              <h3 className="text-2xl font-black text-gray-900">Chưa có logic điểm</h3>
+              <p className="text-gray-500 font-medium">Thiết lập logic đầu tiên để bắt đầu tính toán bảng xếp hạng học viên.</p>
+           </div>
+           <Button onClick={handleCreateNew} className="chinese-gradient h-12 px-8 rounded-xl font-black text-white">Khởi tạo ngay</Button>
+        </div>
+      ) : (
+        <div className="grid gap-8">
+          {configs.map((config) => (
+            <div key={config._id} className="bg-white rounded-[3rem] p-8 border border-gray-100 shadow-xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+               
+               <div className="relative z-10 space-y-8">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                     <div className="space-y-4 flex-1">
+                        <h2 className="text-2xl font-black text-gray-900 group-hover:text-primary transition-colors">{config.name}</h2>
+                        <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-2xl">{config.description || 'Không có mô tả cho cấu hình này.'}</p>
+                        {(config.effectiveFrom || config.effectiveTo) && (
+                          <div className="flex items-center space-x-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                             <span className="flex items-center"><Plus className="w-3 h-3 mr-1" /> {config.effectiveFrom ? new Date(config.effectiveFrom).toLocaleDateString('vi-VN') : 'Always'}</span>
+                             <span className="text-gray-300">→</span>
+                             <span className="flex items-center"><X className="w-3 h-3 mr-1" /> {config.effectiveTo ? new Date(config.effectiveTo).toLocaleDateString('vi-VN') : 'Never Expire'}</span>
+                          </div>
+                        )}
+                     </div>
+
+                     <div className="flex items-center space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(config)} className="h-9 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:text-primary">Chỉnh sửa</Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteConfig(config._id)} className="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {config.scoringRules.map((rule, ruleIndex) => (
-                      <div key={ruleIndex} className="border rounded-lg p-4 bg-gray-50">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Users className="h-4 w-4 text-gray-600" />
-                          <span className="font-semibold">
-                            Phòng từ {rule.minParticipants} đến {rule.maxParticipants} người
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          {rule.rankPoints.map((rp, pointIndex) => (
-                            <div key={pointIndex} className="flex items-center gap-2">
-                              <span className="w-20 text-sm">TOP {rp.rank}:</span>
-                              <span className="text-sm font-medium">{rp.points} điểm</span>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {config.scoringRules.map((rule, rIdx) => (
+                      <div key={rIdx} className="bg-gray-50/50 p-6 rounded-[2rem] border border-gray-100 space-y-4 hover:bg-white hover:shadow-md transition-all">
+                         <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                               <Users className="w-4 h-4 text-primary" />
+                               <span className="text-[10px] font-black uppercase text-gray-400">Quy mô: {rule.minParticipants}-{rule.maxParticipants}</span>
                             </div>
-                          ))}
-                        </div>
+                            <Badge className="bg-primary/5 text-primary border-none rounded-lg text-[8px] font-black">Rule #{rIdx + 1}</Badge>
+                         </div>
+                         <div className="space-y-2">
+                            {rule.rankPoints.map((rp, pIdx) => (
+                              <div key={pIdx} className="flex items-center justify-between bg-white px-4 py-2 rounded-xl border border-gray-50">
+                                 <span className="text-xs font-bold text-gray-500">TOP {rp.rank}</span>
+                                 <span className="text-sm font-black text-gray-900">+{rp.points} pts</span>
+                              </div>
+                            ))}
+                         </div>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+               </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-        {/* Form Dialog */}
-        <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingConfig ? 'Chỉnh sửa cấu hình' : 'Tạo cấu hình mới'}
-              </DialogTitle>
-              <DialogDescription>
-                Cấu hình điểm số dựa trên số người tham gia và thứ hạng trong cuộc thi
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6">
-              <div>
-                <Label>Tên cấu hình *</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ví dụ: Logic điểm mặc định"
-                />
-              </div>
-              
-              <div>
-                <Label>Mô tả</Label>
-                <Input
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Mô tả về logic điểm này"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Hiệu lực từ</Label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.effectiveFrom}
-                    onChange={(e) => setFormData({ ...formData, effectiveFrom: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Hiệu lực đến</Label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.effectiveTo}
-                    min={formData.effectiveFrom || undefined}
-                    onChange={(e) => setFormData({ ...formData, effectiveTo: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <Label>Quy tắc điểm số</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addScoringRule}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Thêm quy tắc
-                  </Button>
-                </div>
-
-                <div className="space-y-4">
-                  {formData.scoringRules.map((rule, ruleIndex) => (
-                    <Card key={ruleIndex}>
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <span className="font-semibold">Quy tắc {ruleIndex + 1}</span>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeScoringRule(ruleIndex)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label>Số người tham gia tối thiểu</Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={rule.minParticipants}
-                              onChange={(e) => updateScoringRule(ruleIndex, 'minParticipants', parseInt(e.target.value) || 1)}
-                            />
-                          </div>
-                          <div>
-                            <Label>Số người tham gia tối đa</Label>
-                            <Input
-                              type="number"
-                              min={rule.minParticipants}
-                              value={rule.maxParticipants}
-                              onChange={(e) => updateScoringRule(ruleIndex, 'maxParticipants', parseInt(e.target.value) || rule.minParticipants)}
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500 md:col-span-2">
-                            Áp dụng khi số người trong phòng nằm trong khoảng [{rule.minParticipants} - {rule.maxParticipants}]
-                          </p>
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <Label>Điểm theo thứ hạng</Label>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addRankPoint(ruleIndex)}
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Thêm hạng
-                            </Button>
-                          </div>
-                          <div className="space-y-2">
-                            {rule.rankPoints.map((rp, pointIndex) => (
-                              <div key={pointIndex} className="flex gap-2 items-center">
-                                <div className="flex-1">
-                                  <Label className="text-xs">TOP</Label>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    value={rp.rank}
-                                    onChange={(e) => updateRankPoint(ruleIndex, pointIndex, 'rank', parseInt(e.target.value) || 1)}
-                                    className="w-full"
-                                  />
-                                </div>
-                                <div className="flex-1">
-                                  <Label className="text-xs">Điểm</Label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={rp.points}
-                                    onChange={(e) => updateRankPoint(ruleIndex, pointIndex, 'points', parseInt(e.target.value) || 0)}
-                                    className="w-full"
-                                  />
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => removeRankPoint(ruleIndex, pointIndex)}
-                                  className="text-red-600 mt-6"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
+      <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
+        <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="text-center space-y-4 mb-8">
+             <DialogTitle className="text-3xl font-black text-gray-900">{editingConfig ? 'Hiệu chỉnh logic điểm' : 'Tạo kịch bản tính điểm'}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-8">
+            <div className="grid md:grid-cols-2 gap-6">
+               <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Tên cấu hình</Label>
+                  <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="h-12 rounded-xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary font-bold" placeholder="Ví dụ: Logic điểm mặc định" />
+               </div>
+               <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Mô tả</Label>
+                  <Input value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="h-12 rounded-xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary font-bold" placeholder="Mô tả về logic điểm này" />
+               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowFormDialog(false)}>
-                Hủy
-              </Button>
-              <Button onClick={handleSubmitForm}>
-                <Save className="h-4 w-4 mr-2" />
-                {editingConfig ? 'Cập nhật' : 'Tạo mới'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <div className="grid md:grid-cols-2 gap-6">
+               <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Thời gian hiệu lực</Label>
+                  <div className="flex gap-2">
+                     <Input type="datetime-local" value={formData.effectiveFrom} onChange={e => setFormData({ ...formData, effectiveFrom: e.target.value })} className="h-12 text-xs" />
+                     <Input type="datetime-local" value={formData.effectiveTo} onChange={e => setFormData({ ...formData, effectiveTo: e.target.value })} className="h-12 text-xs" />
+                  </div>
+               </div>
+            </div>
 
-        {/* Delete Dialog */}
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Xác nhận xóa</DialogTitle>
-              <DialogDescription>
-                Bạn có chắc chắn muốn xóa cấu hình này? Hành động này không thể hoàn tác.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                Hủy
-              </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                Xóa
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <div className="space-y-6">
+               <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black uppercase text-gray-400 ml-1">Quy tắc phân tầng quy mô</Label>
+                  <Button type="button" onClick={addRule} variant="outline" size="sm" className="rounded-lg font-black text-[8px] uppercase border-gray-200">
+                     <Plus className="w-3 h-3 mr-1" /> Thêm quy tắc
+                  </Button>
+               </div>
+
+               <div className="grid md:grid-cols-2 gap-6">
+                  {formData.scoringRules.map((rule, idx) => (
+                    <div key={idx} className="p-6 rounded-[2rem] bg-gray-50 border border-gray-100 space-y-6 relative group">
+                       <Button type="button" variant="ghost" size="icon" onClick={() => removeRule(idx)} className="absolute top-4 right-4 w-8 h-8 rounded-lg hover:bg-red-50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                          <Trash2 className="w-4 h-4" />
+                       </Button>
+                       <div className="flex items-center gap-3">
+                          <div className="flex-1 space-y-1">
+                             <span className="text-[8px] font-black uppercase text-gray-400">Min Players</span>
+                             <Input type="number" value={rule.minParticipants} onChange={e => updateRule(idx, 'minParticipants', parseInt(e.target.value))} className="h-8 font-black" />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                             <span className="text-[8px] font-black uppercase text-gray-400">Max Players</span>
+                             <Input type="number" value={rule.maxParticipants} onChange={e => updateRule(idx, 'maxParticipants', parseInt(e.target.value))} className="h-8 font-black" />
+                          </div>
+                       </div>
+                       
+                       <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                             <span className="text-[8px] font-black uppercase text-gray-400">Điểm theo thứ hạng</span>
+                             <button type="button" onClick={() => addRankPoint(idx)} className="text-[8px] font-black uppercase text-primary hover:underline">+ Thêm Rank</button>
+                          </div>
+                          <div className="space-y-2">
+                             {rule.rankPoints.map((rp, pi) => (
+                               <div key={pi} className="flex items-center gap-2">
+                                  <div className="flex-1 space-y-1">
+                                     <span className="text-[8px] font-black uppercase text-gray-400">TOP</span>
+                                     <Input type="number" min="1" value={rp.rank} onChange={e => updateRankPoint(idx, pi, 'rank', parseInt(e.target.value) || 1)} className="h-8 font-black" />
+                                  </div>
+                                  <div className="flex-1 space-y-1">
+                                     <span className="text-[8px] font-black uppercase text-gray-400">Điểm</span>
+                                     <Input type="number" min="0" value={rp.points} onChange={e => updateRankPoint(idx, pi, 'points', parseInt(e.target.value) || 0)} className="h-8 font-black text-primary" />
+                                  </div>
+                                  <button type="button" onClick={() => removeRankPoint(idx, pi)} className="text-gray-300 hover:text-red-500 mt-4"><X className="w-3 h-3" /></button>
+                               </div>
+                             ))}
+                          </div>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-10 gap-3">
+            <Button variant="ghost" onClick={() => setShowFormDialog(false)} className="rounded-xl font-bold text-gray-400">Hủy bỏ</Button>
+            <Button onClick={handleSubmitForm} className="chinese-gradient px-8 rounded-xl font-black text-white shadow-lg">Lưu cấu hình</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-sm text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500">
+             <Trash2 className="w-8 h-8" />
+          </div>
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-2xl font-black text-gray-900">Xác nhận xóa?</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-gray-500">Hành động này không thể hoàn tác.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-8">
+            <Button onClick={confirmDelete} className="h-12 rounded-xl font-black text-white shadow-lg bg-red-500 hover:bg-red-600">Xác nhận</Button>
+            <Button variant="ghost" onClick={() => setShowDeleteDialog(false)} className="h-12 rounded-xl font-bold text-gray-400">Hủy</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

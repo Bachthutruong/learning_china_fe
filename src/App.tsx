@@ -74,9 +74,9 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="min-h-screen bg-[#fdfaf6] flex flex-col">
           <Navbar />
-          <main className="min-h-screen">
+          <main className="flex-grow">
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Home />} />

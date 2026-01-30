@@ -1,8 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
 import { Textarea } from '../components/ui/textarea'
-// import { Badge } from '../components/ui/badge'
+import { Badge } from '../components/ui/badge'
 import { 
   Mail, 
   Phone, 
@@ -10,10 +11,8 @@ import {
   Clock,
   MessageCircle,
   Send,
-  CheckCircle,
   Loader2
 } from 'lucide-react'
-import { useState } from 'react'
 import toast from 'react-hot-toast'
 
 const contactInfo = [
@@ -90,209 +89,131 @@ export const Contact = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Liên hệ với chúng tôi</h1>
-          <p className="text-gray-600">Chúng tôi luôn sẵn sàng hỗ trợ bạn</p>
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-12">
+        {/* Header Section */}
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
+           <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+              <MessageCircle className="w-4 h-4 text-primary" />
+              <span className="text-primary text-xs font-bold uppercase tracking-widest">Liên kết với chúng tôi</span>
+           </div>
+           <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">Luôn lắng nghe <span className="text-primary">Mọi phản hồi</span></h1>
+           <p className="text-gray-500 font-medium">Bạn có thắc mắc về lộ trình hay cần hỗ trợ kỹ thuật? Đừng ngần ngại kết nối với đội ngũ Jiudi.</p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Contact Form */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5 text-blue-600" />
-                  Gửi tin nhắn
-                </CardTitle>
-                <CardDescription>
-                  Điền thông tin bên dưới và chúng tôi sẽ liên hệ lại với bạn
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Họ và tên *
-                      </label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        placeholder="Nhập họ và tên"
-                        required
-                      />
+        <div className="grid lg:grid-cols-3 gap-12">
+           {/* Contact Info Cards */}
+           <div className="space-y-6">
+              {contactInfo.map((info, i) => (
+                <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                   <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${info.color} flex items-center justify-center text-white shadow-lg mb-6 group-hover:rotate-6 transition-transform`}>
+                      <info.icon className="w-7 h-7" />
+                   </div>
+                   <h3 className="text-xl font-bold text-gray-900 mb-1">{info.title}</h3>
+                   <p className="text-sm font-black text-primary mb-3 break-all">{info.value}</p>
+                   <p className="text-xs text-gray-400 font-medium">{info.description}</p>
+                </div>
+              ))}
+              
+              <div className="bg-primary p-8 rounded-[2.5rem] text-white relative overflow-hidden shadow-xl shadow-primary/20 group">
+                 <div className="absolute inset-0 chinese-gradient opacity-90" />
+                 <div className="relative z-10 space-y-4">
+                    <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest opacity-60">
+                       <Clock className="w-3 h-3" />
+                       <span>Làm việc</span>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email *
-                      </label>
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        placeholder="Nhập email"
-                        required
-                      />
+                    <h4 className="text-2xl font-black">Giờ hành chính</h4>
+                    <div className="space-y-2 text-sm font-medium text-white/80">
+                       <div className="flex justify-between"><span>Thứ 2 - Thứ 6:</span><span>08:00 - 18:00</span></div>
+                       <div className="flex justify-between"><span>Thứ 7:</span><span>09:00 - 17:00</span></div>
+                       <div className="flex justify-between opacity-50 italic"><span>Chủ nhật:</span><span>Nghỉ</span></div>
                     </div>
-                  </div>
+                 </div>
+              </div>
+           </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Lý do liên hệ *
-                    </label>
-                    <select
-                      value={formData.reason}
-                      onChange={(e) => handleInputChange('reason', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
+           {/* Contact Form */}
+           <div className="lg:col-span-2 bg-white rounded-[3rem] p-8 md:p-12 border border-gray-100 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              
+              <div className="relative z-10">
+                 <h3 className="text-2xl font-black text-gray-900 mb-8 flex items-center">
+                    <Send className="w-6 h-6 mr-3 text-primary" />
+                    Gửi yêu cầu trực tuyến
+                 </h3>
+
+                 <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-6">
+                       <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Danh tính của bạn</Label>
+                          <Input
+                            value={formData.name}
+                            onChange={(e) => handleInputChange('name', e.target.value)}
+                            placeholder="Nguyễn Văn A..."
+                            className="h-12 rounded-xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+                            required
+                          />
+                       </div>
+                       <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Địa chỉ Email</Label>
+                          <Input
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                            placeholder="name@email.com..."
+                            className="h-12 rounded-xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+                            required
+                          />
+                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Lý do liên hệ</Label>
+                       <select
+                         value={formData.reason}
+                         onChange={(e) => handleInputChange('reason', e.target.value)}
+                         className="w-full h-12 px-4 bg-gray-50/50 border-2 border-gray-50 rounded-xl font-bold text-sm text-gray-700 focus:bg-white focus:border-primary focus:ring-0 transition-all outline-none"
+                         required
+                       >
+                         <option value="">Chọn một mục lục...</option>
+                         {contactReasons.map((r) => <option key={r} value={r}>{r}</option>)}
+                       </select>
+                    </div>
+
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Chủ đề cần hỗ trợ</Label>
+                       <Input
+                         value={formData.subject}
+                         onChange={(e) => handleInputChange('subject', e.target.value)}
+                         placeholder="Tóm tắt vấn đề của bạn..."
+                         className="h-12 rounded-xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+                         required
+                       />
+                    </div>
+
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Nội dung chi tiết</Label>
+                       <Textarea
+                         value={formData.message}
+                         onChange={(e) => handleInputChange('message', e.target.value)}
+                         placeholder="Hãy mô tả chi tiết vấn đề bạn đang gặp phải..."
+                         className="min-h-[180px] rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-medium leading-relaxed"
+                         required
+                       />
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full h-16 rounded-2xl chinese-gradient text-white font-black text-xl shadow-xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all"
                     >
-                      <option value="">Chọn lý do liên hệ</option>
-                      {contactReasons.map((reason) => (
-                        <option key={reason} value={reason}>{reason}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tiêu đề *
-                    </label>
-                    <Input
-                      value={formData.subject}
-                      onChange={(e) => handleInputChange('subject', e.target.value)}
-                      placeholder="Nhập tiêu đề tin nhắn"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nội dung tin nhắn *
-                    </label>
-                    <Textarea
-                      value={formData.message}
-                      onChange={(e) => handleInputChange('message', e.target.value)}
-                      placeholder="Mô tả chi tiết vấn đề hoặc câu hỏi của bạn..."
-                      rows={6}
-                      required
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Đang gửi...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Gửi tin nhắn
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Contact Info */}
-          <div className="space-y-6">
-            {/* Contact Methods */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="h-5 w-5 text-green-600" />
-                  Thông tin liên hệ
-                </CardTitle>
-                <CardDescription>
-                  Các cách liên hệ với chúng tôi
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {contactInfo.map((info, index) => {
-                  const Icon = info.icon
-                  return (
-                    <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 bg-gradient-to-r ${info.color} rounded-lg flex items-center justify-center`}>
-                          <Icon className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{info.title}</h4>
-                          <p className="text-sm font-medium text-blue-600">{info.value}</p>
-                          <p className="text-xs text-gray-500">{info.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </CardContent>
-            </Card>
-
-            {/* Response Time */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-orange-600" />
-                  Thời gian phản hồi
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">Email: 24 giờ</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">Hotline: Ngay lập tức</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">Chat: Ngay lập tức</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Business Hours */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-purple-600" />
-                  Giờ làm việc
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Thứ 2 - Thứ 6:</span>
-                    <span className="font-medium">8:00 - 18:00</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Thứ 7:</span>
-                    <span className="font-medium">9:00 - 17:00</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Chủ nhật:</span>
-                    <span className="font-medium text-red-500">Nghỉ</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                       {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Gửi yêu cầu hỗ trợ'}
+                    </Button>
+                 </form>
+              </div>
+           </div>
         </div>
       </div>
     </div>
   )
 }
-
-

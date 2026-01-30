@@ -260,36 +260,42 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
   }
 
   return (
-    <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${
-      collapsed ? 'w-16' : 'w-64'
-    } ${className}`}>
+    <div className={`bg-[#1a1a1a] flex flex-col transition-all duration-300 ${
+      collapsed ? 'w-20' : 'w-72'
+    } ${className} h-screen sticky top-0 shadow-2xl z-50`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-6 border-b border-white/5">
         <div className="flex items-center justify-between">
           {!collapsed && (
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">中</span>
+            <Link to="/admin" className="flex items-center space-x-3 group">
+              <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
+                <span className="text-white font-bold text-xl">學</span>
               </div>
-              <div>
-                <h2 className="font-bold text-gray-900">Admin Panel</h2>
-                <p className="text-xs text-gray-500">Quản trị hệ thống</p>
+              <div className="flex flex-col">
+                <span className="text-lg font-black text-white tracking-tight">Admin Portal</span>
+                <span className="text-[9px] uppercase tracking-widest text-gray-500 font-black">Jiudi Learning</span>
               </div>
-            </div>
+            </Link>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-1"
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
+          {collapsed && (
+             <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center shadow-lg mx-auto">
+                <span className="text-white font-bold text-xl">學</span>
+             </div>
+          )}
         </div>
       </div>
 
+      <div className="absolute -right-3 top-20">
+         <Button
+            onClick={() => setCollapsed(!collapsed)}
+            className="w-6 h-6 rounded-full chinese-gradient p-0 border-2 border-white shadow-lg text-white hover:scale-110 transition-transform"
+          >
+            {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+          </Button>
+      </div>
+
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1 custom-scrollbar">
         {menuItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
@@ -297,37 +303,37 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
           const isExpanded = expandedMenus.has(item.href)
           
           return (
-            <div key={item.href}>
+            <div key={item.href} className="space-y-1">
               {hasSubmenu ? (
                 <div>
                   <button
                     onClick={() => toggleMenu(item.href)}
-                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-                      active
-                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                        : 'text-gray-700 hover:bg-gray-50'
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all ${
+                      isExpanded || active
+                        ? 'bg-white/10 text-white'
+                        : 'text-gray-400 hover:bg-white/5 hover:text-gray-300'
                     }`}
                   >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <Icon className={`h-5 w-5 flex-shrink-0 ${active ? 'text-primary' : ''}`} />
                     {!collapsed && (
                       <>
-                        <span className="font-medium flex-1 text-left">{item.title}</span>
+                        <span className="font-bold text-sm flex-1 text-left">{item.title}</span>
                         {item.badge && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge className="bg-primary text-[10px] h-5 min-w-[20px] justify-center px-1 font-black">
                             {item.badge}
                           </Badge>
                         )}
                         {isExpanded ? (
-                          <ChevronUp className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4 opacity-50" />
                         ) : (
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-4 w-4 opacity-50" />
                         )}
                       </>
                     )}
                   </button>
                   
                   {!collapsed && isExpanded && item.submenu && (
-                    <div className="ml-4 mt-1 space-y-1">
+                    <div className="mt-1 ml-4 pl-4 border-l border-white/10 space-y-1">
                       {item.submenu.map((subItem) => {
                         const SubIcon = subItem.icon
                         const subActive = isActive(subItem.href)
@@ -336,19 +342,14 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
                           <Link
                             key={subItem.href}
                             to={subItem.href}
-                            className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-sm ${
+                            className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all text-sm ${
                               subActive
-                                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                                : 'text-gray-600 hover:bg-gray-50'
+                                ? 'text-primary font-black'
+                                : 'text-gray-500 hover:text-gray-300'
                             }`}
                           >
                             <SubIcon className="h-4 w-4 flex-shrink-0" />
-                            <span className="font-medium">{subItem.title}</span>
-                            {subItem.badge && (
-                              <Badge variant="secondary" className="ml-auto text-xs">
-                                {subItem.badge}
-                              </Badge>
-                            )}
+                            <span>{subItem.title}</span>
                           </Link>
                         )
                       })}
@@ -358,18 +359,18 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
               ) : (
                 <Link
                   to={item.href}
-                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all ${
                     active
-                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'chinese-gradient text-white shadow-lg shadow-primary/20 font-black'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-gray-300 font-bold'
                   }`}
                 >
                   <Icon className="h-5 w-5 flex-shrink-0" />
                   {!collapsed && (
                     <>
-                      <span className="font-medium">{item.title}</span>
+                      <span className="text-sm flex-1">{item.title}</span>
                       {item.badge && (
-                        <Badge variant="secondary" className="ml-auto text-xs">
+                        <Badge className={`${active ? 'bg-white text-primary' : 'bg-primary'} text-[10px] h-5 min-w-[20px] justify-center px-1 font-black`}>
                           {item.badge}
                         </Badge>
                       )}
@@ -384,10 +385,10 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
 
       {/* Footer */}
       {!collapsed && (
-        <div className="p-4 border-t border-gray-200">
-          <div className="text-xs text-gray-500 text-center">
-            <p>Hệ thống quản trị</p>
-            <p>Version 1.0.0</p>
+        <div className="p-6 border-t border-white/5">
+          <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Version 2.4.0</p>
+            <p className="text-xs font-bold text-gray-400">© 2026 Jiudi Learning</p>
           </div>
         </div>
       )}

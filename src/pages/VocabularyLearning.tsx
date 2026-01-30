@@ -1,20 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Badge } from '../components/ui/badge'
+// import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { VocabularyStudyCard } from '../components/VocabularyStudyCard'
 import { TopicQuiz } from '../components/TopicQuiz'
 import { AddVocabulary } from './AddVocabulary'
-import { 
-  Plus, 
+import {
+  Plus,
   Loader2,
   BookOpen,
   Tag,
   Play,
-  RotateCcw
+  RotateCcw,
+  ArrowLeft,
+  CheckCircle,
+  TrendingUp
 } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
@@ -90,6 +93,7 @@ export const VocabularyLearning = () => {
   const [isSingleWordMode, setIsSingleWordMode] = useState(false)
   const vocabListAnchorRef = useRef<HTMLDivElement | null>(null)
   const [selectedInlineVocabulary, setSelectedInlineVocabulary] = useState<Vocabulary | null>(null)
+  console.log(selectedInlineVocabulary)
   const studyTopRef = useRef<HTMLDivElement | null>(null)
   // Monthly test stats states
   const [statsMonth, setStatsMonth] = useState<string>(() => {
@@ -389,517 +393,344 @@ export const VocabularyLearning = () => {
 
   // Study mode render
   if (studyMode && studyVocabularies.length > 0) {
-  return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-6">
+    return (
+      <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
         <div ref={studyTopRef} />
-        <div className="max-w-4xl mx-auto">
-          {/* Enhanced Header */}
-          <div className="mb-8 text-center">
-            <div className="relative inline-block">
-                <Button
-                  variant="outline"
-                onClick={() => setStudyMode(false)}
-                className="absolute -left-32 top-0 bg-white/50 border-white/30 text-gray-700 hover:bg-white/70 hover:text-gray-900"
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => setStudyMode(false)}
+              className="rounded-xl font-bold text-gray-500 hover:text-primary hover:bg-primary/5"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
+            </Button>
+            <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100">
+              <BookOpen className="w-4 h-4 text-primary" />
+              <span className="text-sm font-black text-gray-900">
+                Đang học: {personalTopics.find(t => t._id === selectedTopics[0])?.name}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex flex-wrap justify-center gap-2">
+              {studyVocabularies.map((v, idx) => (
+                <button
+                  key={v._id}
+                  onClick={() => setCurrentStudyIndex(idx)}
+                  className={`w-10 h-10 rounded-xl font-bold text-sm transition-all transform hover:scale-110 ${
+                    idx === currentStudyIndex
+                      ? 'chinese-gradient text-white shadow-lg ring-4 ring-primary/10'
+                      : 'bg-white text-gray-400 border border-gray-100 hover:border-primary/20 hover:text-primary'
+                  }`}
                 >
-                ← Quay lại
-                </Button>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4">
-                📚 Học từ vựng
-              </h1>
-              <div className="absolute -top-2 -right-2">
-                <BookOpen className="h-8 w-8 text-yellow-400 animate-bounce" />
-              </div>
-              <div className="absolute -bottom-2 -left-2">
-                <Tag className="h-6 w-6 text-purple-400 animate-pulse" />
+                  {idx + 1}
+                </button>
+              ))}
+            </div>
+
+            <div className="animate-in fade-in zoom-in duration-500">
+              <VocabularyStudyCard
+                vocabulary={studyVocabularies[currentStudyIndex]}
+                onStatusChange={handleStudyStatusChange}
+                status={vocabularyStatuses[studyVocabularies[currentStudyIndex]._id]}
+              />
+            </div>
           </div>
-          </div>
-            {/* Topic name and word list */}
-            {selectedTopics.length > 0 && (
-              <div className="mt-4">
-                <div className="flex justify-center mb-3">
-                  <span className="inline-flex items-center px-5 py-2 rounded-full bg-purple-600 text-white text-lg font-semibold shadow">
-                    Chủ đề: {personalTopics.find(t => t._id === selectedTopics[0])?.name || '—'}
-                  </span>
-                </div>
-                <div className="flex flex-wrap justify-center gap-3 max-h-28 overflow-y-auto px-2">
-                  {availableVocabularies.map((v, idx) => (
-                    <button
-                      key={v._id}
-                      onClick={() => setCurrentStudyIndex(idx)}
-                      className={`px-4 py-2 rounded-2xl text-sm border transition-colors shadow-sm ${
-                        idx === currentStudyIndex
-                          ? 'bg-purple-600 text-white border-purple-600'
-                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                      }`}
-                    >
-                      {v.word}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* Removed helper subtitle and counter to keep header compact */}
-                    </div>
-          
-          <VocabularyStudyCard
-            vocabulary={studyVocabularies[currentStudyIndex]}
-            onStatusChange={handleStudyStatusChange}
-            status={vocabularyStatuses[studyVocabularies[currentStudyIndex]._id]}
-          />
-                  </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Enhanced Header */}
-        <div className="mb-8 text-center">
-          <div className="relative inline-block">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4">
-              📚 Học từ vựng
-            </h1>
-            <div className="absolute -top-2 -right-2">
-              <BookOpen className="h-8 w-8 text-yellow-400 animate-bounce" />
-                          </div>
-            <div className="absolute -bottom-2 -left-2">
-              <Tag className="h-6 w-6 text-purple-400 animate-pulse" />
-                    </div>
-                  </div>
-          <p className="text-xl text-gray-700 font-medium">
-            Chọn chủ đề để bắt đầu học từ vựng
+    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-12">
+        {/* Header Section */}
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
+          <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+            <BookOpen className="w-4 h-4 text-primary" />
+            <span className="text-primary text-xs font-bold uppercase tracking-widest">Kho học liệu cá nhân</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+            Chinh phục <span className="text-primary">Từ vựng</span>
+          </h1>
+          <p className="text-gray-500 font-medium">
+            Hệ thống học tập thông minh giúp bạn ghi nhớ từ vựng vĩnh viễn thông qua các chủ đề cá nhân hóa.
           </p>
-          <div className="flex justify-center mt-4">
-            <div className="flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full">
-              <Play className="h-5 w-5 text-green-500" />
-              <span className="text-sm font-semibold text-green-700">Học tập thông minh</span>
-                  </div>
-              </div>
+          
+          <div className="flex flex-wrap justify-center gap-4 pt-4">
+            <Button
+              onClick={() => setShowCreateTopicDialog(true)}
+              className="chinese-gradient h-12 px-6 rounded-2xl font-black shadow-lg shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Tạo chủ đề
+            </Button>
+            <Button
+              onClick={() => setShowAddVocabularyDialog(true)}
+              variant="outline"
+              className="h-12 px-6 rounded-2xl font-black border-2 border-gray-200 hover:border-primary hover:text-primary transform hover:-translate-y-1 transition-all"
+            >
+              <BookOpen className="w-5 h-5 mr-2" />
+              Thêm từ mới
+            </Button>
+          </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-4 mb-8">
-                <Button
-                  onClick={() => setShowCreateTopicDialog(true)}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                >
-            <Plus className="w-5 h-5 mr-2" />
-            Tạo chủ đề mới
-                </Button>
-                <Button
-            onClick={() => setShowAddVocabularyDialog(true)}
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                >
-            <BookOpen className="w-5 h-5 mr-2" />
-                  Thêm từ vựng
-                      </Button>
-                  </div>
-
-                {/* Personal Topics */}
-                {personalTopics.length > 0 && (
-          <Card className="mb-6 border-0 shadow-xl bg-gradient-to-br from-white to-purple-50">
-            <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="p-2 bg-white/20 rounded-full">
-                  <Tag className="w-6 h-6" />
-                  </div>
-                <div>
-                  <span>Chủ đề của bạn</span>
-                  <div className="flex items-center gap-1 mt-1">
-                    <BookOpen className="h-4 w-4 text-purple-200" />
-                    <span className="text-sm text-purple-100">Chọn một chủ đề để học</span>
-        </div>
-                </div>
-                </CardTitle>
-              </CardHeader>
-            <CardContent className="p-6">
-                <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {personalTopics.map((topic) => (
-                    <div
-                          key={topic._id}
-                      className={`p-6 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-105 ${
-                        selectedTopics.includes(topic._id)
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                          : 'bg-white hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 border-2 hover:border-purple-300'
-                      }`}
-                      onClick={() => handleTopicSelect(topic._id)}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-bold text-xl">{topic.name}</h3>
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant="secondary"
-                            className={`${
-                              selectedTopics.includes(topic._id)
-                                ? 'bg-white/20 text-white border-white/30'
-                                : 'bg-purple-100 text-purple-700 border-purple-200'
-                            }`}
-                          >
-                            {topic.vocabularyCount} từ
-                          </Badge>
-                          {(topic as any).learnedCount !== undefined && (
-                            <Badge 
-                              variant="secondary"
-                              className={`${
-                                selectedTopics.includes(topic._id)
-                                  ? 'bg-white/20 text-white border-white/30'
-                                  : 'bg-green-100 text-green-700 border-green-200'
-                              }`}
-                            >
-                              Đã thuộc: {(topic as any).learnedCount}
-                            </Badge>
-                          )}
-                        </div>
+        {/* Topics Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-gray-900 flex items-center">
+              <Tag className="w-5 h-5 mr-2 text-primary" />
+              Chủ đề của bạn
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {personalTopics.map((topic) => (
+              <div
+                key={topic._id}
+                onClick={() => handleTopicSelect(topic._id)}
+                className={`group relative p-6 rounded-[2rem] cursor-pointer transition-all duration-300 border-2 overflow-hidden ${
+                  selectedTopics.includes(topic._id)
+                    ? 'bg-white border-primary shadow-xl ring-4 ring-primary/5'
+                    : 'bg-white border-gray-100 hover:border-primary/20 shadow-sm hover:shadow-lg'
+                }`}
+              >
+                {selectedTopics.includes(topic._id) && (
+                  <div className="absolute top-0 right-0 w-24 h-24 chinese-gradient opacity-5 rounded-bl-[4rem]" />
+                )}
+                
+                <div className="relative z-10 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-6 ${
+                      selectedTopics.includes(topic._id) ? 'chinese-gradient text-white shadow-lg' : 'bg-gray-50 text-gray-400'
+                    }`}>
+                      <Tag className="w-6 h-6" />
                     </div>
-                      <p className={`text-sm mb-4 ${
-                        selectedTopics.includes(topic._id) ? 'text-purple-100' : 'text-gray-600'
-                      }`}>
-                        {topic.description || 'Không có mô tả'}
-                      </p>
-                      <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            startTopicQuiz(topic._id, topic.name)
-                          }}
-                          className={`text-xs ${
-                            selectedTopics.includes(topic._id)
-                              ? 'border-white/30 text-black hover:bg-white/20'
-                              : 'border-purple-300 text-purple-700 hover:bg-purple-100'
-                          }`}
-                          disabled={(topic as any).learnedCount === 0}
-                        >
-                          <RotateCcw className="w-3 h-3 mr-1" />
-                          Khảo bài
-                      </Button>
-                        {selectedTopics.includes(topic._id) && (
-                      <Button
-                            size="sm"
-                            onClick={() => startStudyMode(availableVocabularies, false)}
-                            className="text-xs bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                    >
-                            <Play className="w-3 h-3 mr-1" />
-                            Bắt đầu học
-                      </Button>
-                    )}
-                        </div>
-                      </div>
-                    ))}
-                        </div>
-                <div className="text-center mt-6">
-                  <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full">
-                    <Tag className="h-4 w-4" />
-                    <span className="text-sm font-semibold">💡 Click vào chủ đề để chọn, click "Khảo bài" để kiểm tra từ vựng đã học</span>
-                              </div>
-                          </div>
-                </div>
-              </CardContent>
-            </Card>
-        )}
-
-        {/* Anchor for smooth scroll to vocab list */}
-        <div ref={vocabListAnchorRef} />
-
-        {/* Selected Topic Vocabularies */}
-        {selectedTopics.length > 0 && (
-          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-pink-50">
-            <CardHeader className="bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-t-lg">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="p-2 bg-white/20 rounded-full">
-                  <BookOpen className="w-6 h-6" />
-                        </div>
-                <div>
-                  <span>Từ vựng trong chủ đề đã chọn</span>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Tag className="h-4 w-4 text-pink-200" />
-                    <span className="text-sm text-pink-100">Từ vựng có sẵn trong chủ đề</span>
-                      </div>
+                    <div className="flex flex-col items-end space-y-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Từ vựng</span>
+                      <span className="text-lg font-black text-gray-900">{topic.vocabularyCount}</span>
+                    </div>
                   </div>
-              </CardTitle>
-                </CardHeader>
-            <CardContent className="p-6">
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                    </div>
-              ) : availableVocabularies.length > 0 ? (
-                  <div className="space-y-4">
-                  {/* Action Buttons */}
-                  <div className="text-center mb-6">
-                    <div className="flex justify-center gap-4 mb-4">
-                      <Button
-                        onClick={() => setShowAddVocabularyDialog(true)}
-                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                      >
-                        <BookOpen className="w-5 h-5 mr-2" />
-                        Thêm từ vựng
-                      </Button>
-                      <Button
-                        onClick={() => startStudyMode(availableVocabularies, false)}
-                        className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                      >
-                        <Play className="w-5 h-5 mr-3" />
-                        Bắt đầu học {availableVocabularies.length} từ vựng
-                      </Button>
-                    </div>
-                    <p className="text-sm text-gray-600 font-medium">
-                      Học từng từ một cách có hệ thống
+                  
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{topic.name}</h3>
+                    <p className="text-sm text-gray-500 line-clamp-2 mt-1 font-medium">
+                      {topic.description || 'Học tập không giới hạn...'}
                     </p>
                   </div>
-
-                  {/* Inline selected vocabulary details */}
-                  {selectedInlineVocabulary && studyVocabularies.length > 0 && (
-                    <div className="mb-8">
-                      <VocabularyStudyCard
-                        vocabulary={studyVocabularies[currentStudyIndex]}
-                        onStatusChange={handleStudyStatusChange}
-                        status={vocabularyStatuses[studyVocabularies[currentStudyIndex]._id]}
-                      />
-                    </div>
-                  )}
-
-                  {/* Tabs */}
-                  <div className="flex justify-center mb-6">
-                    <div className="flex bg-gray-100 rounded-lg p-1">
-                      <button
-                        onClick={() => setActiveTab('studying')}
-                        className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                          activeTab === 'studying'
-                            ? 'bg-white text-purple-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-800'
-                        }`}
-                      >
-                        Từ vựng đang học ({getFilteredVocabularies().length})
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('learned')}
-                        className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                          activeTab === 'learned'
-                            ? 'bg-white text-purple-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-800'
-                        }`}
-                      >
-                        Từ vựng đã thuộc ({availableVocabularies.filter(vocab => vocabularyStatuses[vocab._id] === 'learned').length})
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Vocabulary Grid */}
-                  <div className="flex flex-wrap gap-3">
-                    {getFilteredVocabularies().map((vocabulary) => {
-                      return (
-                        <div
-                          key={vocabulary._id}
-                          className="relative group"
-                        >
-                          <div 
-                            className="px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-105 bg-white hover:bg-gradient-to-r hover:from-pink-50 hover:to-rose-50 border-2 hover:border-pink-300 text-gray-700"
-                            onClick={() => handleVocabularyClick(vocabulary)}
-                          >
-                            <div className="text-center">
-                              <div className="font-bold text-lg">{vocabulary.word}</div>
-                              <div className="text-sm text-gray-600 font-medium">{vocabulary.pinyin}</div>
-                              {vocabulary.zhuyin && (
-                                <div className="text-xs text-gray-500">{vocabulary.zhuyin}</div>
-                              )}
-                              <div className="text-sm text-gray-500">{vocabulary.meaning}</div>
-                            </div>
-                          </div>
-
-                          {/* Tooltip with example */}
-                          {vocabulary.examples.length > 0 && (
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 shadow-xl">
-                              VD: {vocabulary.examples[0]}
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                        </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="relative inline-block mb-6">
-                    <div className="p-6 bg-gradient-to-r from-pink-100 to-rose-100 rounded-full">
-                      <BookOpen className="h-16 w-16 text-pink-500" />
-              </div>
-                    <div className="absolute -top-2 -right-2">
-                      <Tag className="h-8 w-8 text-yellow-400 animate-bounce" />
-              </div>
-                    <div className="absolute -bottom-2 -left-2">
-                      <Play className="h-6 w-6 text-purple-400 animate-pulse" />
-                </div>
-                      </div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-3">
-                    📚 Chưa có từ vựng nào trong chủ đề này
-                  </h3>
-                  <p className="text-lg text-gray-600 mb-6">
-                    Hãy thêm từ vựng vào chủ đề để bắt đầu học
-                  </p>
-                  <div className="flex justify-center gap-4">
+                  
+                  <div className="pt-4 flex items-center justify-between">
                     <Button
-                      onClick={() => setShowAddVocabularyDialog(true)}
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startTopicQuiz(topic._id, topic.name)
+                      }}
+                      className="rounded-xl font-bold text-xs hover:bg-primary/5 hover:text-primary h-9"
+                      disabled={(topic as any).learnedCount === 0}
                     >
-                      <BookOpen className="w-5 h-5 mr-2" />
-                      Thêm từ vựng
+                      <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                      Khảo bài
                     </Button>
+                    {selectedTopics.includes(topic._id) && (
+                      <Button
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          startStudyMode(availableVocabularies, false)
+                        }}
+                        className="chinese-gradient text-white rounded-xl font-black text-xs h-9 shadow-md"
+                      >
+                        <Play className="w-3.5 h-3.5 mr-1.5" />
+                        Học ngay
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Selected Topic Detail */}
+        {selectedTopics.length > 0 && (
+          <div ref={vocabListAnchorRef} className="space-y-8 animate-in slide-in-from-bottom duration-700">
+            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900">Chi tiết từ vựng</h2>
+                  <p className="text-gray-500 font-medium">Quản lý và ôn tập các từ vựng trong chủ đề đã chọn.</p>
+                </div>
+                
+                <div className="flex items-center space-x-2 bg-gray-50 p-1.5 rounded-2xl">
+                  <button
+                    onClick={() => setActiveTab('studying')}
+                    className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
+                      activeTab === 'studying'
+                        ? 'bg-white text-primary shadow-sm'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    Đang học ({getFilteredVocabularies().length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('learned')}
+                    className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
+                      activeTab === 'learned'
+                        ? 'bg-white text-primary shadow-sm'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    Đã thuộc ({availableVocabularies.filter(v => vocabularyStatuses[v._id] === 'learned').length})
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : availableVocabularies.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {getFilteredVocabularies().map((vocabulary) => (
+                    <div
+                      key={vocabulary._id}
+                      onClick={() => handleVocabularyClick(vocabulary)}
+                      className="group p-4 rounded-2xl bg-gray-50/50 border border-gray-100 hover:border-primary/30 hover:bg-white hover:shadow-lg transition-all text-center cursor-pointer relative"
+                    >
+                      <div className="text-2xl font-black text-gray-900 group-hover:text-primary transition-colors">{vocabulary.word}</div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{vocabulary.pinyin}</div>
+                      <div className="text-xs text-gray-500 line-clamp-1 mt-2 font-medium">{vocabulary.meaning}</div>
+                      
+                      {vocabularyStatuses[vocabulary._id] === 'learned' && (
+                        <div className="absolute top-2 right-2">
+                           <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                              <CheckCircle className="w-3 h-3 text-white" />
+                           </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <button 
+                    onClick={() => setShowAddVocabularyDialog(true)}
+                    className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+                  >
+                    <Plus className="w-6 h-6 mb-2" />
+                    <span className="text-[10px] font-black uppercase">Thêm từ</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-16 space-y-6">
+                  <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
+                    <BookOpen className="w-10 h-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-gray-900">Chưa có từ vựng nào</h3>
+                    <p className="text-gray-500 font-medium">Hãy bắt đầu hành trình bằng cách thêm từ vựng đầu tiên của bạn.</p>
+                  </div>
+                  <Button
+                    onClick={() => setShowAddVocabularyDialog(true)}
+                    className="chinese-gradient h-12 px-8 rounded-2xl font-black shadow-lg"
+                  >
+                    Thêm từ ngay
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
-            </CardContent>
-          </Card>
+          </div>
         )}
 
-        {/* Vocabulary learners statistics section */}
-        <Card className="mt-8 border-0 shadow-xl bg-gradient-to-br from-white to-purple-50">
-          <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-full">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="text-xl font-bold">📚 Thống kê người học từ vựng</span>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Tag className="h-4 w-4 text-purple-200" />
-                    <span className="text-sm text-purple-100">Thống kê theo tháng</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const now = new Date()
-                    const y = now.getFullYear()
-                    const m = (now.getMonth() + 1).toString().padStart(2, '0')
-                    const month = `${y}-${m}`
-                    setStatsMonth(month)
-                    void fetchMonthlyVocabularyLearnerStats(month)
-                  }}
-                  className="bg-white/20 border-white/30 text-white hover:bg-white/30 hover:text-white transition-all"
-                >
-                  Tháng này
-                </Button>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="statsMonth" className="text-white font-medium">Chọn tháng:</Label>
-                  <Input
-                    id="statsMonth"
-                    type="month"
-                    value={statsMonth}
-                    max={(() => {
-                      const now = new Date()
-                      const y = now.getFullYear()
-                      const m = (now.getMonth() + 1).toString().padStart(2, '0')
-                      return `${y}-${m}`
-                    })()}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      setStatsMonth(v)
-                      void fetchMonthlyVocabularyLearnerStats(v)
-                    }}
-                    className="bg-white text-gray-800 border-0 focus:ring-2 focus:ring-white/50 h-9"
-                  />
-                </div>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            {statsLoading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-purple-500 mb-3" />
-                <p className="text-gray-600">Đang tải dữ liệu thống kê...</p>
-              </div>
-            ) : statsError ? (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                  <span className="text-lg">⚠️</span>
-                  <span>{statsError}</span>
-                </div>
-              </div>
-            ) : vocabLearnerStats.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="inline-block p-6 bg-purple-100 rounded-full mb-4">
-                  <BookOpen className="h-12 w-12 text-purple-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">Không có dữ liệu</h3>
-                <p className="text-gray-500">Không có dữ liệu thống kê cho tháng đã chọn</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm text-gray-600">
-                    Tổng cộng: <span className="font-semibold text-gray-800">{vocabLearnerStats.length}</span> người dùng
-                  </p>
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
-                    Tháng: {statsMonth}
-                  </Badge>
-                </div>
-                <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-                  <table className="min-w-full bg-white divide-y divide-gray-200">
-                    <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">STT</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Người dùng</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Cấp độ</th>
-                        <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Đã thuộc</th>
-                        <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Đang học</th>
-                        <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Tổng từ vựng</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {vocabLearnerStats.map((row: MonthlyVocabularyLearner, index: number) => (
-                        <tr 
-                          key={row.userId} 
-                          className="hover:bg-purple-50 transition-colors duration-150"
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500">
-                            {index + 1}
+        {/* Statistics Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-gray-900 flex items-center">
+              <TrendingUp className="w-5 h-5 mr-2 text-primary" />
+              Bảng vàng học tập
+            </h2>
+            
+            <div className="flex items-center space-x-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+               <input
+                 type="month"
+                 value={statsMonth}
+                 onChange={(e) => {
+                   setStatsMonth(e.target.value)
+                   void fetchMonthlyVocabularyLearnerStats(e.target.value)
+                 }}
+                 className="text-xs font-black uppercase tracking-widest text-gray-600 bg-transparent border-none focus:ring-0 cursor-pointer"
+               />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl">
+             <div className="overflow-x-auto">
+               <table className="w-full text-left">
+                 <thead>
+                   <tr className="bg-gray-50/50 border-b border-gray-100">
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Thứ hạng</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Học viên</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Trình độ</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-center">Đã thuộc</th>
+                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Tổng vốn từ</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-gray-100">
+                    {statsLoading ? (
+                      [1, 2, 3].map(i => (
+                        <tr key={i} className="animate-pulse">
+                          <td colSpan={5} className="px-8 py-6 h-16 bg-gray-50/20" />
+                        </tr>
+                      ))
+                    ) : vocabLearnerStats.length > 0 ? (
+                      vocabLearnerStats.map((row, idx) => (
+                        <tr key={row.userId} className="group hover:bg-gray-50/50 transition-colors">
+                          <td className="px-8 py-6">
+                            <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${
+                              idx === 0 ? 'bg-yellow-400 text-white shadow-lg' :
+                              idx === 1 ? 'bg-gray-300 text-white shadow-lg' :
+                              idx === 2 ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-400'
+                            }`}>
+                              {idx + 1}
+                            </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-semibold text-gray-900">{row.name}</div>
+                          <td className="px-8 py-6">
+                            <div className="flex items-center space-x-3">
+                               <div className="w-10 h-10 rounded-xl chinese-gradient flex items-center justify-center text-white font-black">
+                                  {row.name.charAt(0).toUpperCase()}
+                               </div>
+                               <div>
+                                  <p className="text-sm font-black text-gray-900">{row.name}</p>
+                                  <p className="text-[10px] text-gray-500 font-medium italic">{row.email}</p>
+                               </div>
+                            </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-600">{row.email}</div>
+                          <td className="px-8 py-6">
+                             <span className="bg-primary/5 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/10">
+                                Level {row.level || 1}
+                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            {row.level ? (
-                              <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
-                                Level {row.level}
-                              </Badge>
-                            ) : (
-                              <span className="text-sm text-gray-400">-</span>
-                            )}
+                          <td className="px-8 py-6 text-center">
+                             <span className="text-sm font-black text-green-600">+{row.learnedCount}</span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
-                              {row.learnedCount}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
-                              {row.studyingCount}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <span className="text-sm font-semibold text-gray-900">{row.totalVocabularies}</span>
+                          <td className="px-8 py-6 text-right">
+                             <span className="text-sm font-black text-gray-900">{row.totalVocabularies}</span>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-12 text-center text-gray-400 font-medium">Chưa có dữ liệu thống kê cho tháng này.</td>
+                      </tr>
+                    )}
+                 </tbody>
+               </table>
+             </div>
+          </div>
+        </div>
 
         {/* Empty State */}
         {personalTopics.length === 0 && (
@@ -908,91 +739,92 @@ export const VocabularyLearning = () => {
               <div className="relative inline-block mb-6">
                 <div className="p-6 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full">
                   <BookOpen className="h-16 w-16 text-indigo-500" />
-                  </div>
+                </div>
                 <div className="absolute -top-2 -right-2">
                   <Tag className="h-8 w-8 text-yellow-400 animate-bounce" />
                 </div>
                 <div className="absolute -bottom-2 -left-2">
                   <Plus className="h-6 w-6 text-purple-400 animate-pulse" />
-                  </div>
-                  </div>
+                </div>
+              </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-3">
-                🎯 Chưa có chủ đề nào
-                  </h3>
+                Chưa có chủ đề nào
+              </h3>
               <p className="text-lg text-gray-600 mb-6">
                 Tạo chủ đề đầu tiên để bắt đầu học từ vựng
               </p>
-                  <Button
+              <Button
                 onClick={() => setShowCreateTopicDialog(true)}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
               >
                 <Plus className="w-5 h-5 mr-3" />
                 Tạo chủ đề đầu tiên
-                  </Button>
+              </Button>
             </CardContent>
           </Card>
         )}
+      </div>
 
-        {/* Create Topic Dialog */}
+      {/* Create Topic Dialog */}
       <Dialog open={showCreateTopicDialog} onOpenChange={setShowCreateTopicDialog}>
-          <DialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
-            <DialogHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg p-6 -m-6 mb-6">
-              <DialogTitle className="flex items-center gap-3 text-xl">
-                <div className="p-2 bg-white/20 rounded-full">
-                  <Plus className="w-6 h-6" />
-                </div>
-                <div>
-                  <span>Tạo chủ đề mới</span>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Tag className="h-4 w-4 text-purple-200" />
-                    <span className="text-sm text-purple-100">Tổ chức từ vựng cá nhân</span>
-                  </div>
-                </div>
-              </DialogTitle>
-          </DialogHeader>
-            <form onSubmit={handleCreateTopic} className="space-y-6">
+        <DialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
+          <DialogHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg p-6 -m-6 mb-6">
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 bg-white/20 rounded-full">
+                <Plus className="w-6 h-6" />
+              </div>
               <div>
-                <Label htmlFor="topicName" className="text-lg font-semibold text-gray-700">Tên chủ đề *</Label>
+                <span>Tạo chủ đề mới</span>
+                <div className="flex items-center gap-1 mt-1">
+                  <Tag className="h-4 w-4 text-purple-200" />
+                  <span className="text-sm text-purple-100">Tổ chức từ vựng cá nhân</span>
+                </div>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateTopic} className="space-y-6">
+            <div>
+              <Label htmlFor="topicName" className="text-lg font-semibold text-gray-700">Tên chủ đề *</Label>
               <Input
                 id="topicName"
                 value={newTopicName}
                 onChange={(e) => setNewTopicName(e.target.value)}
-                  placeholder="Ví dụ: Từ vựng công việc"
-                  className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
+                placeholder="Ví dụ: Từ vựng công việc"
+                className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
                 required
               />
             </div>
-              <div>
-                <Label htmlFor="topicDescription" className="text-lg font-semibold text-gray-700">Mô tả (tùy chọn)</Label>
+            <div>
+              <Label htmlFor="topicDescription" className="text-lg font-semibold text-gray-700">Mô tả (tùy chọn)</Label>
               <Input
                 id="topicDescription"
                 value={newTopicDescription}
                 onChange={(e) => setNewTopicDescription(e.target.value)}
-                  placeholder="Mô tả ngắn về chủ đề này"
-                  className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
+                placeholder="Mô tả ngắn về chủ đề này"
+                className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
               />
             </div>
-              <div className="flex justify-end gap-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowCreateTopicDialog(false)}
-                  className="px-6 py-3 text-lg border-2 border-gray-300 hover:border-gray-400"
-                >
+            <div className="flex justify-end gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCreateTopicDialog(false)}
+                className="px-6 py-3 text-lg border-2 border-gray-300 hover:border-gray-400"
+              >
                 Hủy
               </Button>
-                <Button 
-                  type="submit"
-                  className="px-6 py-3 text-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                >
-                  Tạo chủ đề
-                </Button>
+              <Button
+                type="submit"
+                className="px-6 py-3 text-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+              >
+                Tạo chủ đề
+              </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-        {/* Add Vocabulary Dialog */}
+      {/* Add Vocabulary Dialog */}
       <Dialog open={showAddVocabularyDialog} onOpenChange={(open) => {
         setShowAddVocabularyDialog(open)
         if (!open) {
@@ -1002,29 +834,28 @@ export const VocabularyLearning = () => {
         }
       }}>
         <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto p-0">
-          <AddVocabulary 
-            inDialog 
-            onClose={() => setShowAddVocabularyDialog(false)} 
+          <AddVocabulary
+            inDialog
+            onClose={() => setShowAddVocabularyDialog(false)}
             initialSelectedPersonalTopics={selectedTopics}
           />
         </DialogContent>
       </Dialog>
 
-        {/* Topic Quiz */}
-        {selectedTopicForQuiz && (
-          <TopicQuiz
-            topicId={selectedTopicForQuiz.id}
-            topicName={selectedTopicForQuiz.name}
-            isOpen={showTopicQuiz}
-            onClose={() => {
-              setShowTopicQuiz(false)
-              setSelectedTopicForQuiz(null)
-              // Refresh list and statuses after quiz persists results
-              fetchAvailableVocabularies()
-            }}
-          />
-        )}
-      </div>
+      {/* Topic Quiz */}
+      {selectedTopicForQuiz && (
+        <TopicQuiz
+          topicId={selectedTopicForQuiz.id}
+          topicName={selectedTopicForQuiz.name}
+          isOpen={showTopicQuiz}
+          onClose={() => {
+            setShowTopicQuiz(false)
+            setSelectedTopicForQuiz(null)
+            // Refresh list and statuses after quiz persists results
+            fetchAvailableVocabularies()
+          }}
+        />
+      )}
     </div>
   )
 }
