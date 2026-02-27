@@ -37,7 +37,8 @@ interface Vocabulary {
 interface QuizQuestion {
   question: string
   options: string[]
-  correctAnswer: number
+  // Hỗ trợ cả câu 1 đáp án và nhiều đáp án
+  correctAnswer: number | number[]
   explanation?: string
 }
 
@@ -51,7 +52,8 @@ interface TopicQuizProps {
 export const TopicQuiz = ({ topicId, topicName, isOpen, onClose }: TopicQuizProps) => {
   const [vocabularies, setVocabularies] = useState<Vocabulary[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [answers, setAnswers] = useState<number[]>([])
+  // answers[i] là danh sách index đáp án đã chọn cho từ vựng i
+  const [answers, setAnswers] = useState<number[][]>([])
   const [quizCompleted, setQuizCompleted] = useState(false)
   const [score, setScore] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -108,13 +110,48 @@ export const TopicQuiz = ({ topicId, topicName, isOpen, onClose }: TopicQuizProp
 
   const handleAnswer = (answerIndex: number) => {
     if (showAnswer) return
+    const currentVocabulary = vocabularies[currentIndex]
+    const question = currentVocabulary?.questions?.[0]
+    if (!question) return
+
+    const isMulti = Array.isArray(question.correctAnswer)
+
     const newAnswers = [...answers]
-    newAnswers[currentIndex] = answerIndex
+    const currentSelected = newAnswers[currentIndex]
+      ? [...newAnswers[currentIndex]]
+      : []
+
+    if (isMulti) {
+      // Toggle nhiều đáp án
+      if (currentSelected.includes(answerIndex)) {
+        newAnswers[currentIndex] = currentSelected.filter((i) => i !== answerIndex)
+      } else {
+        newAnswers[currentIndex] = [...currentSelected, answerIndex]
+      }
+    } else {
+      // Câu 1 đáp án: chỉ giữ 1 lựa chọn
+      newAnswers[currentIndex] = [answerIndex]
+    }
+
     setAnswers(newAnswers)
   }
 
+  const isUserAnswerCorrect = (question: QuizQuestion, selectedIndices: number[]) => {
+    if (!selectedIndices || selectedIndices.length === 0) return false
+
+    const correctRaw = question.correctAnswer
+    const correctIndices = Array.isArray(correctRaw) ? correctRaw : [correctRaw]
+
+    if (selectedIndices.length !== correctIndices.length) return false
+
+    const sortedSelected = [...selectedIndices].sort()
+    const sortedCorrect = [...correctIndices].sort()
+
+    return sortedSelected.every((v, i) => v === sortedCorrect[i])
+  }
+
   const handleCheck = () => {
-    if (answers[currentIndex] === undefined) return
+    if (!answers[currentIndex] || answers[currentIndex].length === 0) return
     setShowAnswer(true)
   }
 
@@ -125,9 +162,11 @@ export const TopicQuiz = ({ topicId, topicName, isOpen, onClose }: TopicQuizProp
       setCurrentIndex(currentIndex + 1)
     } else {
       // Calculate final score
-      const correctAnswers = vocabularies.filter((vocab, index) => 
-        answers[index] === vocab.questions![0].correctAnswer
-      ).length
+      const correctAnswers = vocabularies.filter((vocab, index) => {
+        const q = vocab.questions![0]
+        const selected = answers[index] || []
+        return isUserAnswerCorrect(q, selected)
+      }).length
       const finalScore = Math.round((correctAnswers / vocabularies.length) * 100)
       setScore(finalScore)
       setQuizCompleted(true)
@@ -153,7 +192,7 @@ export const TopicQuiz = ({ topicId, topicName, isOpen, onClose }: TopicQuizProp
     try {
       // Save per-word status: correct -> learned, wrong -> studying
       const updates = vocabularies.map((vocab, index) => {
-        const isCorrect = answers[index] === vocab.questions![0].correctAnswer
+        const isCorrect = isUserAnswerCorrect(vocab.questions![0], answers[index] || [])
         const status = isCorrect ? 'learned' : 'studying'
         return api.post('/vocabulary-learning/user/vocabularies', {
           vocabularyId: vocab._id,
@@ -175,8 +214,8 @@ export const TopicQuiz = ({ topicId, topicName, isOpen, onClose }: TopicQuizProp
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-      <Card className="w-full max-w-2xl rounded-[3rem] border-none shadow-2xl overflow-hidden relative">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 p-4 overflow-y-auto flex items-start justify-center animate-in fade-in duration-300">
+      <Card className="w-full max-w-2xl rounded-[3rem] border-none shadow-2xl relative my-8 max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 chinese-gradient opacity-5 rounded-bl-[8rem]" />
         
         <CardHeader className="border-b border-gray-100 p-8 md:p-10 bg-white/80 relative z-10">
@@ -193,7 +232,7 @@ export const TopicQuiz = ({ topicId, topicName, isOpen, onClose }: TopicQuizProp
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="p-8 md:p-12 bg-white relative z-10">
+        <CardContent className="p-8 md:p-12 bg-white relative z-10 overflow-y-auto">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -257,13 +296,22 @@ export const TopicQuiz = ({ topicId, topicName, isOpen, onClose }: TopicQuizProp
               <div className="space-y-4">
                  <Badge className="bg-primary/5 text-primary border-none rounded-lg px-2 py-0.5 text-[8px] font-black uppercase tracking-widest">Question</Badge>
                  <h4 className="text-xl font-black text-gray-900 leading-snug">{currentQuestion.question}</h4>
+                 {Array.isArray(currentQuestion.correctAnswer) && currentQuestion.correctAnswer.length > 1 && (
+                   <p className="text-[10px] font-black uppercase text-amber-600">
+                     Dạng: Chọn <span className="underline">nhiều đáp án đúng</span>
+                   </p>
+                 )}
               </div>
 
               {/* Options */}
               <div className="grid gap-3">
                 {currentQuestion.options.map((option, index) => {
-                  const isSelected = answers[currentIndex] === index
-                  const isCorrect = showAnswer && index === currentQuestion.correctAnswer
+                  const selectedForCurrent = answers[currentIndex] || []
+                  const isSelected = selectedForCurrent.includes(index)
+
+                  const correctRaw = currentQuestion.correctAnswer
+                  const correctIndices = Array.isArray(correctRaw) ? correctRaw : [correctRaw]
+                  const isCorrect = showAnswer && correctIndices.includes(index)
                   const isWrong = showAnswer && isSelected && !isCorrect
                   
                   return (

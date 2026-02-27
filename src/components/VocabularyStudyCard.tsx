@@ -35,7 +35,8 @@ interface Vocabulary {
 interface QuizQuestion {
   question: string
   options: string[]
-  correctAnswer: number
+  // Backend cho phép correctAnswer là number | number[]
+  correctAnswer: number | number[]
   explanation?: string
 }
 
@@ -52,7 +53,8 @@ export const VocabularyStudyCard = ({
 }: VocabularyStudyCardProps) => {
   const [showDetails, setShowDetails] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
-  const [quizAnswers, setQuizAnswers] = useState<number[]>([])
+  // Mỗi phần tử là danh sách index đáp án đã chọn cho 1 câu hỏi
+  const [quizAnswers, setQuizAnswers] = useState<number[][]>([])
   const [quizCompleted, setQuizCompleted] = useState(false)
   const [quizScore, setQuizScore] = useState(0)
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0)
@@ -115,9 +117,43 @@ export const VocabularyStudyCard = ({
   }
 
   const handleQuizAnswer = (answerIndex: number) => {
+    if (!vocabulary.questions || !vocabulary.questions[currentQuizIndex]) return
+
+    const question = vocabulary.questions[currentQuizIndex]
+    const isMulti = Array.isArray(question.correctAnswer)
+
     const newAnswers = [...quizAnswers]
-    newAnswers[currentQuizIndex] = answerIndex
+    const currentSelected = newAnswers[currentQuizIndex]
+      ? [...newAnswers[currentQuizIndex]]
+      : []
+
+    if (isMulti) {
+      // Câu hỏi nhiều đáp án: toggle chọn/bỏ chọn
+      if (currentSelected.includes(answerIndex)) {
+        newAnswers[currentQuizIndex] = currentSelected.filter((i) => i !== answerIndex)
+      } else {
+        newAnswers[currentQuizIndex] = [...currentSelected, answerIndex]
+      }
+    } else {
+      // Câu hỏi 1 đáp án: chỉ giữ 1 lựa chọn
+      newAnswers[currentQuizIndex] = [answerIndex]
+    }
+
     setQuizAnswers(newAnswers)
+  }
+
+  const isUserAnswerCorrect = (question: QuizQuestion, selectedIndices: number[]) => {
+    if (!selectedIndices || selectedIndices.length === 0) return false
+
+    const correctRaw = question.correctAnswer
+    const correctIndices = Array.isArray(correctRaw) ? correctRaw : [correctRaw]
+
+    if (selectedIndices.length !== correctIndices.length) return false
+
+    const sortedSelected = [...selectedIndices].sort()
+    const sortedCorrect = [...correctIndices].sort()
+
+    return sortedSelected.every((v, i) => v === sortedCorrect[i])
   }
 
   const handleNextQuiz = () => {
@@ -125,9 +161,10 @@ export const VocabularyStudyCard = ({
     if (currentQuizIndex < vocabulary.questions!.length - 1) {
       setCurrentQuizIndex(currentQuizIndex + 1)
     } else {
-      const correctAnswers = vocabulary.questions!.filter((q, index) => 
-        quizAnswers[index] === q.correctAnswer
-      ).length
+      const correctAnswers = vocabulary.questions!.filter((q, index) => {
+        const selected = quizAnswers[index] || []
+        return isUserAnswerCorrect(q, selected)
+      }).length
       const score = Math.round((correctAnswers / vocabulary.questions!.length) * 100)
       setQuizScore(score)
       setQuizCompleted(true)
@@ -246,7 +283,18 @@ export const VocabularyStudyCard = ({
           <DialogHeader className="text-center space-y-4 mb-8">
              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto"><Brain className="w-8 h-8 text-primary" /></div>
              <DialogTitle className="text-3xl font-black">Kiểm tra: {vocabulary.word}</DialogTitle>
-             {vocabulary.questions && <p className="text-xs font-black uppercase text-gray-400">Câu hỏi {currentQuizIndex + 1} của {vocabulary.questions.length}</p>}
+             {vocabulary.questions && (
+               <div className="space-y-1">
+                 <p className="text-xs font-black uppercase text-gray-400">
+                   Câu hỏi {currentQuizIndex + 1} của {vocabulary.questions.length}
+                 </p>
+                 {currentQuiz && Array.isArray(currentQuiz.correctAnswer) && currentQuiz.correctAnswer.length > 1 && (
+                   <p className="text-[10px] font-black uppercase text-amber-600">
+                     Dạng: Chọn <span className="underline">nhiều đáp án đúng</span>
+                   </p>
+                 )}
+               </div>
+             )}
           </DialogHeader>
 
           {(!vocabulary.questions || vocabulary.questions.length === 0) ? (
@@ -260,13 +308,54 @@ export const VocabularyStudyCard = ({
                 <p className="text-xl font-bold text-gray-900 text-center">{currentQuiz?.question}</p>
               </div>
               <div className="grid gap-3">
-                {currentQuiz?.options.map((option, index) => (
-                  <button key={index} disabled={showAnswer} onClick={() => handleQuizAnswer(index)} className={`flex items-center p-5 rounded-2xl border-2 transition-all text-left ${showAnswer && index === currentQuiz?.correctAnswer ? 'border-green-500 bg-green-50' : quizAnswers[currentQuizIndex] === index ? 'border-primary bg-primary/5' : 'border-gray-100 hover:bg-gray-50'}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm mr-4 shrink-0 ${showAnswer && index === currentQuiz?.correctAnswer ? 'bg-green-500 text-white' : quizAnswers[currentQuizIndex] === index ? 'chinese-gradient text-white' : 'bg-gray-100 text-gray-400'}`}>{String.fromCharCode(65 + index)}</div>
-                    <span className={`font-bold ${quizAnswers[currentQuizIndex] === index || (showAnswer && index === currentQuiz?.correctAnswer) ? 'text-gray-900' : 'text-gray-500'}`}>{option}</span>
-                    {showAnswer && index === currentQuiz?.correctAnswer && <CheckCircle className="ml-auto w-5 h-5 text-green-500" />}
-                  </button>
-                ))}
+                {currentQuiz?.options.map((option, index) => {
+                  const selectedForCurrent = quizAnswers[currentQuizIndex] || []
+                  const isSelected = selectedForCurrent.includes(index)
+
+                  const correctRaw = currentQuiz.correctAnswer
+                  const correctIndices = Array.isArray(correctRaw) ? correctRaw : [correctRaw]
+                  const isCorrect = showAnswer && correctIndices.includes(index)
+                  const isWrong = showAnswer && isSelected && !isCorrect
+
+                  return (
+                    <button
+                      key={index}
+                      disabled={showAnswer}
+                      onClick={() => handleQuizAnswer(index)}
+                      className={`flex items-center p-5 rounded-2xl border-2 transition-all text-left ${
+                        isCorrect
+                          ? 'border-green-500 bg-green-50'
+                          : isWrong
+                            ? 'border-red-500 bg-red-50'
+                            : isSelected
+                              ? 'border-primary bg-primary/5'
+                              : 'border-gray-100 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm mr-4 shrink-0 ${
+                          isCorrect
+                            ? 'bg-green-500 text-white'
+                            : isWrong
+                              ? 'bg-red-500 text-white'
+                              : isSelected
+                                ? 'chinese-gradient text-white'
+                                : 'bg-gray-100 text-gray-400'
+                        }`}
+                      >
+                        {String.fromCharCode(65 + index)}
+                      </div>
+                      <span
+                        className={`font-bold ${
+                          isSelected || isCorrect ? 'text-gray-900' : 'text-gray-500'
+                        }`}
+                      >
+                        {option}
+                      </span>
+                      {isCorrect && <CheckCircle className="ml-auto w-5 h-5 text-green-500" />}
+                    </button>
+                  )
+                })}
               </div>
               {showAnswer && currentQuiz?.explanation && (
                 <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex items-start space-x-3">
@@ -275,8 +364,31 @@ export const VocabularyStudyCard = ({
                 </div>
               )}
               <div className="flex justify-between items-center pt-4">
-                <Button variant="ghost" onClick={() => currentQuizIndex > 0 && setCurrentQuizIndex(currentQuizIndex - 1)} disabled={currentQuizIndex === 0} className="rounded-xl font-bold text-gray-400"><ArrowLeft className="w-4 h-4 mr-2" /> Quay lại</Button>
-                {!showAnswer ? <Button disabled={quizAnswers[currentQuizIndex] === undefined} onClick={() => setShowAnswer(true)} className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg">Kiểm tra đáp án</Button> : <Button onClick={handleNextQuiz} className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg">{currentQuizIndex === vocabulary.questions!.length - 1 ? 'Xem kết quả' : 'Câu tiếp theo'} <ArrowRight className="w-4 h-4 ml-2" /></Button>}
+                <Button
+                  variant="ghost"
+                  onClick={() => currentQuizIndex > 0 && setCurrentQuizIndex(currentQuizIndex - 1)}
+                  disabled={currentQuizIndex === 0}
+                  className="rounded-xl font-bold text-gray-400"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại
+                </Button>
+                {!showAnswer ? (
+                  <Button
+                    disabled={!quizAnswers[currentQuizIndex] || quizAnswers[currentQuizIndex].length === 0}
+                    onClick={() => setShowAnswer(true)}
+                    className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg"
+                  >
+                    Kiểm tra đáp án
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleNextQuiz}
+                    className="chinese-gradient h-12 px-8 rounded-xl font-black text-white shadow-lg"
+                  >
+                    {currentQuizIndex === vocabulary.questions!.length - 1 ? 'Xem kết quả' : 'Câu tiếp theo'}{' '}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -287,7 +399,14 @@ export const VocabularyStudyCard = ({
               <div className="space-y-2">
                  <div className={`text-6xl font-black ${quizScore === 100 ? 'text-green-600' : 'text-orange-600'}`}>{quizScore}%</div>
                  <h4 className="text-2xl font-black text-gray-900">{quizScore === 100 ? 'Xuất sắc! Đã thuộc từ.' : 'Cần ôn tập thêm!'}</h4>
-                 <p className="text-gray-500 font-medium">Bạn đã trả lời đúng {vocabulary.questions!.filter((q, i) => quizAnswers[i] === q.correctAnswer).length}/{vocabulary.questions!.length} câu hỏi.</p>
+                 <p className="text-gray-500 font-medium">
+                   Bạn đã trả lời đúng{' '}
+                   {vocabulary.questions!.filter((q, i) => {
+                     const selected = quizAnswers[i] || []
+                     return isUserAnswerCorrect(q, selected)
+                   }).length}
+                   /{vocabulary.questions!.length} câu hỏi.
+                 </p>
               </div>
               <Button onClick={handleFinishQuiz} className={`w-full h-14 rounded-2xl font-black text-lg shadow-xl transition-all ${quizScore === 100 ? 'chinese-gradient text-white shadow-primary/20 hover:shadow-primary/30' : 'bg-gray-900 text-white hover:bg-black'}`}>{quizScore === 100 ? 'Hoàn thành bài khảo' : 'Tiếp tục luyện tập'}</Button>
             </div>

@@ -53,7 +53,8 @@ interface Level {
 interface QuizQuestion {
   question: string
   options: string[]
-  correctAnswer: number
+  // Hỗ trợ cả câu hỏi 1 đáp án và nhiều đáp án
+  correctAnswer: number | number[]
   explanation?: string
 }
 
@@ -96,12 +97,14 @@ export const AdminVocabulary = () => {
   const [newAntonym, setNewAntonym] = useState('')
   const [newQuestion, setNewQuestion] = useState('')
   const [newQuestionOptions, setNewQuestionOptions] = useState(['', '', '', ''])
-  const [newQuestionCorrectAnswer, setNewQuestionCorrectAnswer] = useState(0)
+  // Danh sách index đáp án đúng cho câu hỏi mới
+  const [newQuestionCorrectAnswer, setNewQuestionCorrectAnswer] = useState<number[]>([])
   const [newQuestionExplanation, setNewQuestionExplanation] = useState('')
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
   const [editQuestion, setEditQuestion] = useState('')
   const [editQuestionOptions, setEditQuestionOptions] = useState(['', '', '', ''])
-  const [editQuestionCorrectAnswer, setEditQuestionCorrectAnswer] = useState(0)
+  // Danh sách index đáp án đúng khi chỉnh sửa câu hỏi
+  const [editQuestionCorrectAnswer, setEditQuestionCorrectAnswer] = useState<number[]>([])
   const [editQuestionExplanation, setEditQuestionExplanation] = useState('')
   const [audioRemoved, setAudioRemoved] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
@@ -179,7 +182,7 @@ export const AdminVocabulary = () => {
   const resetForm = () => {
     setFormData({ word: '', pinyin: '', zhuyin: '', meaning: '', partOfSpeech: '', level: 1, topics: [], examples: [], synonyms: [], antonyms: [], questions: [] })
     setNewExample(''); setNewSynonym(''); setNewAntonym(''); setNewQuestion('')
-    setNewQuestionOptions(['', '', '', '']); setNewQuestionCorrectAnswer(0); setNewQuestionExplanation('')
+    setNewQuestionOptions(['', '', '', '']); setNewQuestionCorrectAnswer([]); setNewQuestionExplanation('')
   }
 
   const handleCreateVocabulary = async (e: React.FormEvent) => {
@@ -252,25 +255,67 @@ export const AdminVocabulary = () => {
 
   // Quiz question helpers
   const addQuestion = () => {
-    if (newQuestion.trim() && newQuestionOptions.every(opt => opt.trim())) {
-      setFormData(prev => ({ ...prev, questions: [...prev.questions, { question: newQuestion.trim(), options: newQuestionOptions.map(o => o.trim()), correctAnswer: newQuestionCorrectAnswer, explanation: newQuestionExplanation.trim() || undefined }] }))
-      setNewQuestion(''); setNewQuestionOptions(['', '', '', '']); setNewQuestionCorrectAnswer(0); setNewQuestionExplanation('')
+    if (newQuestion.trim() && newQuestionOptions.every(opt => opt.trim()) && newQuestionCorrectAnswer.length > 0) {
+      const correct =
+        newQuestionCorrectAnswer.length === 1 ? newQuestionCorrectAnswer[0] : newQuestionCorrectAnswer
+
+      setFormData(prev => ({
+        ...prev,
+        questions: [
+          ...prev.questions,
+          {
+            question: newQuestion.trim(),
+            options: newQuestionOptions.map(o => o.trim()),
+            correctAnswer: correct,
+            explanation: newQuestionExplanation.trim() || undefined
+          }
+        ]
+      }))
+      setNewQuestion('')
+      setNewQuestionOptions(['', '', '', ''])
+      setNewQuestionCorrectAnswer([])
+      setNewQuestionExplanation('')
     }
   }
   const removeQuestion = (i: number) => setFormData(prev => ({ ...prev, questions: prev.questions.filter((_, idx) => idx !== i) }))
   const startEditQuestion = (i: number) => {
     const q = formData.questions[i]
-    setEditingQuestionIndex(i); setEditQuestion(q.question); setEditQuestionOptions([...q.options]); setEditQuestionCorrectAnswer(q.correctAnswer); setEditQuestionExplanation(q.explanation || '')
+    const existingCorrect = Array.isArray(q.correctAnswer)
+      ? q.correctAnswer
+      : [q.correctAnswer]
+    setEditingQuestionIndex(i)
+    setEditQuestion(q.question)
+    setEditQuestionOptions([...q.options])
+    setEditQuestionCorrectAnswer(existingCorrect)
+    setEditQuestionExplanation(q.explanation || '')
   }
   const saveEditQuestion = () => {
-    if (editingQuestionIndex !== null && editQuestion.trim() && editQuestionOptions.every(o => o.trim())) {
+    if (
+      editingQuestionIndex !== null &&
+      editQuestion.trim() &&
+      editQuestionOptions.every(o => o.trim()) &&
+      editQuestionCorrectAnswer.length > 0
+    ) {
       const updated = [...formData.questions]
-      updated[editingQuestionIndex] = { question: editQuestion.trim(), options: editQuestionOptions.map(o => o.trim()), correctAnswer: editQuestionCorrectAnswer, explanation: editQuestionExplanation.trim() || undefined }
+      const correct =
+        editQuestionCorrectAnswer.length === 1 ? editQuestionCorrectAnswer[0] : editQuestionCorrectAnswer
+      updated[editingQuestionIndex] = {
+        question: editQuestion.trim(),
+        options: editQuestionOptions.map(o => o.trim()),
+        correctAnswer: correct,
+        explanation: editQuestionExplanation.trim() || undefined
+      }
       setFormData(prev => ({ ...prev, questions: updated }))
       cancelEditQuestion()
     }
   }
-  const cancelEditQuestion = () => { setEditingQuestionIndex(null); setEditQuestion(''); setEditQuestionOptions(['', '', '', '']); setEditQuestionCorrectAnswer(0); setEditQuestionExplanation('') }
+  const cancelEditQuestion = () => {
+    setEditingQuestionIndex(null)
+    setEditQuestion('')
+    setEditQuestionOptions(['', '', '', ''])
+    setEditQuestionCorrectAnswer([])
+    setEditQuestionExplanation('')
+  }
 
   // Import
   const onFileSelected = async (ev: React.ChangeEvent<HTMLInputElement>) => {
@@ -470,9 +515,19 @@ export const AdminVocabulary = () => {
               </div>
             </div>
             <p className="text-sm font-bold">{q.question}</p>
+            {Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1 && (
+              <p className="text-[10px] font-black uppercase text-amber-600">Dạng: Chọn nhiều đáp án đúng</p>
+            )}
             <div className="grid grid-cols-2 gap-2">
               {q.options.map((opt, oi) => (
-                <div key={oi} className={`px-3 py-2 rounded-xl text-sm ${oi === q.correctAnswer ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-white border'}`}>
+                <div
+                  key={oi}
+                  className={`px-3 py-2 rounded-xl text-sm ${
+                    (Array.isArray(q.correctAnswer) ? q.correctAnswer.includes(oi) : oi === q.correctAnswer)
+                      ? 'bg-green-100 text-green-800 border border-green-200'
+                      : 'bg-white border'
+                  }`}
+                >
                   {String.fromCharCode(65 + oi)}. {opt}
                 </div>
               ))}
@@ -486,12 +541,27 @@ export const AdminVocabulary = () => {
           <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 space-y-3">
             <span className="text-[10px] font-black uppercase text-blue-600">Chỉnh sửa câu hỏi {editingQuestionIndex + 1}</span>
             <Input value={editQuestion} onChange={e => setEditQuestion(e.target.value)} placeholder="Nhập câu hỏi..." className="rounded-xl" />
+            <p className="text-[10px] text-gray-500">
+              Bạn có thể chọn <span className="font-bold">nhiều nút "Đúng"</span> nếu câu hỏi có nhiều đáp án đúng.
+            </p>
             <div className="space-y-2">
               {editQuestionOptions.map((opt, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="w-6 text-sm font-bold">{String.fromCharCode(65 + i)}.</span>
                   <Input value={opt} onChange={e => { const o = [...editQuestionOptions]; o[i] = e.target.value; setEditQuestionOptions(o) }} placeholder={`Lựa chọn ${String.fromCharCode(65 + i)}`} className="rounded-xl" />
-                  <Button type="button" variant={editQuestionCorrectAnswer === i ? 'default' : 'outline'} size="sm" onClick={() => setEditQuestionCorrectAnswer(i)} className="rounded-xl">Đúng</Button>
+                  <Button
+                    type="button"
+                    variant={editQuestionCorrectAnswer.includes(i) ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() =>
+                      setEditQuestionCorrectAnswer(prev =>
+                        prev.includes(i) ? prev.filter(idx => idx !== i) : [...prev, i]
+                      )
+                    }
+                    className="rounded-xl"
+                  >
+                    Đúng
+                  </Button>
                 </div>
               ))}
             </div>
@@ -507,12 +577,28 @@ export const AdminVocabulary = () => {
         <div className="border-2 border-dashed border-gray-200 rounded-2xl p-4 space-y-3">
           <span className="text-[10px] font-black uppercase text-gray-400">Thêm câu hỏi mới</span>
           <Input value={newQuestion} onChange={e => setNewQuestion(e.target.value)} placeholder="Nhập câu hỏi..." className="rounded-xl" />
+          <p className="text-[10px] text-gray-500">
+            Mặc định là câu hỏi <span className="font-bold">1 đáp án</span>. Nếu muốn nhiều đáp án đúng, hãy
+            bấm chọn <span className="font-bold">nhiều nút \"Đúng\"</span> ở dưới.
+          </p>
           <div className="space-y-2">
             {newQuestionOptions.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="w-6 text-sm font-bold">{String.fromCharCode(65 + i)}.</span>
                 <Input value={opt} onChange={e => { const o = [...newQuestionOptions]; o[i] = e.target.value; setNewQuestionOptions(o) }} placeholder={`Lựa chọn ${String.fromCharCode(65 + i)}`} className="rounded-xl" />
-                <Button type="button" variant={newQuestionCorrectAnswer === i ? 'default' : 'outline'} size="sm" onClick={() => setNewQuestionCorrectAnswer(i)} className="rounded-xl">Đúng</Button>
+                <Button
+                  type="button"
+                  variant={newQuestionCorrectAnswer.includes(i) ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() =>
+                    setNewQuestionCorrectAnswer(prev =>
+                      prev.includes(i) ? prev.filter(idx => idx !== i) : [...prev, i]
+                    )
+                  }
+                  className="rounded-xl"
+                >
+                  Đúng
+                </Button>
               </div>
             ))}
           </div>
