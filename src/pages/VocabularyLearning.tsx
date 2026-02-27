@@ -324,16 +324,16 @@ export const VocabularyLearning = () => {
     setShowTopicQuiz(true)
   }
 
+  // Pre-computed lists để dùng chung cho cả hiển thị và badge đếm
+  const studyingVocabularies = availableVocabularies.filter(vocab =>
+    vocabularyStatuses[vocab._id] !== 'learned'
+  )
+  const learnedVocabularies = availableVocabularies.filter(vocab =>
+    vocabularyStatuses[vocab._id] === 'learned'
+  )
+
   const getFilteredVocabularies = () => {
-    if (activeTab === 'studying') {
-      return availableVocabularies.filter(vocab => 
-        vocabularyStatuses[vocab._id] !== 'learned'
-      )
-    } else {
-      return availableVocabularies.filter(vocab => 
-        vocabularyStatuses[vocab._id] === 'learned'
-      )
-    }
+    return activeTab === 'studying' ? studyingVocabularies : learnedVocabularies
   }
 
   const handleVocabularyClick = (vocabulary: Vocabulary) => {
@@ -575,7 +575,7 @@ export const VocabularyLearning = () => {
                         : 'text-gray-400 hover:text-gray-600'
                     }`}
                   >
-                    Đang học ({getFilteredVocabularies().length})
+                    Đang học ({studyingVocabularies.length})
                   </button>
                   <button
                     onClick={() => setActiveTab('learned')}
@@ -585,7 +585,7 @@ export const VocabularyLearning = () => {
                         : 'text-gray-400 hover:text-gray-600'
                     }`}
                   >
-                    Đã thuộc ({availableVocabularies.filter(v => vocabularyStatuses[v._id] === 'learned').length})
+                    Đã thuộc ({learnedVocabularies.length})
                   </button>
                 </div>
               </div>

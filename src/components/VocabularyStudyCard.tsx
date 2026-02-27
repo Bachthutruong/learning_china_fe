@@ -136,8 +136,12 @@ export const VocabularyStudyCard = ({
 
   const handleFinishQuiz = async () => {
     setShowQuiz(false)
-    if (quizScore === 100) await onStatusChange('learned')
-    else await onStatusChange('studying')
+    const hasNoQuestions = !vocabulary.questions || vocabulary.questions.length === 0
+    if (hasNoQuestions || quizScore === 100) {
+      await onStatusChange('learned')
+    } else {
+      await onStatusChange('studying')
+    }
   }
 
   const currentQuiz = vocabulary.questions?.[currentQuizIndex]
