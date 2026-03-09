@@ -113,16 +113,16 @@ export const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Tổng quan</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Tổng quan</h1>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {[...Array(8)].map((_, i) => (
             <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              <CardContent className="p-4 sm:p-6">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                <div className="h-6 sm:h-8 bg-gray-200 rounded w-1/2" />
               </CardContent>
             </Card>
           ))}
@@ -132,19 +132,19 @@ export const AdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-10 pb-12">
+    <div className="space-y-6 sm:space-y-10 pb-8 sm:pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
-             <LayoutDashboard className="w-8 h-8 mr-3 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center flex-wrap gap-2">
+             <LayoutDashboard className="w-7 h-7 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary shrink-0" />
              Tổng quan hệ thống
           </h1>
-          <p className="text-gray-500 font-medium">Theo dõi dữ liệu và hiệu suất vận hành thời gian thực.</p>
+          <p className="text-sm sm:text-base text-gray-500 font-medium mt-1">Theo dõi dữ liệu và hiệu suất vận hành thời gian thực.</p>
         </div>
         <Button 
           onClick={fetchDashboardData} 
-          className="chinese-gradient h-12 px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all"
+          className="chinese-gradient h-11 sm:h-12 px-4 sm:px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all shrink-0 min-h-[44px]"
         >
           <Activity className="mr-2 h-4 w-4" />
           Làm mới dữ liệu
@@ -152,7 +152,7 @@ export const AdminDashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {[
           { label: 'Tổng người dùng', value: stats.totalUsers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Kho từ vựng', value: stats.totalVocabulary, icon: BookOpen, color: 'text-red-600', bg: 'bg-red-50' },
@@ -163,45 +163,45 @@ export const AdminDashboard = () => {
           { label: 'Tổng Xu', value: stats.totalCoins, icon: Coins, color: 'text-yellow-600', bg: 'bg-yellow-50' },
           { label: 'Test Năng lực', value: stats.totalProficiencyTests, icon: Brain, color: 'text-cyan-600', bg: 'bg-cyan-50' }
         ].map((item, i) => (
-          <div key={i} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group">
-             <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 rounded-2xl ${item.bg} ${item.color} flex items-center justify-center transition-transform group-hover:rotate-6`}>
-                   <item.icon className="w-6 h-6" />
+          <div key={i} className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group">
+             <div className="flex items-center justify-between mb-2 sm:mb-4">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${item.bg} ${item.color} flex items-center justify-center transition-transform group-hover:rotate-6 shrink-0`}>
+                   <item.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-gray-100 text-gray-400">
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest border-gray-100 text-gray-400 hidden sm:inline-flex">
                    Realtime
                 </Badge>
              </div>
-             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{item.label}</p>
-             <div className="text-2xl font-black text-gray-900">{item.value.toLocaleString()}</div>
+             <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 line-clamp-1">{item.label}</p>
+             <div className="text-lg sm:text-2xl font-black text-gray-900 truncate">{item.value.toLocaleString()}</div>
           </div>
         ))}
       </div>
 
       {/* Main Analysis Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
-           <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-gray-900">Hoạt động gần đây</h3>
-              <Button variant="ghost" className="text-xs font-black text-primary hover:bg-primary/5 rounded-xl">Xem tất cả</Button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
+        <div className="lg:col-span-2 bg-white rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-8 border border-gray-100 shadow-xl space-y-4 sm:space-y-8">
+           <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-lg sm:text-xl font-black text-gray-900">Hoạt động gần đây</h3>
+              <Button variant="ghost" className="text-xs font-black text-primary hover:bg-primary/5 rounded-xl min-h-[44px]">Xem tất cả</Button>
            </div>
            
-           <div className="space-y-6">
+           <div className="space-y-4 sm:space-y-6">
               {recentActivities.length > 0 ? (
                 recentActivities.slice(0, 6).map((activity) => {
                   const Icon = getActivityIcon(activity.type)
                   return (
-                    <div key={activity.id} className="flex items-center justify-between group">
-                       <div className="flex items-center space-x-4">
-                          <div className={`w-10 h-10 rounded-xl bg-gray-50 ${getActivityColor(activity.type)} flex items-center justify-center`}>
-                             <Icon className="w-5 h-5" />
+                    <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
+                       <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gray-50 ${getActivityColor(activity.type)} flex items-center justify-center shrink-0`}>
+                             <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                           </div>
-                          <div>
-                             <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-primary transition-colors">{activity.description}</p>
-                             <p className="text-[10px] font-medium text-gray-400 mt-1 italic">{new Date(activity.timestamp).toLocaleString('vi-VN')}</p>
+                          <div className="min-w-0">
+                             <p className="text-xs sm:text-sm font-bold text-gray-900 leading-tight group-hover:text-primary transition-colors line-clamp-2">{activity.description}</p>
+                             <p className="text-[10px] font-medium text-gray-400 mt-0.5 italic">{new Date(activity.timestamp).toLocaleString('vi-VN')}</p>
                           </div>
                        </div>
-                       <Badge className="bg-gray-50 text-gray-400 hover:bg-gray-100 transition-all rounded-lg font-bold text-[9px] uppercase">
+                       <Badge className="bg-gray-50 text-gray-400 hover:bg-gray-100 transition-all rounded-lg font-bold text-[9px] uppercase w-fit shrink-0">
                           {activity.type.split('_')[1]}
                        </Badge>
                     </div>
@@ -213,10 +213,10 @@ export const AdminDashboard = () => {
            </div>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
-           <h3 className="text-xl font-black text-gray-900">Chỉ số vận hành</h3>
+        <div className="bg-white rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-8 border border-gray-100 shadow-xl space-y-4 sm:space-y-8">
+           <h3 className="text-lg sm:text-xl font-black text-gray-900">Chỉ số vận hành</h3>
            
-           <div className="space-y-8">
+           <div className="space-y-6 sm:space-y-8">
               {[
                 { label: 'Tỷ lệ hoàn thành test', val: stats.testCompletionRate, color: 'bg-green-500', icon: CheckCircle },
                 { label: 'Tỷ lệ học từ vựng', val: stats.vocabularyLearningRate, color: 'bg-blue-500', icon: BookOpen },
@@ -240,8 +240,8 @@ export const AdminDashboard = () => {
               ))}
            </div>
 
-           <div className="pt-8 border-t border-gray-50">
-              <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10 text-center space-y-2">
+           <div className="pt-6 sm:pt-8 border-t border-gray-50">
+              <div className="bg-primary/5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-primary/10 text-center space-y-2">
                  <p className="text-[10px] font-black uppercase tracking-widest text-primary">System Health</p>
                  <p className="text-xl font-black text-gray-900">Optimal (99.9%)</p>
               </div>

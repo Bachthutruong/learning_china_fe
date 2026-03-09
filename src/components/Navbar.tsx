@@ -48,9 +48,9 @@ export const Navbar = () => {
   ]
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/80 backdrop-blur-xl transition-all duration-300">
+    <nav className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/80 backdrop-blur-xl transition-all duration-300 pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
+        <div className="flex h-14 sm:h-16 lg:h-20 items-center justify-between">
           
           {/* Logo & Main Nav */}
           <div className="flex items-center gap-8">
@@ -205,11 +205,11 @@ export const Navbar = () => {
               </div>
             )}
 
-            {/* Mobile Menu Toggle */}
+            {/* Mobile Menu Toggle - 44px touch target */}
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden rounded-xl h-10 w-10 text-gray-600 hover:bg-gray-100"
+              className="lg:hidden rounded-xl h-11 w-11 min-h-[44px] min-w-[44px] text-gray-600 hover:bg-gray-100 active:bg-gray-200"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -218,12 +218,12 @@ export const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Navigation Drawer */}
+      {/* Mobile Navigation Drawer - full width, scrollable, safe area */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-gray-100 shadow-2xl p-4 animate-in slide-in-from-top-5 duration-200 z-40 max-h-[85vh] overflow-y-auto">
+        <div className="lg:hidden absolute top-full left-0 right-0 w-full bg-white border-b border-gray-100 shadow-2xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))] animate-in slide-in-from-top-5 duration-200 z-40 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain">
           <div className="space-y-1">
             <div className="px-4 py-2 text-xs font-black uppercase tracking-widest text-gray-400">Menu Chính</div>
-            <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 rounded-xl px-4 py-3 font-bold ${isActive('/') ? 'bg-primary/5 text-primary' : 'text-gray-600 active:bg-gray-50'}`}>
+            <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 rounded-xl px-4 py-3.5 min-h-[48px] font-bold active:scale-[0.98] transition-transform ${isActive('/') ? 'bg-primary/5 text-primary' : 'text-gray-600 active:bg-gray-50'}`}>
               <Home className="h-5 w-5" /> Trang chủ
             </Link>
             {mainNav.map((item) => (
@@ -231,7 +231,7 @@ export const Navbar = () => {
                 key={item.path}
                 to={item.path}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 font-bold ${isActive(item.path) ? 'bg-primary/5 text-primary' : 'text-gray-600 active:bg-gray-50'}`}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3.5 min-h-[48px] font-bold active:scale-[0.98] transition-transform ${isActive(item.path) ? 'bg-primary/5 text-primary' : 'text-gray-600 active:bg-gray-50'}`}
               >
                 <item.icon className="h-5 w-5" /> {item.label}
               </Link>
@@ -245,7 +245,7 @@ export const Navbar = () => {
                 key={item.path}
                 to={item.path}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 font-bold ${isActive(item.path) ? 'bg-primary/5 text-primary' : 'text-gray-600 active:bg-gray-50'}`}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3.5 min-h-[48px] font-bold active:scale-[0.98] transition-transform ${isActive(item.path) ? 'bg-primary/5 text-primary' : 'text-gray-600 active:bg-gray-50'}`}
               >
                 <item.icon className="h-5 w-5" /> {item.label}
               </Link>
@@ -254,7 +254,7 @@ export const Navbar = () => {
             {user && (
               <>
                 <div className="my-2 h-px bg-gray-100" />
-                <Button variant="destructive" className="w-full rounded-xl h-12 font-black mt-4" onClick={handleLogout}>
+                <Button variant="destructive" className="w-full rounded-xl h-12 min-h-[48px] font-black mt-4" onClick={handleLogout}>
                   <LogOut className="mr-2 h-5 w-5" /> Đăng xuất
                 </Button>
               </>

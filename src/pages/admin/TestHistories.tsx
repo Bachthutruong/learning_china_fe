@@ -194,7 +194,7 @@ export const AdminTestHistories = () => {
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 max-w-4xl max-h-[90dvh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               Chi tiết lần làm bài {selected && (<span className="text-sm text-gray-500 ml-2">{new Date(selected.createdAt).toLocaleString()}</span>)}

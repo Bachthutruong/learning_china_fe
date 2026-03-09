@@ -57,7 +57,7 @@ export const Login = () => {
         <div className="absolute bottom-10 right-10 w-96 h-96 bg-secondary rounded-full blur-3xl" />
       </div>
       
-      <div className="w-full max-w-[1000px] grid lg:grid-cols-2 bg-white rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10 border border-gray-100">
+      <div className="w-full max-w-[1000px] grid lg:grid-cols-2 bg-white rounded-xl sm:rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10 border border-gray-100 mx-2 sm:mx-4">
         {/* Left Side: Visual/Branding */}
         <div className="hidden lg:flex flex-col justify-between p-12 chinese-gradient text-white relative">
           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
@@ -106,7 +106,7 @@ export const Login = () => {
         </div>
 
         {/* Right Side: Login Form */}
-        <div className="p-8 md:p-12 lg:p-16 flex flex-col justify-center">
+        <div className="p-5 sm:p-6 md:p-12 lg:p-16 flex flex-col justify-center">
           <div className="mb-8">
             <Button 
               variant="ghost" 
@@ -131,7 +131,7 @@ export const Login = () => {
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-12 h-14 rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white transition-all text-base"
+                  className="pl-12 h-12 sm:h-14 rounded-xl sm:rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white transition-all text-base min-h-[48px]"
                   required
                 />
               </div>
@@ -152,7 +152,7 @@ export const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-12 pr-12 h-14 rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white transition-all text-base"
+                  className="pl-12 pr-12 h-12 sm:h-14 rounded-xl sm:rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white transition-all text-base min-h-[48px]"
                   required
                 />
                 <button
@@ -178,7 +178,7 @@ export const Login = () => {
 
             <Button
               type="submit"
-              className="w-full h-14 rounded-2xl chinese-gradient text-white text-lg font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-0.5 transition-all"
+              className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl chinese-gradient text-white text-base sm:text-lg font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-0.5 transition-all min-h-[48px]"
               disabled={isLoading}
             >
               {isLoading ? (

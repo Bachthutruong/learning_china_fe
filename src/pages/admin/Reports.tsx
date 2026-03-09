@@ -122,32 +122,32 @@ export const AdminReports = () => {
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-8 pb-8 sm:pb-12">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 flex items-center">
-            <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg">
-              <AlertCircle />
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 flex items-center flex-wrap gap-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 chinese-gradient rounded-xl flex items-center justify-center text-white shadow-lg shrink-0 mr-2 sm:mr-4">
+              <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             Trung tâm phản hồi
           </h1>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-[2rem] border shadow-xl flex gap-6 items-center">
-        <div className="flex-1 relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border shadow-xl flex flex-col sm:flex-row gap-4 sm:gap-6 items-stretch sm:items-center">
+        <div className="flex-1 min-w-0 relative group">
+          <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
           <Input
             placeholder="Tìm kiếm..."
             value={search}
             onChange={e => { setPage(1); setSearch(e.target.value) }}
-            className="h-12 pl-11 rounded-xl bg-gray-50/50"
+            className="h-11 sm:h-12 pl-10 sm:pl-11 rounded-xl min-h-[44px] bg-gray-50/50"
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-gray-400 uppercase">Hiển thị</span>
+          <span className="text-[10px] font-black text-gray-400 uppercase hidden xs:inline">Hiển thị</span>
           <Select value={pageSize.toString()} onValueChange={v => { setPageSize(parseInt(v)); setPage(1) }}>
-            <SelectTrigger className="w-20 h-10 rounded-xl"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-20 sm:w-24 h-10 sm:h-11 rounded-xl min-h-[44px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="5">5</SelectItem>
               <SelectItem value="10">10</SelectItem>
@@ -158,26 +158,27 @@ export const AdminReports = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border shadow-xl overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-gray-50/50 border-b">
-              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">#</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Phân loại</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Nội dung</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 text-center">Trạng thái</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Ngày tạo</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {reports.map((r, i) => (
-              <tr key={r._id} className="group hover:bg-gray-50/50">
-                <td className="px-8 py-6 text-sm text-gray-400">{(page - 1) * pageSize + i + 1}</td>
-                <td className="px-8 py-6">
-                  <Badge variant="outline" className="text-primary">{r.type}</Badge>
+      <div className="bg-white rounded-xl sm:rounded-[2.5rem] border shadow-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[500px]">
+            <thead>
+              <tr className="bg-gray-50/50 border-b">
+                <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400">#</th>
+                <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400">Loại</th>
+                <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400">Nội dung</th>
+                <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400 text-center">Trạng thái</th>
+                <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400 hidden md:table-cell">Ngày tạo</th>
+                <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {reports.map((r, i) => (
+                <tr key={r._id} className="group hover:bg-gray-50/50">
+                <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-xs sm:text-sm text-gray-400">{(page - 1) * pageSize + i + 1}</td>
+                <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+                  <Badge variant="outline" className="text-primary text-[10px]">{r.type}</Badge>
                 </td>
-                <td className="px-8 py-6">
+                <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 min-w-0">
                   {r.type === 'vocabulary' && r.targetSummary?.word ? (
                     <div>
                       <p className="text-sm font-black">
@@ -198,52 +199,55 @@ export const AdminReports = () => {
                     </div>
                   )}
                 </td>
-                <td className="px-8 py-6 text-center">
+                <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-center">
                   <Badge className={getStatusBadgeClass(r.status)}>{getStatusLabel(r.status)}</Badge>
                 </td>
-                <td className="px-8 py-6 text-sm text-gray-500">
+                <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-xs sm:text-sm text-gray-500 hidden md:table-cell">
                   {new Date(r.createdAt).toLocaleDateString()}
                 </td>
-                <td className="px-8 py-6 text-right space-x-2">
-                  <Button variant="ghost" size="sm" onClick={() => showReportDetail(r)} className="text-[10px] font-black uppercase">
-                    Chi tiết
-                  </Button>
-                  {r.status === 'pending' && (
-                    <>
-                      <Button size="sm" onClick={() => handleApproveReject(r.id || r._id, 'approved')} className="bg-green-500 text-white">
-                        <CheckCircle className="w-4 h-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleApproveReject(r.id || r._id, 'rejected')} className="text-red-500">
-                        <XCircle className="w-4 h-4" />
-                      </Button>
-                    </>
-                  )}
+                <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-right">
+                  <div className="flex items-center justify-end gap-1 flex-wrap">
+                    <Button variant="ghost" size="sm" className="min-h-[44px] rounded-xl text-[10px] font-black uppercase" onClick={() => showReportDetail(r)}>
+                      Chi tiết
+                    </Button>
+                    {r.status === 'pending' && (
+                      <>
+                        <Button size="sm" className="min-h-[44px] min-w-[44px] rounded-xl bg-green-500 text-white p-0" onClick={() => handleApproveReject(r.id || r._id, 'approved')}>
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="min-h-[44px] min-w-[44px] rounded-xl text-red-500 p-0" onClick={() => handleApproveReject(r.id || r._id, 'rejected')}>
+                          <XCircle className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
             {reports.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-10 text-center text-gray-400 font-bold">
+                <td colSpan={6} className="py-10 text-center text-gray-400 font-bold text-sm">
                   Không có báo cáo
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
-      <div className="flex justify-center items-center gap-4 mt-8">
+      <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 mt-6 sm:mt-8">
         <Button 
           variant="ghost" 
           disabled={page === 1} 
           onClick={() => setPage(p => p - 1)} 
-          className="rounded-xl font-bold border hover:bg-gray-50"
+          className="rounded-xl font-bold border hover:bg-gray-50 min-h-[44px]"
         >
           Trước
         </Button>
         
-        <div className="flex items-center gap-2">
-          <span className="bg-white px-6 py-2 rounded-xl border font-black shadow-sm">
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          <span className="bg-white px-4 sm:px-6 py-2 rounded-xl border font-black text-xs sm:text-sm shadow-sm">
             Trang {page} / {totalPages}
           </span>
           <span className="text-[10px] font-black text-gray-400 uppercase bg-gray-50 px-3 py-2 rounded-lg border">
@@ -255,15 +259,15 @@ export const AdminReports = () => {
           variant="ghost" 
           disabled={page >= totalPages} 
           onClick={() => setPage(p => p + 1)} 
-          className="rounded-xl font-bold border hover:bg-gray-50"
+          className="rounded-xl font-bold border hover:bg-gray-50 min-h-[44px]"
         >
           Tiếp
         </Button>
       </div>
 
-      {/* Report Detail Dialog */}
+      {/* Report Detail Dialog - mobile */}
       <Dialog open={showDetailDialog} onOpenChange={(open) => { if (!open) setShowDetailDialog(false) }}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-2xl">
+        <DialogContent className="sm:max-w-2xl rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 max-h-[90dvh] overflow-y-auto">
           <UIDialogHeader>
             <UIDialogTitle className="text-3xl font-black">Chi tiết báo cáo</UIDialogTitle>
           </UIDialogHeader>
@@ -392,9 +396,9 @@ export const AdminReports = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation Dialog - mobile */}
       <Dialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null) }}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-md">
+        <DialogContent className="sm:max-w-md rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 max-h-[90dvh] overflow-y-auto">
           <UIDialogHeader>
             <UIDialogTitle className="text-2xl font-black">
               {confirmAction?.action === 'approved' ? 'Xác nhận duyệt báo cáo' : 'Xác nhận từ chối báo cáo'}

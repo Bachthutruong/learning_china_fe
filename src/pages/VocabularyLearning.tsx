@@ -394,7 +394,7 @@ export const VocabularyLearning = () => {
   // Study mode render
   if (studyMode && studyVocabularies.length > 0) {
     return (
-      <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
+      <div className="min-h-screen bg-[#fdfaf6] p-4 sm:p-6 md:p-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div ref={studyTopRef} />
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
@@ -414,12 +414,12 @@ export const VocabularyLearning = () => {
           </div>
 
           <div className="space-y-6">
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
               {studyVocabularies.map((v, idx) => (
                 <button
                   key={v._id}
                   onClick={() => setCurrentStudyIndex(idx)}
-                  className={`w-10 h-10 rounded-xl font-bold text-sm transition-all transform hover:scale-110 ${
+                  className={`min-w-[40px] min-h-[40px] w-10 h-10 rounded-lg sm:rounded-xl font-bold text-sm transition-all transform hover:scale-110 active:scale-95 ${
                     idx === currentStudyIndex
                       ? 'chinese-gradient text-white shadow-lg ring-4 ring-primary/10'
                       : 'bg-white text-gray-400 border border-gray-100 hover:border-primary/20 hover:text-primary'
@@ -444,25 +444,25 @@ export const VocabularyLearning = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#fdfaf6] p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-12">
+    <div className="min-h-screen bg-[#fdfaf6] p-4 sm:p-6 md:p-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <div className="max-w-7xl mx-auto space-y-8 sm:space-y-12">
         {/* Header Section */}
         <div className="text-center space-y-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
             <BookOpen className="w-4 h-4 text-primary" />
             <span className="text-primary text-xs font-bold uppercase tracking-widest">Kho học liệu cá nhân</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 tracking-tight">
             Chinh phục <span className="text-primary">Từ vựng</span>
           </h1>
           <p className="text-gray-500 font-medium">
             Hệ thống học tập thông minh giúp bạn ghi nhớ từ vựng vĩnh viễn thông qua các chủ đề cá nhân hóa.
           </p>
           
-          <div className="flex flex-wrap justify-center gap-4 pt-4">
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4 pt-4">
             <Button
               onClick={() => setShowCreateTopicDialog(true)}
-              className="chinese-gradient h-12 px-6 rounded-2xl font-black shadow-lg shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all"
+              className="chinese-gradient h-11 sm:h-12 px-5 sm:px-6 rounded-2xl font-black shadow-lg shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all min-h-[44px]"
             >
               <Plus className="w-5 h-5 mr-2" />
               Tạo chủ đề
@@ -470,7 +470,7 @@ export const VocabularyLearning = () => {
             <Button
               onClick={() => setShowAddVocabularyDialog(true)}
               variant="outline"
-              className="h-12 px-6 rounded-2xl font-black border-2 border-gray-200 hover:border-primary hover:text-primary transform hover:-translate-y-1 transition-all"
+              className="h-11 sm:h-12 px-5 sm:px-6 rounded-2xl font-black border-2 border-gray-200 hover:border-primary hover:text-primary transform hover:-translate-y-1 transition-all min-h-[44px]"
             >
               <BookOpen className="w-5 h-5 mr-2" />
               Thêm từ mới
@@ -559,17 +559,17 @@ export const VocabularyLearning = () => {
         {/* Selected Topic Detail */}
         {selectedTopics.length > 0 && (
           <div ref={vocabListAnchorRef} className="space-y-8 animate-in slide-in-from-bottom duration-700">
-            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
+            <div className="bg-white rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-8 border border-gray-100 shadow-xl space-y-6 sm:space-y-8">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                   <h2 className="text-2xl font-black text-gray-900">Chi tiết từ vựng</h2>
                   <p className="text-gray-500 font-medium">Quản lý và ôn tập các từ vựng trong chủ đề đã chọn.</p>
                 </div>
                 
-                <div className="flex items-center space-x-2 bg-gray-50 p-1.5 rounded-2xl">
+                <div className="flex items-center space-x-1 sm:space-x-2 bg-gray-50 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl">
                   <button
                     onClick={() => setActiveTab('studying')}
-                    className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
+                    className={`px-3 sm:px-4 md:px-6 py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black transition-all min-h-[44px] ${
                       activeTab === 'studying'
                         ? 'bg-white text-primary shadow-sm'
                         : 'text-gray-400 hover:text-gray-600'
@@ -577,9 +577,9 @@ export const VocabularyLearning = () => {
                   >
                     Đang học ({studyingVocabularies.length})
                   </button>
-                  <button
+                    <button
                     onClick={() => setActiveTab('learned')}
-                    className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
+                    className={`px-3 sm:px-4 md:px-6 py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black transition-all min-h-[44px] ${
                       activeTab === 'learned'
                         ? 'bg-white text-primary shadow-sm'
                         : 'text-gray-400 hover:text-gray-600'
@@ -595,14 +595,14 @@ export const VocabularyLearning = () => {
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
               ) : availableVocabularies.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
                   {getFilteredVocabularies().map((vocabulary) => (
                     <div
                       key={vocabulary._id}
                       onClick={() => handleVocabularyClick(vocabulary)}
-                      className="group p-4 rounded-2xl bg-gray-50/50 border border-gray-100 hover:border-primary/30 hover:bg-white hover:shadow-lg transition-all text-center cursor-pointer relative"
+                      className="group p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gray-50/50 border border-gray-100 hover:border-primary/30 hover:bg-white hover:shadow-lg transition-all text-center cursor-pointer relative min-h-[80px] sm:min-h-[90px] flex flex-col items-center justify-center active:scale-[0.98]"
                     >
-                      <div className="text-2xl font-black text-gray-900 group-hover:text-primary transition-colors">{vocabulary.word}</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 group-hover:text-primary transition-colors">{vocabulary.word}</div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{vocabulary.pinyin}</div>
                       <div className="text-xs text-gray-500 line-clamp-1 mt-2 font-medium">{vocabulary.meaning}</div>
                       
@@ -666,16 +666,16 @@ export const VocabularyLearning = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl">
-             <div className="overflow-x-auto">
-               <table className="w-full text-left">
+          <div className="bg-white rounded-xl sm:rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl">
+             <div className="overflow-x-auto -mx-4 sm:mx-0">
+               <table className="w-full text-left min-w-[500px]">
                  <thead>
                    <tr className="bg-gray-50/50 border-b border-gray-100">
-                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Thứ hạng</th>
-                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Học viên</th>
-                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Trình độ</th>
-                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-center">Đã thuộc</th>
-                     <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Tổng vốn từ</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Thứ hạng</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Học viên</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Trình độ</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-center">Đã thuộc</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Tổng vốn từ</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-gray-100">
@@ -688,7 +688,7 @@ export const VocabularyLearning = () => {
                     ) : vocabLearnerStats.length > 0 ? (
                       vocabLearnerStats.map((row, idx) => (
                         <tr key={row.userId} className="group hover:bg-gray-50/50 transition-colors">
-                          <td className="px-8 py-6">
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
                             <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${
                               idx === 0 ? 'bg-yellow-400 text-white shadow-lg' :
                               idx === 1 ? 'bg-gray-300 text-white shadow-lg' :
@@ -697,7 +697,7 @@ export const VocabularyLearning = () => {
                               {idx + 1}
                             </span>
                           </td>
-                          <td className="px-8 py-6">
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
                             <div className="flex items-center space-x-3">
                                <div className="w-10 h-10 rounded-xl chinese-gradient flex items-center justify-center text-white font-black">
                                   {row.name.charAt(0).toUpperCase()}
@@ -708,7 +708,7 @@ export const VocabularyLearning = () => {
                                </div>
                             </div>
                           </td>
-                          <td className="px-8 py-6">
+                          <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
                              <span className="bg-primary/5 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/10">
                                 Level {row.level || 1}
                              </span>
@@ -765,9 +765,9 @@ export const VocabularyLearning = () => {
         )}
       </div>
 
-      {/* Create Topic Dialog */}
+      {/* Create Topic Dialog - full width on mobile */}
       <Dialog open={showCreateTopicDialog} onOpenChange={setShowCreateTopicDialog}>
-        <DialogContent className="border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-lg sm:w-auto rounded-xl sm:rounded-2xl p-4 sm:p-6 border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
           <DialogHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg p-6 -m-6 mb-6">
             <DialogTitle className="flex items-center gap-3 text-xl">
               <div className="p-2 bg-white/20 rounded-full">
@@ -833,7 +833,7 @@ export const VocabularyLearning = () => {
           fetchAvailableVocabularies()
         }
       }}>
-        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] min-h-[90dvh] sm:min-h-0 sm:w-[95vw] sm:max-w-6xl rounded-xl sm:rounded-2xl max-h-[90dvh] overflow-y-auto p-0">
           <AddVocabulary
             inDialog
             onClose={() => setShowAddVocabularyDialog(false)}

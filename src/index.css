@@ -53,10 +53,29 @@
   * {
     @apply border-border;
   }
+  html {
+    /* Prevent iOS zoom on input focus */
+    -webkit-text-size-adjust: 100%;
+  }
   body {
     @apply bg-[#fdfaf6] text-foreground antialiased;
     background-image: radial-gradient(#e5e7eb 0.5px, transparent 0.5px);
     background-size: 24px 24px;
+    /* Improve touch scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+  /* Touch-friendly: ensure tap targets are adequate on mobile */
+  @media (max-width: 768px) {
+    button:not(.no-touch-target), .btn-touch {
+      min-height: 44px;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+    }
+  }
+  /* Prevent tap highlight on mobile */
+  * {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 

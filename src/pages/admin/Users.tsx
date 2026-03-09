@@ -136,17 +136,17 @@ export const AdminUsers = () => {
   }
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-4 sm:space-y-8 pb-8 sm:pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
-             <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg">
-                <UsersIcon className="w-6 h-6" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center flex-wrap gap-2">
+             <div className="w-9 h-9 sm:w-10 sm:h-10 chinese-gradient rounded-xl flex items-center justify-center text-white shadow-lg shrink-0 mr-2 sm:mr-4">
+                <UsersIcon className="w-5 h-5 sm:w-6 sm:h-6" />
              </div>
-             Quản trị học viên
+             <span className="truncate">Quản trị học viên</span>
           </h1>
-          <p className="text-gray-500 font-medium">Quản lý tài khoản, trình độ và tài sản của học viên trên hệ thống.</p>
+          <p className="text-sm sm:text-base text-gray-500 font-medium mt-1">Quản lý tài khoản, trình độ và tài sản của học viên trên hệ thống.</p>
         </div>
         
         <Button onClick={() => { 
@@ -154,28 +154,28 @@ export const AdminUsers = () => {
           setPassword('')
           setOriginalLevel(null)
           setExperienceRange(null)
-        }} className="chinese-gradient h-11 px-8 rounded-xl font-black text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-1">
+        }} className="chinese-gradient h-11 sm:h-11 px-4 sm:px-8 rounded-xl font-black text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-1 shrink-0 min-h-[44px]">
           <Plus className="mr-2 h-4 w-4" /> Thêm học viên mới
         </Button>
       </div>
 
       {/* Control Bar */}
-      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl flex flex-col md:flex-row gap-6">
-         <div className="flex-1 relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
+      <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border border-gray-100 shadow-xl flex flex-col sm:flex-row gap-4 sm:gap-6">
+         <div className="flex-1 min-w-0 relative group">
+            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
             <Input 
-              placeholder="Tìm kiếm theo tên hoặc email..." 
+              placeholder="Tìm theo tên hoặc email..." 
               value={search} 
               onChange={e => { setPage(1); setSearch(e.target.value) }} 
-              className="pl-12 h-12 rounded-xl border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-primary/20 transition-all font-medium" 
+              className="pl-10 sm:pl-12 h-11 sm:h-12 rounded-xl border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-primary/20 transition-all font-medium text-sm sm:text-base" 
             />
          </div>
          
-         <div className="flex items-center gap-4">
+         <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
             <div className="flex items-center space-x-2">
-               <span className="text-[10px] font-black uppercase text-gray-400">Hiển thị</span>
+               <span className="text-[10px] font-black uppercase text-gray-400 hidden xs:inline">Hiển thị</span>
                <Select value={pageSize.toString()} onValueChange={v => { setPageSize(parseInt(v)); setPage(1); }}>
-                  <SelectTrigger className="w-24 h-12 rounded-xl border-gray-100 bg-gray-50 font-black text-sm">
+                  <SelectTrigger className="w-20 sm:w-24 h-11 sm:h-12 rounded-xl border-gray-100 bg-gray-50 font-black text-xs sm:text-sm min-h-[44px]">
                      <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-gray-100">
@@ -186,59 +186,59 @@ export const AdminUsers = () => {
                </Select>
             </div>
             
-            <Badge variant="outline" className="h-12 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest border-gray-100 text-gray-400">
-               Tổng số: {totalUsers} Học viên
+            <Badge variant="outline" className="h-10 sm:h-12 px-3 sm:px-4 rounded-xl font-black text-[10px] uppercase tracking-widest border-gray-100 text-gray-400">
+               Tổng: {totalUsers}
             </Badge>
          </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl">
-         <div className="overflow-x-auto">
-            <table className="w-full text-left">
+      <div className="bg-white rounded-xl sm:rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl">
+         <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="w-full text-left min-w-[600px]">
                <thead>
                   <tr className="bg-gray-50/50 border-b border-gray-100">
-                     <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Học viên</th>
-                     <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Trình độ</th>
-                     <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Tài sản (Xu)</th>
-                     <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Vai trò</th>
-                     <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-right">Thao tác</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Học viên</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Trình độ</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Xu</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Vai trò</th>
+                     <th className="px-4 sm:px-6 md:px-8 py-3 sm:py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-right">Thao tác</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-50">
                   {users.map(u => (
                     <tr key={u._id} className="group hover:bg-gray-50/30 transition-colors">
-                       <td className="px-8 py-6">
-                          <div className="flex items-center space-x-4">
-                             <div className="w-12 h-12 rounded-2xl chinese-gradient flex items-center justify-center text-white font-black text-xl shadow-md transform group-hover:rotate-6 transition-transform">
+                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+                          <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl chinese-gradient flex items-center justify-center text-white font-black text-lg sm:text-xl shadow-md shrink-0">
                                 {u.name ? u.name[0].toUpperCase() : '?'}
                              </div>
-                             <div>
-                                <p className="text-sm font-black text-gray-900 leading-none mb-1">{u.name}</p>
-                                <p className="text-[11px] text-gray-400 font-medium">{u.email}</p>
+                             <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-black text-gray-900 leading-none mb-0.5 sm:mb-1 truncate">{u.name}</p>
+                                <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate">{u.email}</p>
                              </div>
                           </div>
                        </td>
-                       <td className="px-8 py-6 text-center">
-                          <Badge className="bg-primary/5 text-primary border-none rounded-lg font-black text-[10px] px-3 py-1">
-                             LEVEL {u.level}
+                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-center">
+                          <Badge className="bg-primary/5 text-primary border-none rounded-lg font-black text-[10px] px-2 sm:px-3 py-1">
+                             Lv{u.level}
                           </Badge>
                        </td>
-                       <td className="px-8 py-6 text-center">
-                          <div className="flex items-center justify-center space-x-1.5 font-black text-amber-500">
-                             <Coins className="w-4 h-4" />
+                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-center">
+                          <div className="flex items-center justify-center space-x-1 font-black text-amber-500 text-sm sm:text-base">
+                             <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                              <span>{u.coins.toLocaleString()}</span>
                           </div>
                        </td>
-                       <td className="px-8 py-6 text-center">
-                          <Badge className={`rounded-lg font-black text-[10px] px-3 py-1 border-none ${
+                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-center">
+                          <Badge className={`rounded-lg font-black text-[10px] px-2 sm:px-3 py-1 border-none ${
                             u.role === 'admin' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-500'
                           }`}>
                              {u.role ? u.role.toUpperCase() : 'USER'}
                           </Badge>
                        </td>
-                       <td className="px-8 py-6 text-right">
-                          <div className="flex items-center justify-end space-x-2">
+                       <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-right">
+                          <div className="flex items-center justify-end space-x-1 sm:space-x-2">
                              <Button 
                                variant="ghost" 
                                size="icon" 
@@ -248,17 +248,17 @@ export const AdminUsers = () => {
                                  setOriginalLevel(u.level)
                                  setExperienceRange(null)
                                }} 
-                               className="w-10 h-10 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                               className="w-9 h-9 sm:w-10 sm:h-10 min-w-[44px] min-h-[44px] rounded-xl hover:bg-blue-50 hover:text-blue-600"
                              >
-                                <Edit className="w-4.5 h-4.5" />
+                                <Edit className="w-4 h-4" />
                              </Button>
                              <Button 
                                variant="ghost" 
                                size="icon" 
                                onClick={() => setDeleteId(u._id)} 
-                               className="w-10 h-10 rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors"
+                               className="w-9 h-9 sm:w-10 sm:h-10 min-w-[44px] min-h-[44px] rounded-xl hover:bg-red-50 hover:text-red-500"
                              >
-                                <Trash2 className="w-4.5 h-4.5" />
+                                <Trash2 className="w-4 h-4" />
                              </Button>
                           </div>
                        </td>
@@ -266,8 +266,8 @@ export const AdminUsers = () => {
                   ))}
                   {users.length === 0 && (
                     <tr>
-                       <td colSpan={5} className="px-8 py-20 text-center">
-                          <p className="text-gray-400 font-bold italic">Không tìm thấy học viên nào phù hợp.</p>
+                       <td colSpan={5} className="px-4 sm:px-8 py-12 sm:py-20 text-center">
+                          <p className="text-gray-400 font-bold italic text-sm sm:text-base">Không tìm thấy học viên nào phù hợp.</p>
                        </td>
                     </tr>
                   )}
@@ -278,30 +278,30 @@ export const AdminUsers = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center space-x-4">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
            <Button 
              variant="ghost" 
              disabled={page === 1} 
              onClick={() => setPage(p => p - 1)} 
-             className="rounded-xl font-bold text-xs uppercase text-gray-400 hover:text-primary transition-colors"
+             className="rounded-xl font-bold text-xs uppercase text-gray-400 hover:text-primary min-h-[44px]"
            >
-              Trang trước
+              Trước
            </Button>
-           <div className="bg-white px-6 py-2 rounded-2xl border border-gray-100 shadow-sm font-black text-sm text-gray-900">
+           <div className="bg-white px-4 sm:px-6 py-2 rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm font-black text-xs sm:text-sm text-gray-900">
               Trang {page} / {totalPages}
            </div>
            <Button 
              variant="ghost" 
              disabled={page === totalPages}
              onClick={() => setPage(p => p + 1)} 
-             className="rounded-xl font-bold text-xs uppercase text-gray-400 hover:text-primary transition-colors"
+             className="rounded-xl font-bold text-xs uppercase text-gray-400 hover:text-primary min-h-[44px]"
            >
-              Trang sau
+              Sau
            </Button>
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
+      {/* Create/Edit Dialog - mobile full width */}
       <Dialog open={!!editing} onOpenChange={o => {
         if (!o) {
           setEditing(null)
@@ -310,7 +310,7 @@ export const AdminUsers = () => {
           setOriginalLevel(null)
         }
       }}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-2xl border-none shadow-2xl">
+        <DialogContent className="sm:max-w-2xl min-h-[85dvh] sm:min-h-0 rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 max-h-[90dvh] overflow-y-auto border-none shadow-2xl">
           <DialogHeader className="mb-8">
             <DialogTitle className="text-3xl font-black text-gray-900 flex items-center">
                <div className="w-12 h-12 chinese-gradient rounded-2xl flex items-center justify-center text-white mr-4 shadow-lg">
@@ -462,7 +462,7 @@ export const AdminUsers = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={o => !o && setDeleteId(null)}>
-        <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-md text-center">
+        <DialogContent className="sm:max-w-md rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 border-none shadow-2xl text-center max-h-[90dvh] overflow-y-auto">
           <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500">
              <Trash2 className="w-8 h-8" />
           </div>

@@ -101,6 +101,8 @@ export const AdminVocabulary = () => {
   const [newQuestionCorrectAnswer, setNewQuestionCorrectAnswer] = useState<number[]>([])
   const [newQuestionExplanation, setNewQuestionExplanation] = useState('')
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
+  const [editingExampleIndex, setEditingExampleIndex] = useState<number | null>(null)
+  const [editingExampleText, setEditingExampleText] = useState('')
   const [editQuestion, setEditQuestion] = useState('')
   const [editQuestionOptions, setEditQuestionOptions] = useState(['', '', '', ''])
   // Danh sách index đáp án đúng khi chỉnh sửa câu hỏi
@@ -182,6 +184,7 @@ export const AdminVocabulary = () => {
   const resetForm = () => {
     setFormData({ word: '', pinyin: '', zhuyin: '', meaning: '', partOfSpeech: '', level: 1, topics: [], examples: [], synonyms: [], antonyms: [], questions: [] })
     setNewExample(''); setNewSynonym(''); setNewAntonym(''); setNewQuestion('')
+    setEditingExampleIndex(null); setEditingExampleText('')
     setNewQuestionOptions(['', '', '', '']); setNewQuestionCorrectAnswer([]); setNewQuestionExplanation('')
   }
 
@@ -247,7 +250,17 @@ export const AdminVocabulary = () => {
 
   // Example / Synonym / Antonym helpers
   const addExample = () => { if (newExample.trim()) { setFormData(prev => ({ ...prev, examples: [...prev.examples, newExample.trim()] })); setNewExample('') } }
-  const removeExample = (i: number) => setFormData(prev => ({ ...prev, examples: prev.examples.filter((_, idx) => idx !== i) }))
+  const removeExample = (i: number) => { setFormData(prev => ({ ...prev, examples: prev.examples.filter((_, idx) => idx !== i) })); if (editingExampleIndex === i) cancelEditExample() }
+  const startEditExample = (i: number) => { setEditingExampleIndex(i); setEditingExampleText(formData.examples[i]) }
+  const saveEditExample = () => {
+    if (editingExampleIndex !== null && editingExampleText.trim()) {
+      const updated = [...formData.examples]
+      updated[editingExampleIndex] = editingExampleText.trim()
+      setFormData(prev => ({ ...prev, examples: updated }))
+      cancelEditExample()
+    }
+  }
+  const cancelEditExample = () => { setEditingExampleIndex(null); setEditingExampleText('') }
   const addSynonym = () => { if (newSynonym.trim()) { setFormData(prev => ({ ...prev, synonyms: [...prev.synonyms, newSynonym.trim()] })); setNewSynonym('') } }
   const removeSynonym = (i: number) => setFormData(prev => ({ ...prev, synonyms: prev.synonyms.filter((_, idx) => idx !== i) }))
   const addAntonym = () => { if (newAntonym.trim()) { setFormData(prev => ({ ...prev, antonyms: [...prev.antonyms, newAntonym.trim()] })); setNewAntonym('') } }
@@ -449,15 +462,34 @@ export const AdminVocabulary = () => {
         <Label>Ví dụ</Label>
         <div className="space-y-2">
           {formData.examples.map((ex, i) => (
-            <div key={i} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl">
-              <span className="text-sm flex-1">{ex}</span>
-              <Button type="button" variant="ghost" size="sm" onClick={() => removeExample(i)}><X className="h-4 w-4" /></Button>
+            <div key={i} className="space-y-2">
+              {editingExampleIndex === i ? (
+                <div className="flex flex-col sm:flex-row gap-2 bg-blue-50 border-2 border-blue-200 px-3 py-2 rounded-xl">
+                  <Input
+                    value={editingExampleText}
+                    onChange={e => setEditingExampleText(e.target.value)}
+                    placeholder="Chỉnh sửa ví dụ..."
+                    className="rounded-xl flex-1"
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveEditExample())}
+                  />
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" onClick={saveEditExample} disabled={!editingExampleText.trim()} className="rounded-xl chinese-gradient text-white">Lưu</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={cancelEditExample} className="rounded-xl">Hủy</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl">
+                  <span className="text-sm flex-1">{ex}</span>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => startEditExample(i)} className="shrink-0"><Edit className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removeExample(i)} className="shrink-0"><X className="h-4 w-4" /></Button>
+                </div>
+              )}
             </div>
           ))}
           <div className="flex gap-2">
-            <Input value={newExample} onChange={e => setNewExample(e.target.value)} placeholder="Thêm ví dụ..." className="rounded-xl"
+            <Input value={newExample} onChange={e => setNewExample(e.target.value)} placeholder="Thêm ví dụ..." className="rounded-xl flex-1"
               onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), addExample())} />
-            <Button type="button" onClick={addExample} disabled={!newExample.trim()} className="rounded-xl"><Plus className="h-4 w-4" /></Button>
+            <Button type="button" onClick={addExample} disabled={!newExample.trim()} className="rounded-xl shrink-0"><Plus className="h-4 w-4" /></Button>
           </div>
         </div>
       </div>
@@ -612,41 +644,41 @@ export const AdminVocabulary = () => {
   )
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-4 sm:space-y-8 pb-8 sm:pb-12">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div><h1 className="text-3xl font-black text-gray-900 flex items-center"><BookOpen className="w-8 h-8 mr-3 text-primary" /> Kho từ vựng</h1></div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={downloadTemplate} className="rounded-xl"><Download className="mr-2 h-4 w-4" /> Template</Button>
-          <Button variant="outline" onClick={() => { setShowImportDialog(true); setImportProgress(null) }} disabled={importing} className="rounded-xl"><Upload className="mr-2 h-4 w-4" /> Import Excel</Button>
-          <Button onClick={() => { resetForm(); setEditingVocabulary(null); setShowCreateDialog(true) }} className="chinese-gradient text-white rounded-xl"><Plus className="mr-2" /> Thêm mới</Button>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div><h1 className="text-2xl sm:text-3xl font-black text-gray-900 flex items-center flex-wrap gap-2"><BookOpen className="w-7 h-7 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary shrink-0" /> Kho từ vựng</h1></div>
+        <div className="flex flex-col xs:flex-row flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
+          <Button variant="outline" onClick={downloadTemplate} className="rounded-xl min-h-[44px] w-full xs:flex-1 sm:flex-none"><Download className="mr-2 h-4 w-4 shrink-0" /> Template</Button>
+          <Button variant="outline" onClick={() => { setShowImportDialog(true); setImportProgress(null) }} disabled={importing} className="rounded-xl min-h-[44px] w-full xs:flex-1 sm:flex-none"><Upload className="mr-2 h-4 w-4 shrink-0" /> Import</Button>
+          <Button onClick={() => { resetForm(); setEditingVocabulary(null); setShowCreateDialog(true) }} className="chinese-gradient text-white rounded-xl min-h-[44px] w-full sm:w-auto"><Plus className="mr-2 h-4 w-4 shrink-0" /> Thêm mới</Button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-[2rem] border shadow-xl flex gap-6 items-center flex-wrap">
-        <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <Input placeholder="Tìm kiếm..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-11 rounded-xl" />
+      <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border shadow-xl flex flex-col sm:flex-row gap-4 sm:gap-6 items-stretch sm:items-center flex-wrap">
+        <div className="flex-1 min-w-0 relative">
+          <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+          <Input placeholder="Tìm kiếm..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 sm:pl-11 rounded-xl h-11 min-h-[44px]" />
         </div>
         <Select value={levelFilter} onValueChange={setLevelFilter}>
-          <SelectTrigger className="w-32 rounded-xl"><SelectValue placeholder="HSK" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-32 rounded-xl min-h-[44px]"><SelectValue placeholder="HSK" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả</SelectItem>
             {levels.map(l => <SelectItem key={l._id} value={(l.level ?? l.number).toString()}>HSK {l.level || l.number}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={topicFilter} onValueChange={setTopicFilter}>
-          <SelectTrigger className="w-40 rounded-xl"><SelectValue placeholder="Chủ đề" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40 rounded-xl min-h-[44px]"><SelectValue placeholder="Chủ đề" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả</SelectItem>
             {topics.map(t => <SelectItem key={t._id} value={t.name}>{t.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-gray-400 uppercase">Hiển thị</span>
+          <span className="text-[10px] font-black text-gray-400 uppercase hidden xs:inline">Hiển thị</span>
           <Select value={itemsPerPage.toString()} onValueChange={v => { setItemsPerPage(parseInt(v)); setCurrentPage(1) }}>
-            <SelectTrigger className="w-20 rounded-xl"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-20 sm:w-24 rounded-xl min-h-[44px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="5">5</SelectItem>
               <SelectItem value="12">12</SelectItem>
@@ -656,8 +688,8 @@ export const AdminVocabulary = () => {
           </Select>
         </div>
         <div className="bg-gray-100 p-1 rounded-xl flex">
-          <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="icon" onClick={() => setViewMode('grid')}><Grid3X3 /></Button>
-          <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="icon" onClick={() => setViewMode('table')}><Table /></Button>
+          <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="icon" className="h-9 w-9 sm:h-10 sm:w-10 min-h-[44px] min-w-[44px] rounded-lg" onClick={() => setViewMode('grid')}><Grid3X3 className="w-4 h-4" /></Button>
+          <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="icon" className="h-9 w-9 sm:h-10 sm:w-10 min-h-[44px] min-w-[44px] rounded-lg" onClick={() => setViewMode('table')}><Table className="w-4 h-4" /></Button>
         </div>
       </div>
 
@@ -817,9 +849,9 @@ export const AdminVocabulary = () => {
         <span className="bg-white px-4 py-2 rounded-xl border font-black text-sm">Trang {currentPage}/{totalPages}</span>
       </div>
 
-      {/* Create Dialog */}
+      {/* Create Dialog - full width/height on mobile, desktop unchanged */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 max-h-[90dvh] overflow-y-auto min-h-[90dvh] sm:min-h-0">
           <DialogHeader>
             <DialogTitle className="text-3xl font-black">Thêm từ vựng mới</DialogTitle>
             <DialogDescription>Tạo từ vựng mới với đầy đủ thông tin và âm thanh</DialogDescription>
@@ -836,9 +868,9 @@ export const AdminVocabulary = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog - full width/height on mobile, desktop unchanged */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 max-h-[90dvh] overflow-y-auto min-h-[90dvh] sm:min-h-0">
           <DialogHeader>
             <DialogTitle className="text-3xl font-black">Chỉnh sửa từ vựng</DialogTitle>
             <DialogDescription>Cập nhật thông tin từ vựng</DialogDescription>
@@ -857,7 +889,7 @@ export const AdminVocabulary = () => {
 
       {/* Import Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-2xl">
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 max-w-2xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader className="text-center">
             <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-blue-500"><FileSpreadsheet className="w-8 h-8" /></div>
             <DialogTitle className="text-3xl font-black">Import dữ liệu</DialogTitle>
@@ -947,7 +979,7 @@ export const AdminVocabulary = () => {
 
       {/* Delete Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 text-center">
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 text-center max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black">Xóa từ vựng?</DialogTitle>
             <DialogDescription>Từ <span className="font-bold">{vocabularyToDelete?.word}</span> sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.</DialogDescription>

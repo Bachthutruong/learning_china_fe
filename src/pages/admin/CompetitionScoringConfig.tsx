@@ -295,7 +295,7 @@ export const CompetitionScoringConfigPage = () => {
       )}
 
       <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 border-none shadow-2xl max-w-4xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader className="text-center space-y-4 mb-8">
              <DialogTitle className="text-3xl font-black text-gray-900">{editingConfig ? 'Hiệu chỉnh logic điểm' : 'Tạo kịch bản tính điểm'}</DialogTitle>
           </DialogHeader>
@@ -382,7 +382,7 @@ export const CompetitionScoringConfigPage = () => {
       </Dialog>
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-sm text-center">
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 border-none shadow-2xl max-w-sm text-center max-h-[90dvh] overflow-y-auto">
           <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500">
              <Trash2 className="w-8 h-8" />
           </div>

@@ -15,6 +15,7 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  X,
   // BarChart3,
   // FileText,
   Layers,
@@ -39,9 +40,10 @@ interface MenuItem {
 interface AdminSidebarProps {
   className?: string
   onStatsUpdate?: () => void
+  onMobileClose?: () => void
 }
 
-export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) => {
+export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState({
@@ -259,15 +261,19 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
     return location.pathname === href
   }
 
+  const handleNavClick = () => onMobileClose?.()
+  const isMobile = !!onMobileClose
+  const effectiveCollapsed = isMobile ? false : collapsed
+
   return (
     <div className={`bg-[#1a1a1a] flex flex-col transition-all duration-300 ${
-      collapsed ? 'w-20' : 'w-72'
-    } ${className} h-screen sticky top-0 shadow-2xl z-50`}>
-      {/* Header */}
-      <div className="p-6 border-b border-white/5">
-        <div className="flex items-center justify-between">
-          {!collapsed && (
-            <Link to="/admin" className="flex items-center space-x-3 group">
+      effectiveCollapsed ? 'w-20' : 'w-72'
+    } ${className} h-full min-h-screen sticky top-0 shadow-2xl z-50`}>
+      {/* Header - close button on mobile */}
+      <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between">
+        <div className="flex items-center justify-between flex-1">
+          {!effectiveCollapsed && (
+            <Link to="/admin" onClick={handleNavClick} className="flex items-center space-x-3 group">
               <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
                 <span className="text-white font-bold text-xl">學</span>
               </div>
@@ -277,14 +283,20 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
               </div>
             </Link>
           )}
-          {collapsed && (
+          {effectiveCollapsed && (
              <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center shadow-lg mx-auto">
                 <span className="text-white font-bold text-xl">學</span>
              </div>
           )}
         </div>
+        {onMobileClose && (
+          <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/10 h-10 w-10 shrink-0" onClick={onMobileClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
+      {!isMobile && (
       <div className="absolute -right-3 top-20">
          <Button
             onClick={() => setCollapsed(!collapsed)}
@@ -293,6 +305,7 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
             {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
           </Button>
       </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1 custom-scrollbar">
@@ -315,7 +328,7 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
                     }`}
                   >
                     <Icon className={`h-5 w-5 flex-shrink-0 ${active ? 'text-primary' : ''}`} />
-                    {!collapsed && (
+                    {!effectiveCollapsed && (
                       <>
                         <span className="font-bold text-sm flex-1 text-left">{item.title}</span>
                         {item.badge && (
@@ -332,7 +345,7 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
                     )}
                   </button>
                   
-                  {!collapsed && isExpanded && item.submenu && (
+                  {!effectiveCollapsed && isExpanded && item.submenu && (
                     <div className="mt-1 ml-4 pl-4 border-l border-white/10 space-y-1">
                       {item.submenu.map((subItem) => {
                         const SubIcon = subItem.icon
@@ -342,6 +355,7 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
                           <Link
                             key={subItem.href}
                             to={subItem.href}
+                            onClick={handleNavClick}
                             className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all text-sm ${
                               subActive
                                 ? 'text-primary font-black'
@@ -359,6 +373,7 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
               ) : (
                 <Link
                   to={item.href}
+                  onClick={handleNavClick}
                   className={`flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all ${
                     active
                       ? 'chinese-gradient text-white shadow-lg shadow-primary/20 font-black'
@@ -366,7 +381,7 @@ export const AdminSidebar = ({ className, onStatsUpdate }: AdminSidebarProps) =>
                   }`}
                 >
                   <Icon className="h-5 w-5 flex-shrink-0" />
-                  {!collapsed && (
+                  {!effectiveCollapsed && (
                     <>
                       <span className="text-sm flex-1">{item.title}</span>
                       {item.badge && (

@@ -218,7 +218,7 @@ export const AdminLevels = () => {
   }
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-4 sm:space-y-8 pb-8 sm:pb-12">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
@@ -333,7 +333,7 @@ export const AdminLevels = () => {
 
       {/* Dialogs */}
       <Dialog open={showCreateDialog || showEditDialog} onOpenChange={(o) => { if (!o) { setShowCreateDialog(false); setShowEditDialog(false); } }}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-2xl overflow-y-auto max-h-[90vh]">
+        <DialogContent className="sm:max-w-2xl rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 overflow-y-auto max-h-[90dvh]">
           <DialogHeader>
             <DialogTitle className="text-3xl font-black">
               {showEditDialog ? 'Hiệu chỉnh' : 'Tạo mới'} cấp độ
@@ -443,7 +443,7 @@ export const AdminLevels = () => {
 
       {/* Delete Confirmation */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-sm text-center border-none shadow-2xl">
+        <DialogContent className="sm:max-w-sm rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 text-center border-none shadow-2xl max-h-[90dvh] overflow-y-auto">
           <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500">
             <Trash2 className="w-8 h-8" />
           </div>

@@ -423,7 +423,7 @@ export const AdminProficiencyQuestions = () => {
 
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="rounded-none sm:rounded-lg p-4 sm:p-6 max-w-4xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Thêm câu hỏi mới</DialogTitle>
             <DialogDescription>
@@ -549,7 +549,7 @@ export const AdminProficiencyQuestions = () => {
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="rounded-none sm:rounded-lg p-4 sm:p-6 max-w-4xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa câu hỏi</DialogTitle>
             <DialogDescription>
@@ -675,7 +675,7 @@ export const AdminProficiencyQuestions = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="rounded-none sm:rounded-lg p-4 sm:p-6 max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Xác nhận xóa câu hỏi</DialogTitle>
             <DialogDescription>

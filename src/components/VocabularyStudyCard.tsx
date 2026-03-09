@@ -189,29 +189,29 @@ export const VocabularyStudyCard = ({
         <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden relative group">
            <div className="absolute top-0 right-0 w-64 h-64 chinese-gradient opacity-5 rounded-bl-[8rem]" />
            
-           <div className="p-12 md:p-20 text-center space-y-12">
-              <div className="space-y-4 animate-in fade-in zoom-in duration-700">
-                 <h2 className="text-8xl md:text-9xl font-black text-gray-900 tracking-tight">{vocabulary.word}</h2>
-                 <p className="text-2xl md:text-3xl font-bold text-primary italic font-serif uppercase tracking-widest">{vocabulary.pinyin}</p>
+           <div className="p-6 sm:p-8 md:p-12 lg:p-20 text-center space-y-6 sm:space-y-8 md:space-y-12">
+              <div className="space-y-3 sm:space-y-4 animate-in fade-in zoom-in duration-700">
+                 <h2 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-black text-gray-900 tracking-tight">{vocabulary.word}</h2>
+                 <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary italic font-serif uppercase tracking-widest">{vocabulary.pinyin}</p>
               </div>
 
-              <div className="flex flex-wrap justify-center gap-4">
-                 <Button size="lg" onClick={() => setShowDetails(true)} className="h-14 px-8 bg-gray-900 text-white rounded-2xl font-black shadow-xl hover:bg-black transition-all">
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
+                 <Button size="lg" onClick={() => setShowDetails(true)} className="h-12 sm:h-14 px-6 sm:px-8 bg-gray-900 text-white rounded-2xl font-black shadow-xl hover:bg-black transition-all min-h-[48px]">
                    <BookOpen className="w-5 h-5 mr-2" /> Khám phá chi tiết
                  </Button>
-                 <Button size="lg" onClick={() => handleStatusChange('learned')} className="h-14 px-8 chinese-gradient text-white rounded-2xl font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all">
+                 <Button size="lg" onClick={() => handleStatusChange('learned')} className="h-12 sm:h-14 px-6 sm:px-8 chinese-gradient text-white rounded-2xl font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all min-h-[48px]">
                    <CheckCircle className="w-5 h-5 mr-2" /> {status === 'learned' ? 'Ôn tập lại' : 'Tôi đã thuộc từ này'}
                  </Button>
               </div>
 
-              <div className="flex flex-wrap justify-center gap-3 pt-4">
-                 <Button variant="ghost" onClick={() => handleStatusChange('studying')} className="rounded-xl font-bold text-orange-600 hover:bg-orange-50">Cần học thêm</Button>
-                 <Button variant="ghost" onClick={() => handleStatusChange('skipped')} className="rounded-xl font-bold text-gray-400 hover:bg-gray-50">Bỏ qua từ này</Button>
-                 <Button variant="ghost" onClick={() => setShowReport(true)} className="rounded-xl font-bold text-red-400 hover:bg-red-50">Báo lỗi</Button>
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-4">
+                 <Button variant="ghost" onClick={() => handleStatusChange('studying')} className="rounded-xl font-bold text-orange-600 hover:bg-orange-50 min-h-[44px] py-2">Cần học thêm</Button>
+                 <Button variant="ghost" onClick={() => handleStatusChange('skipped')} className="rounded-xl font-bold text-gray-400 hover:bg-gray-50 min-h-[44px] py-2">Bỏ qua từ này</Button>
+                 <Button variant="ghost" onClick={() => setShowReport(true)} className="rounded-xl font-bold text-red-400 hover:bg-red-50 min-h-[44px] py-2">Báo lỗi</Button>
               </div>
            </div>
 
-           <div className="bg-gray-50/50 p-6 border-t border-gray-100 flex justify-between items-center px-12">
+           <div className="bg-gray-50/50 p-4 sm:p-6 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-2 px-4 sm:px-8 md:px-12">
               <div className="flex items-center space-x-2">
                  <Badge className="bg-primary/10 text-primary border-primary/20 rounded-lg px-3 py-1 font-black text-[10px] uppercase tracking-widest">Level {vocabulary.level}</Badge>
                  <Badge variant="outline" className="rounded-lg px-3 py-1 font-bold text-[10px] uppercase tracking-widest text-gray-400">{vocabulary.partOfSpeech}</Badge>

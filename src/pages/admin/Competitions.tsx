@@ -89,30 +89,30 @@ export const AdminCompetitions = () => {
   }
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-4 sm:space-y-8 pb-8 sm:pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col sm:flex-row md:items-center justify-between gap-4 sm:gap-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
-             <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg">
-                <Trophy className="w-6 h-6" />
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center flex-wrap gap-2">
+             <div className="w-9 h-9 sm:w-10 sm:h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-2 sm:mr-4 shadow-lg shrink-0">
+                <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />
              </div>
              Giải đấu hệ thống
           </h1>
-          <p className="text-gray-500 font-medium">Tổ chức và giám sát các kỳ thi đấu trí tuệ định kỳ trên toàn nền tảng.</p>
+          <p className="text-sm sm:text-base text-gray-500 font-medium mt-1">Tổ chức và giám sát các kỳ thi đấu trí tuệ định kỳ trên toàn nền tảng.</p>
         </div>
         
-        <Button asChild className="chinese-gradient h-11 px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-1">
+        <Button asChild className="chinese-gradient h-11 px-4 sm:px-6 rounded-xl font-black text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-1 min-h-[44px] w-full sm:w-auto">
           <Link to="/admin/competitions/new"><Plus className="mr-2 h-4 w-4" /> Tạo giải đấu mới</Link>
         </Button>
       </div>
 
       {/* Control Bar */}
-      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl flex items-center justify-between">
-         <div className="flex items-center space-x-2">
-            <span className="text-[10px] font-black uppercase text-gray-400">Hiển thị</span>
+      <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border border-gray-100 shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+         <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase text-gray-400 hidden xs:inline">Hiển thị</span>
             <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setPage(1); }}>
-               <SelectTrigger className="w-20 h-8 rounded-lg border-none bg-gray-50 font-black text-[10px]">
+               <SelectTrigger className="w-20 sm:w-24 h-10 rounded-lg sm:rounded-xl border-none bg-gray-50 font-black text-[10px] min-h-[44px]">
                   <SelectValue />
                </SelectTrigger>
                <SelectContent className="rounded-xl">
@@ -129,10 +129,10 @@ export const AdminCompetitions = () => {
       </div>
 
       {/* Competitions Grid Rendering */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {items.map((c) => (
-          <div key={c._id} className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col">
-             <div className="p-8 space-y-6 flex-1 relative">
+          <div key={c._id} className="bg-white rounded-xl sm:rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col">
+             <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 flex-1 relative">
                 <div className="absolute top-0 right-0 w-32 h-32 chinese-gradient opacity-5 rounded-bl-[4rem]" />
                 
                 <div className="flex justify-between items-start">
@@ -228,7 +228,7 @@ export const AdminCompetitions = () => {
 
       {/* Delete Confirmation */}
       <Dialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl max-w-sm text-center">
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 border-none shadow-2xl text-center max-w-sm max-h-[90dvh] overflow-y-auto">
           <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500">
              <Trash2 className="w-8 h-8" />
           </div>

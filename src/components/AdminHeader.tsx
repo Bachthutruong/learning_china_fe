@@ -9,11 +9,15 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from './ui/dropdown-menu'
-import { Bell, Search, User, LogOut, Settings } from 'lucide-react'
+import { Bell, Search, User, LogOut, Settings, Menu } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
-export const AdminHeader = () => {
+interface AdminHeaderProps {
+  onOpenMobileMenu?: () => void
+}
+
+export const AdminHeader = ({ onOpenMobileMenu }: AdminHeaderProps) => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [notifications] = useState(5) // Mock notification count
@@ -24,11 +28,29 @@ export const AdminHeader = () => {
   }
 
   return (
-    <header className="bg-white border-b border-gray-100 px-8 py-4 sticky top-0 z-40">
-      <div className="flex items-center justify-between">
-        {/* Search */}
-        <div className="flex-1 max-w-xl">
-          <div className="relative group">
+    <header className="bg-white border-b border-gray-100 px-4 sm:px-6 md:px-8 py-3 sm:py-4 sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
+      <div className="flex items-center justify-between gap-3">
+        {/* Mobile: nút mở menu quản trị | Desktop: ô tìm kiếm */}
+        <div className="lg:hidden flex items-center gap-2 shrink-0">
+          {onOpenMobileMenu ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-gray-700 hover:bg-primary/5 hover:text-primary"
+                onClick={onOpenMobileMenu}
+                aria-label="Mở menu quản trị"
+              >
+                <Menu className="h-6 w-6" />
+              </Button>
+              <span className="font-bold text-gray-900 truncate">Menu quản trị</span>
+            </>
+          ) : (
+            <span className="font-bold text-gray-900 truncate">Quản trị</span>
+          )}
+        </div>
+        <div className="hidden lg:flex flex-1 max-w-xl">
+          <div className="relative group w-full">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-primary transition-colors" />
             <input
               type="text"
@@ -38,10 +60,10 @@ export const AdminHeader = () => {
           </div>
         </div>
 
-        {/* Right side */}
-        <div className="flex items-center space-x-6">
+        {/* Bên phải: Thông báo + User */}
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative w-10 h-10 rounded-xl hover:bg-primary/5 hover:text-primary transition-all">
+          <Button variant="ghost" size="icon" className="relative w-10 h-10 min-w-10 min-h-10 rounded-xl hover:bg-primary/5 hover:text-primary transition-all">
             <Bell className="h-5 w-5" />
             {notifications > 0 && (
               <span className="absolute top-2 right-2 bg-primary text-white text-[10px] font-black rounded-lg h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-white">
@@ -50,7 +72,7 @@ export const AdminHeader = () => {
             )}
           </Button>
 
-          <div className="w-px h-6 bg-gray-100" />
+          <div className="w-px h-6 bg-gray-100 hidden sm:block" />
 
           {/* User Menu */}
           <DropdownMenu>

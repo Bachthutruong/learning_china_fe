@@ -345,7 +345,7 @@ export const AdminCoinPurchases = () => {
 
       {/* Action Dialog */}
       <Dialog open={!!selectedPurchase} onOpenChange={(open) => !open && setSelectedPurchase(null)}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-2xl border-none shadow-2xl">
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 border-none shadow-2xl max-w-2xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader className="mb-6">
             <DialogTitle className="text-3xl font-black text-gray-900 flex items-center">
                <div className="w-12 h-12 chinese-gradient rounded-2xl flex items-center justify-center text-white mr-4 shadow-lg">

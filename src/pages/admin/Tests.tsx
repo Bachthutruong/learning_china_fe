@@ -478,9 +478,9 @@ export const AdminTests = () => {
   )
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-4 sm:space-y-8 pb-8 sm:pb-12">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900 flex items-center tracking-tight">
             <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg"><TestTube className="w-6 h-6" /></div>
@@ -591,7 +591,7 @@ export const AdminTests = () => {
 
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-4xl max-h-[90vh] overflow-y-auto border-none shadow-2xl">
+        <DialogContent className="sm:max-w-4xl rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 max-h-[90dvh] overflow-y-auto border-none shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-3xl font-black">Tạo câu hỏi mới</DialogTitle>
             <DialogDescription className="font-medium text-gray-500">Thiết lập câu hỏi HSK mới cho hệ thống khảo thí.</DialogDescription>
@@ -610,7 +610,7 @@ export const AdminTests = () => {
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-4xl max-h-[90vh] overflow-y-auto border-none shadow-2xl">
+        <DialogContent className="sm:max-w-4xl rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 max-h-[90dvh] overflow-y-auto border-none shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-3xl font-black">Hiệu chỉnh câu hỏi</DialogTitle>
             <DialogDescription className="font-medium text-gray-500">Cập nhật nội dung hoặc thay đổi cấu hình đáp án.</DialogDescription>
@@ -629,7 +629,7 @@ export const AdminTests = () => {
 
       {/* History Dialog */}
       <Dialog open={showHistory} onOpenChange={setShowHistory}>
-        <DialogContent className="max-w-4xl rounded-[3rem] p-10 h-[85vh] flex flex-col border-none shadow-2xl overflow-hidden">
+        <DialogContent className="max-w-4xl rounded-none sm:rounded-[3rem] p-4 sm:p-10 h-[85dvh] sm:h-[85vh] flex flex-col border-none shadow-2xl overflow-hidden max-h-[90dvh]">
            <DialogHeader className="mb-6">
               <div className="flex items-center gap-4 mb-2">
                  <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-sm"><Clock className="w-6 h-6" /></div>
@@ -676,7 +676,7 @@ export const AdminTests = () => {
 
       {/* Import Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 max-w-lg border-none shadow-2xl">
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 max-w-lg border-none shadow-2xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader className="text-center space-y-4 mb-8">
              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto shadow-lg text-blue-500"><FileSpreadsheet className="w-8 h-8" /></div>
              <DialogTitle className="text-3xl font-black text-gray-900">Import dữ liệu</DialogTitle>
@@ -703,7 +703,7 @@ export const AdminTests = () => {
 
       {/* Delete Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="rounded-[2.5rem] p-10 text-center border-none shadow-2xl max-w-sm">
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 text-center border-none shadow-2xl max-w-sm max-h-[90dvh] overflow-y-auto">
           <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-red-500"><Trash2 className="w-8 h-8" /></div>
           <DialogHeader><DialogTitle className="text-2xl font-black">Xác nhận xóa?</DialogTitle><DialogDescription className="font-medium">Câu hỏi sẽ bị gỡ bỏ vĩnh viễn.</DialogDescription></DialogHeader>
           <div className="flex flex-col gap-3 mt-8">

@@ -80,8 +80,8 @@ export const Home = () => {
 
   return (
     <div className="min-h-screen bg-[#fdfaf6]">
-      {/* Hero Section */}
-      <section className="relative pt-12 pb-24 md:pt-24 md:pb-32 overflow-hidden">
+      {/* Hero Section - mobile padding */}
+      <section className="relative pt-6 sm:pt-12 pb-16 sm:pb-24 md:pt-24 md:pb-32 overflow-hidden">
         {/* Background Decorations */}
         <div className="absolute top-0 right-0 w-1/3 h-full bg-primary/5 -skew-x-12 transform origin-top-right -z-10" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl -z-10" />
@@ -94,7 +94,7 @@ export const Home = () => {
                 <span className="text-primary text-xs font-bold uppercase tracking-widest">Ứng dụng học tiếng Trung số 1</span>
               </div>
               
-              <h1 className="text-5xl md:text-7xl font-black text-gray-900 leading-[1.1] tracking-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black text-gray-900 leading-[1.1] tracking-tight">
                 Chinh phục <br />
                 <span className="text-primary relative inline-block">
                   Tiếng Trung
@@ -105,15 +105,15 @@ export const Home = () => {
                 <br />Thật Dễ Dàng.
               </h1>
               
-              <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+              <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 Jiudi Learning kết hợp trí tuệ nhân tạo (AI) với giáo trình chuẩn quốc tế, 
                 giúp bạn đạt được mục tiêu ngôn ngữ nhanh hơn 3 lần so với phương pháp truyền thống.
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-4">
                 <Button 
                   size="lg" 
-                  className="chinese-gradient h-14 px-8 text-lg rounded-2xl shadow-xl hover:shadow-primary/30 transition-all transform hover:-translate-y-1 group"
+                  className="chinese-gradient h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-2xl shadow-xl hover:shadow-primary/30 transition-all transform hover:-translate-y-1 group min-h-[48px]"
                   onClick={() => navigate('/register')}
                 >
                   Bắt đầu ngay
@@ -122,7 +122,7 @@ export const Home = () => {
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className="h-14 px-8 text-lg rounded-2xl border-2 border-gray-200 hover:border-primary hover:text-primary transition-all"
+                  className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-2xl border-2 border-gray-200 hover:border-primary hover:text-primary transition-all min-h-[48px]"
                   onClick={() => navigate('/help')}
                 >
                   Xem lộ trình học
@@ -147,7 +147,7 @@ export const Home = () => {
                   <img 
                     src="https://images.unsplash.com/photo-1540633594418-3c74c673f4d2?auto=format&fit=crop&q=80&w=1000" 
                     alt="Learning Chinese" 
-                    className="rounded-[2rem] shadow-inner object-cover h-[400px] w-full"
+                    className="rounded-xl sm:rounded-[2rem] shadow-inner object-cover h-[240px] sm:h-[320px] md:h-[400px] w-full"
                   />
                   <div className="absolute -bottom-6 -left-6 glass-panel p-6 rounded-3xl shadow-2xl border-primary/20 space-y-3 animate-pulse-subtle">
                     <div className="flex items-center space-x-3">
@@ -175,33 +175,36 @@ export const Home = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 relative overflow-hidden">
+      <section className="py-10 sm:py-16 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
             {[
               { label: 'Học viên', value: '10,000+', icon: Users, color: 'text-blue-600' },
               { label: 'Từ vựng', value: '50,000+', icon: BookOpen, color: 'text-red-600' },
               { label: 'Bài học', value: '1,200+', icon: Target, color: 'text-amber-600' },
               { label: 'Cộng đồng', value: '24/7', icon: Sparkles, color: 'text-purple-600' },
-            ].map((stat, idx) => (
-              <div key={idx} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow group">
-                <div className={`w-12 h-12 ${stat.color} bg-current/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform`}>
-                  <stat.icon className="w-6 h-6" />
+            ].map((stat, idx) => {
+              const StatIcon = stat.icon
+              return (
+                <div key={idx} className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow group">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 ${stat.color} bg-current/10 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-4 group-hover:scale-110 transition-transform`}>
+                    <StatIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
+                  <div className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 mb-1">{stat.value}</div>
+                  <div className="text-xs sm:text-sm font-medium text-gray-500">{stat.label}</div>
                 </div>
-                <div className="text-3xl font-black text-gray-900 mb-1">{stat.value}</div>
-                <div className="text-sm font-medium text-gray-500">{stat.label}</div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-24 md:py-32">
+      <section className="py-12 sm:py-16 md:py-24 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
             <h2 className="text-primary text-sm font-black uppercase tracking-widest">Tính năng nổi bật</h2>
-            <h3 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+            <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 tracking-tight">
               Tất cả những gì bạn cần để thành thạo tiếng Trung
             </h3>
             <p className="text-lg text-gray-600">
@@ -209,11 +212,11 @@ export const Home = () => {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {features.map((feature, idx) => {
               const Icon = feature.icon
               return (
-                <div key={idx} className="group p-8 rounded-[2rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 relative overflow-hidden">
+                <div key={idx} className="group p-5 sm:p-6 md:p-8 rounded-xl sm:rounded-[2rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 relative overflow-hidden">
                   <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${feature.gradient} opacity-[0.03] rounded-bl-full group-hover:opacity-[0.08] transition-opacity`} />
                   
                   <div className={`w-14 h-14 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-current/20 group-hover:rotate-6 transition-transform`}>
@@ -310,23 +313,23 @@ export const Home = () => {
       )}
 
       {/* CTA Section */}
-      <section className="py-24 relative overflow-hidden">
+      <section className="py-12 sm:py-16 md:py-24 relative overflow-hidden pb-[max(3rem,env(safe-area-inset-bottom))]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="chinese-gradient rounded-[3rem] p-8 md:p-16 text-center text-white relative overflow-hidden shadow-2xl">
+          <div className="chinese-gradient rounded-2xl sm:rounded-[3rem] p-6 sm:p-8 md:p-16 text-center text-white relative overflow-hidden shadow-2xl">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
             
             <div className="relative z-10 space-y-8">
-              <h2 className="text-4xl md:text-5xl font-black tracking-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight">
                 Bắt đầu hành trình <br className="hidden md:block" /> chinh phục Hán ngữ ngay hôm nay!
               </h2>
               <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
                 Tham gia cùng 10,000+ học viên và khám phá phương pháp học tiếng Trung hiệu quả nhất thế giới.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-4">
                 <Button 
                   size="lg" 
-                  className="bg-white text-primary hover:bg-gray-100 h-14 px-10 text-lg rounded-2xl font-black shadow-xl"
+                  className="bg-white text-primary hover:bg-gray-100 h-12 sm:h-14 px-8 sm:px-10 text-base sm:text-lg rounded-2xl font-black shadow-xl min-h-[48px]"
                   onClick={() => navigate('/register')}
                 >
                   Đăng ký miễn phí
@@ -334,7 +337,7 @@ export const Home = () => {
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className="border-2 border-white/30 text-white hover:bg-white/10 h-14 px-10 text-lg rounded-2xl font-black"
+                  className="border-2 border-white/30 text-white hover:bg-white/10 h-12 sm:h-14 px-8 sm:px-10 text-base sm:text-lg rounded-2xl font-black min-h-[48px]"
                   onClick={() => navigate('/login')}
                 >
                   Đăng nhập

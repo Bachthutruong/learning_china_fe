@@ -426,7 +426,7 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
 
         {/* Create Topic Dialog */}
         <Dialog open={showCreateTopicDialog} onOpenChange={setShowCreateTopicDialog}>
-          <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl">
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-lg sm:w-auto min-h-[50vh] sm:min-h-0 rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 border-none shadow-2xl">
             <DialogHeader className="text-center space-y-4 mb-8">
                <div className="w-16 h-16 chinese-gradient rounded-2xl flex items-center justify-center mx-auto shadow-lg">
                   <Plus className="w-8 h-8 text-white" />
