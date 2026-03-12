@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { 
@@ -25,7 +26,8 @@ import {
   Settings,
   CreditCard,
   Award,
-  FileText
+  FileText,
+  MessageSquarePlus
 } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -44,6 +46,7 @@ interface AdminSidebarProps {
 }
 
 export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminSidebarProps) => {
+  const { user } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState({
@@ -74,15 +77,15 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
       ])
 
       setStats({
-        reports: reportsRes.data?.total || reportsRes.data?.reports?.length || 0,
-        vocabularies: vocabulariesRes.data?.total || vocabulariesRes.data?.vocabularies?.length || 0,
-        topics: topicsRes.data?.total || topicsRes.data?.topics?.length || 0,
-        levels: levelsRes.data?.total || levelsRes.data?.levels?.length || 0,
-        tests: testsRes.data?.total || testsRes.data?.tests?.length || 0,
-        proficiencyTests: proficiencyRes.data?.total || proficiencyRes.data?.proficiencyTests?.length || 0,
-        competitions: competitionsRes.data?.total || competitionsRes.data?.competitions?.length || 0,
-        users: usersRes.data?.total || usersRes.data?.users?.length || 0,
-        coinPurchases: coinPurchasesRes.data?.total || coinPurchasesRes.data?.purchases?.length || 0
+        reports: reportsRes?.data?.total || reportsRes?.data?.reports?.length || 0,
+        vocabularies: vocabulariesRes?.data?.total || vocabulariesRes?.data?.vocabularies?.length || 0,
+        topics: topicsRes?.data?.total || topicsRes?.data?.topics?.length || 0,
+        levels: levelsRes?.data?.total || levelsRes?.data?.levels?.length || 0,
+        tests: testsRes?.data?.total || testsRes?.data?.tests?.length || 0,
+        proficiencyTests: proficiencyRes?.data?.total || proficiencyRes?.data?.proficiencyTests?.length || 0,
+        competitions: competitionsRes?.data?.total || competitionsRes?.data?.competitions?.length || 0,
+        users: usersRes?.data?.total || usersRes?.data?.users?.length || 0,
+        coinPurchases: coinPurchasesRes?.data?.total || coinPurchasesRes?.data?.purchases?.length || 0
       })
     } catch (error) {
       console.error('Error fetching stats:', error)
@@ -129,6 +132,32 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
       icon: Layers,
       href: '/admin/topics',
       badge: stats.topics > 0 ? stats.topics.toString() : null
+    },
+    {
+      title: 'Duyệt Ví Dụ',
+      icon: MessageSquarePlus,
+      href: '#',
+      badge: null,
+      submenu: [
+        {
+          title: 'Danh sách đóng góp',
+          icon: MessageSquarePlus,
+          href: '/admin/example-contributions',
+          badge: null
+        },
+        {
+          title: 'Cấu hình người duyệt',
+          icon: Users,
+          href: '/admin/example-reviewers',
+          badge: null
+        },
+        {
+          title: 'Cấu hình thưởng',
+          icon: Coins,
+          href: '/admin/example-reward-config',
+          badge: null
+        }
+      ]
     },
     {
       title: 'Cấp độ',
@@ -244,6 +273,28 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
     // }
   ]
 
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.filter(item => {
+    const isAdmin = user?.role?.toLowerCase() === 'admin'
+    const isReviewer = !!user?.isReviewer
+
+    if (isAdmin) return true
+
+    // If only a reviewer, only show "Duyệt Ví Dụ"
+    if (isReviewer) {
+      if (item.title === 'Duyệt Ví Dụ') {
+        // Filter submenu to only show "Danh sách đóng góp"
+        if (item.submenu) {
+          item.submenu = item.submenu.filter(sub => sub.title === 'Danh sách đóng góp')
+        }
+        return true
+      }
+      return false
+    }
+
+    return false
+  })
+
   const toggleMenu = (menuKey: string) => {
     const newExpanded = new Set(expandedMenus)
     if (newExpanded.has(menuKey)) {
@@ -309,7 +360,7 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1 custom-scrollbar">
-        {menuItems.map((item) => {
+        {filteredMenuItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
           const hasSubmenu = item.submenu && item.submenu.length > 0

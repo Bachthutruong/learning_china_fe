@@ -347,13 +347,17 @@ export const VocabularyLearning = () => {
   }, [selectedTopics, searchTerm])
 
 
-  // Scroll to vocab list when a topic gets selected
+  // Scroll đến đầu list từ vựng khi chọn chủ đề (không scroll xuống cuối trang)
   useEffect(() => {
     if (selectedTopics.length > 0) {
-      // Ensure DOM is ready
-      requestAnimationFrame(() => {
-        vocabListAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      })
+      setTimeout(() => {
+        const el = vocabListAnchorRef.current
+        if (el) {
+          // Trừ đi một khoảng header (ví dụ 80px)
+          const y = el.getBoundingClientRect().top + window.scrollY - 80
+          window.scrollTo({ top: y, behavior: 'smooth' })
+        }
+      }, 100) // Đợi DOM cập nhật một chút
     }
   }, [selectedTopics])
 
@@ -541,7 +545,12 @@ export const VocabularyLearning = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          startStudyMode(availableVocabularies, false)
+                          const toStudy = availableVocabularies.filter(v => vocabularyStatuses[v._id] !== 'learned')
+                          if (toStudy.length === 0) {
+                            toast('Tất cả từ vựng đã thuộc! Hãy thêm từ mới hoặc chuyển tab Đã thuộc để ôn tập.')
+                            return
+                          }
+                          startStudyMode(toStudy, false)
                         }}
                         className="chinese-gradient text-white rounded-xl font-black text-xs h-9 shadow-md"
                       >
@@ -556,9 +565,11 @@ export const VocabularyLearning = () => {
           </div>
         </div>
 
+        <div ref={vocabListAnchorRef} />
+
         {/* Selected Topic Detail */}
         {selectedTopics.length > 0 && (
-          <div ref={vocabListAnchorRef} className="space-y-8 animate-in slide-in-from-bottom duration-700">
+          <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
             <div className="bg-white rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-8 border border-gray-100 shadow-xl space-y-6 sm:space-y-8">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
@@ -767,62 +778,55 @@ export const VocabularyLearning = () => {
 
       {/* Create Topic Dialog - full width on mobile */}
       <Dialog open={showCreateTopicDialog} onOpenChange={setShowCreateTopicDialog}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-lg sm:w-auto rounded-xl sm:rounded-2xl p-4 sm:p-6 border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50">
-          <DialogHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg p-6 -m-6 mb-6">
-            <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 bg-white/20 rounded-full">
-                <Plus className="w-6 h-6" />
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-lg sm:w-auto min-h-[50vh] sm:min-h-0 rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 border-none shadow-2xl">
+            <DialogHeader className="text-center space-y-4 mb-8">
+               <div className="w-16 h-16 chinese-gradient rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                  <Plus className="w-8 h-8 text-white" />
+               </div>
+               <DialogTitle className="text-3xl font-black text-gray-900">Tạo chủ đề học tập</DialogTitle>
+               <p className="text-gray-500 font-medium leading-relaxed">Tổ chức từ vựng theo cách riêng của bạn để ghi nhớ tốt hơn.</p>
+            </DialogHeader>
+            <form onSubmit={handleCreateTopic} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="topicName" className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Tên chủ đề của bạn</Label>
+                <Input
+                  id="topicName"
+                  value={newTopicName}
+                  onChange={(e) => setNewTopicName(e.target.value)}
+                  placeholder="Ví dụ: Tiếng Trung chuyên ngành IT..."
+                  className="h-14 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+                  required
+                />
               </div>
-              <div>
-                <span>Tạo chủ đề mới</span>
-                <div className="flex items-center gap-1 mt-1">
-                  <Tag className="h-4 w-4 text-purple-200" />
-                  <span className="text-sm text-purple-100">Tổ chức từ vựng cá nhân</span>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="topicDescription" className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Mô tả ngắn gọn (tùy chọn)</Label>
+                <Input
+                  id="topicDescription"
+                  value={newTopicDescription}
+                  onChange={(e) => setNewTopicDescription(e.target.value)}
+                  placeholder="Mục tiêu của chủ đề này là gì?..."
+                  className="h-14 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+                />
               </div>
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleCreateTopic} className="space-y-6">
-            <div>
-              <Label htmlFor="topicName" className="text-lg font-semibold text-gray-700">Tên chủ đề *</Label>
-              <Input
-                id="topicName"
-                value={newTopicName}
-                onChange={(e) => setNewTopicName(e.target.value)}
-                placeholder="Ví dụ: Từ vựng công việc"
-                className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="topicDescription" className="text-lg font-semibold text-gray-700">Mô tả (tùy chọn)</Label>
-              <Input
-                id="topicDescription"
-                value={newTopicDescription}
-                onChange={(e) => setNewTopicDescription(e.target.value)}
-                placeholder="Mô tả ngắn về chủ đề này"
-                className="mt-2 text-lg py-3 border-2 focus:border-purple-400"
-              />
-            </div>
-            <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowCreateTopicDialog(false)}
-                className="px-6 py-3 text-lg border-2 border-gray-300 hover:border-gray-400"
-              >
-                Hủy
-              </Button>
-              <Button
-                type="submit"
-                className="px-6 py-3 text-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-              >
-                Tạo chủ đề
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+              <div className="flex gap-4 pt-4">
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  onClick={() => setShowCreateTopicDialog(false)}
+                  className="flex-1 h-12 rounded-xl font-bold text-gray-400"
+                >
+                  Hủy bỏ
+                </Button>
+                <Button 
+                  type="submit"
+                  className="flex-1 chinese-gradient h-12 rounded-xl font-black text-white shadow-lg"
+                >
+                  Tạo ngay
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
       {/* Add Vocabulary Dialog */}
       <Dialog open={showAddVocabularyDialog} onOpenChange={(open) => {
@@ -833,7 +837,7 @@ export const VocabularyLearning = () => {
           fetchAvailableVocabularies()
         }
       }}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] min-h-[90dvh] sm:min-h-0 sm:w-[95vw] sm:max-w-6xl rounded-xl sm:rounded-2xl max-h-[90dvh] overflow-y-auto p-0">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] min-h-[90dvh] sm:min-h-0 sm:w-[95vw] sm:max-w-6xl rounded-xl sm:rounded-2xl max-h-[90dvh] overflow-hidden flex flex-col p-0">
           <AddVocabulary
             inDialog
             onClose={() => setShowAddVocabularyDialog(false)}

@@ -11,6 +11,7 @@ interface User {
   experience: number
   coins: number
   streak: number
+  isReviewer?: boolean
 }
 
 interface AuthContextType {

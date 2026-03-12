@@ -45,6 +45,9 @@ import { CompetitionScoringConfigPage } from './pages/admin/CompetitionScoringCo
 import { CompetitionRewardsConfigPage } from './pages/admin/CompetitionRewardsConfig'
 import { AdminBlogPosts } from './pages/admin/BlogPosts'
 import { BlogPostForm } from './pages/admin/BlogPostForm'
+import { ExampleContributions } from './pages/admin/ExampleContributions'
+import { ExampleReviewers } from './pages/admin/ExampleReviewers'
+import { ExampleRewardConfig } from './pages/admin/ExampleRewardConfig'
 import { TestList } from './pages/TestList'
 import { TestDetail } from './pages/TestDetail'
 import { NewTestPage } from './pages/NewTestPage'
@@ -304,6 +307,27 @@ function App() {
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
                     <AdminUsers />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/example-contributions" element={
+                <ProtectedRoute requireReviewer>
+                  <AdminLayout>
+                    <ExampleContributions />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/example-reviewers" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <ExampleReviewers />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/example-reward-config" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <ExampleRewardConfig />
                   </AdminLayout>
                 </ProtectedRoute>
               } />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
@@ -67,6 +67,23 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
   const [showCreateTopicDialog, setShowCreateTopicDialog] = useState(false)
   const [newTopicName, setNewTopicName] = useState('')
   const [newTopicDescription, setNewTopicDescription] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalVocabularies, setTotalVocabularies] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  const observer = useRef<IntersectionObserver | null>(null)
+  const lastVocabularyElementRef = useCallback((node: HTMLButtonElement | null) => {
+    if (loadingMore || loading) return
+    if (observer.current) observer.current.disconnect()
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && availableVocabularies.length < totalVocabularies) {
+        setPage(prevPage => prevPage + 1)
+      }
+    }, {
+      rootMargin: '100px', // Load before reaching the exact bottom
+    })
+    if (node) observer.current.observe(node)
+  }, [loadingMore, loading, availableVocabularies.length, totalVocabularies])
 
   useEffect(() => {
     fetchPersonalTopics()
@@ -81,12 +98,17 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
   }, [initialSelectedPersonalTopics])
 
   useEffect(() => {
+    setPage(1)
+  }, [selectedCategories, searchTerm])
+
+  useEffect(() => {
     if (selectedCategories.length > 0) {
-      fetchVocabulariesByCategories()
+      fetchVocabulariesByCategories(page)
     } else {
       setAvailableVocabularies([])
+      setTotalVocabularies(0)
     }
-  }, [selectedCategories, searchTerm])
+  }, [selectedCategories, searchTerm, page])
 
   const fetchPersonalTopics = async () => {
     try {
@@ -117,25 +139,35 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
     }
   }
 
-  const fetchVocabulariesByCategories = async () => {
+  const fetchVocabulariesByCategories = async (currentPage = 1) => {
     try {
-      setLoading(true)
+      if (currentPage === 1) setLoading(true)
+      else setLoadingMore(true)
       
       const response = await api.get('/vocabulary/by-categories', {
         params: {
           categories: selectedCategories.join(','),
           search: searchTerm,
-          limit: 50
+          limit: 20,
+          page: currentPage
         }
       })
       
       const vocabularies = response.data.vocabularies || response.data
-      setAvailableVocabularies(vocabularies)
+      const total = response.data.total || 0
+      
+      if (currentPage === 1) {
+        setAvailableVocabularies(vocabularies)
+      } else {
+        setAvailableVocabularies(prev => [...prev, ...vocabularies])
+      }
+      setTotalVocabularies(total)
     } catch (error) {
       console.error('Error fetching vocabularies by categories:', error)
       toast.error('Không thể tải từ vựng theo danh mục')
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
 
@@ -245,8 +277,8 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
   // Removed audio play helper in compact UI
 
   return (
-    <div className={`${inDialog ? '' : 'min-h-screen'} bg-[#fdfaf6] p-4 md:p-8`}>
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className={`${inDialog ? 'flex flex-col flex-1 min-h-0 overflow-hidden' : 'min-h-screen'} bg-[#fdfaf6] p-4 md:p-8`}>
+      <div className={`max-w-6xl mx-auto ${inDialog ? 'flex flex-col flex-1 min-h-0' : 'space-y-10'}`}>
         {/* Header Section */}
         {!inDialog && (
           <div className="text-center space-y-4 max-w-3xl mx-auto">
@@ -259,8 +291,10 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
           </div>
         )}
 
-        <div className="space-y-8">
+        <div className={`space-y-8 ${inDialog ? 'flex flex-col min-h-0' : ''}`}>
           {/* Step 1: Search & Filter Categories */}
+          <div className={`${inDialog ? 'flex-1 overflow-y-auto min-h-0' : ''}`}>
+          <div className="space-y-8">
           <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8">
              <div className="flex items-center space-x-4">
                 <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white shadow-lg">
@@ -317,60 +351,8 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
              </div>
           </div>
 
-          {/* Step 2: Vocabulary Selection */}
+          {/* Step 3: Target Personal Topics - Hiển thị TRÊN danh sách từ vựng */}
           {selectedCategories.length > 0 && (
-            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-6 animate-in slide-in-from-bottom duration-500">
-               <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                     <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                        <Tag className="w-5 h-5" />
-                     </div>
-                     <div>
-                        <h3 className="text-xl font-black text-gray-900">2. Lựa chọn từ vựng</h3>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn các từ bạn muốn học</p>
-                     </div>
-                  </div>
-                  <Badge className="bg-blue-50 text-blue-600 border-blue-100 rounded-lg font-black">{availableVocabularies.length} Từ khả dụng</Badge>
-               </div>
-
-               {loading ? (
-                 <div className="flex justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                 </div>
-               ) : availableVocabularies.length > 0 ? (
-                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {availableVocabularies.map((vocabulary) => (
-                      <button
-                        key={vocabulary._id}
-                        onClick={() => handleVocabularySelect(vocabulary._id)}
-                        className={`p-4 rounded-2xl border-2 text-center transition-all group relative ${
-                          selectedVocabularies.includes(vocabulary._id)
-                            ? 'bg-blue-50 border-blue-500 shadow-md ring-4 ring-blue-50'
-                            : 'bg-white border-gray-50 hover:border-blue-200 hover:bg-blue-50/30'
-                        }`}
-                      >
-                        <p className={`text-2xl font-black transition-colors ${selectedVocabularies.includes(vocabulary._id) ? 'text-blue-700' : 'text-gray-900'}`}>{vocabulary.word}</p>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{vocabulary.pinyin}</p>
-                        <p className="text-xs text-gray-500 line-clamp-1 mt-2 font-medium">{vocabulary.meaning}</p>
-                        
-                        {selectedVocabularies.includes(vocabulary._id) && (
-                          <div className="absolute top-2 right-2">
-                             <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                                <CheckCircle className="w-3 h-3 text-white" />
-                             </div>
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                 </div>
-               ) : (
-                 <div className="text-center py-12 text-gray-400 italic font-medium">Không tìm thấy từ vựng nào phù hợp.</div>
-               )}
-            </div>
-          )}
-
-          {/* Step 3: Target Personal Topics */}
-          {selectedVocabularies.length > 0 && (
             <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-8 animate-in slide-in-from-bottom duration-700">
                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="flex items-center space-x-4">
@@ -379,7 +361,7 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
                      </div>
                      <div>
                         <h3 className="text-xl font-black text-gray-900">3. Đích đến học tập</h3>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn chủ đề cá nhân của bạn</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">LIỆN LỰC DỰ LỰC LÀ ĐỘNG LỰC CỦA BẠN</p>
                      </div>
                   </div>
                   <Button 
@@ -410,17 +392,98 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
                     </button>
                   ))}
                </div>
-
-               <div className="pt-8 border-t border-gray-50 flex justify-center">
-                  <Button
-                    onClick={handleAddVocabularies}
-                    disabled={selectedPersonalTopics.length === 0}
-                    className="h-16 px-12 rounded-2xl chinese-gradient text-white font-black text-xl shadow-2xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all disabled:opacity-50 disabled:transform-none"
-                  >
-                     Hoàn tất & Thêm {selectedVocabularies.length} từ vào {selectedPersonalTopics.length} chủ đề
-                  </Button>
-               </div>
             </div>
+          )}
+
+          {/* Step 2: Vocabulary Selection */}
+          {selectedCategories.length > 0 && (
+            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl space-y-6 animate-in slide-in-from-bottom duration-500">
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                     <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                        <Tag className="w-5 h-5" />
+                     </div>
+                     <div>
+                        <h3 className="text-xl font-black text-gray-900">2. Lựa chọn từ vựng</h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn các từ bạn muốn học</p>
+                     </div>
+                  </div>
+                  <Badge className="bg-blue-50 text-blue-600 border-blue-100 rounded-lg font-black">{totalVocabularies} Từ khả dụng</Badge>
+               </div>
+
+               {loading ? (
+                 <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                 </div>
+               ) : availableVocabularies.length > 0 ? (
+                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {availableVocabularies.map((vocabulary, index) => {
+                      const isLast = index === availableVocabularies.length - 1
+                      return (
+                        <button
+                          key={`${vocabulary._id}-${index}`}
+                          ref={isLast ? lastVocabularyElementRef : null}
+                          onClick={() => handleVocabularySelect(vocabulary._id)}
+                          className={`p-4 rounded-2xl border-2 text-center transition-all group relative ${
+                            selectedVocabularies.includes(vocabulary._id)
+                              ? 'bg-blue-50 border-blue-500 shadow-md ring-4 ring-blue-50'
+                              : 'bg-white border-gray-50 hover:border-blue-200 hover:bg-blue-50/30'
+                          }`}
+                        >
+                          <p className={`text-2xl font-black transition-colors ${selectedVocabularies.includes(vocabulary._id) ? 'text-blue-700' : 'text-gray-900'}`}>{vocabulary.word}</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{vocabulary.pinyin}</p>
+                          <p className="text-xs text-gray-500 line-clamp-1 mt-2 font-medium">{vocabulary.meaning}</p>
+                          
+                          {selectedVocabularies.includes(vocabulary._id) && (
+                            <div className="absolute top-2 right-2">
+                               <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                  <CheckCircle className="w-3 h-3 text-white" />
+                               </div>
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                 </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-400 italic font-medium">Không tìm thấy từ vựng nào phù hợp.</div>
+                )}
+                {loadingMore && (
+                  <div className="flex justify-center pt-6 pb-2">
+                    <div className="flex items-center text-primary font-bold">
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Đang tải thêm từ vựng...
+                    </div>
+                  </div>
+                )}
+             </div>
+          )}
+          </div>
+          </div>
+
+          {/* Button Hoàn tất - fix cứng góc phải khi trong dialog */}
+          {selectedVocabularies.length > 0 && (
+            inDialog ? (
+              <div className="shrink-0 p-4 sm:p-6 border-t border-gray-100 flex justify-end bg-white rounded-b-xl">
+                <Button
+                  onClick={handleAddVocabularies}
+                  disabled={selectedPersonalTopics.length === 0}
+                  className="h-14 px-8 rounded-2xl chinese-gradient text-white font-black text-lg shadow-2xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all disabled:opacity-50 disabled:transform-none"
+                >
+                  Hoàn tất & Thêm {selectedVocabularies.length} từ vào {selectedPersonalTopics.length} chủ đề
+                </Button>
+              </div>
+            ) : (
+              <div className="pt-8 border-t border-gray-50 flex justify-center">
+                <Button
+                  onClick={handleAddVocabularies}
+                  disabled={selectedPersonalTopics.length === 0}
+                  className="h-16 px-12 rounded-2xl chinese-gradient text-white font-black text-xl shadow-2xl shadow-primary/20 hover:shadow-primary/30 transform hover:-translate-y-1 transition-all disabled:opacity-50 disabled:transform-none"
+                >
+                  Hoàn tất & Thêm {selectedVocabularies.length} từ vào {selectedPersonalTopics.length} chủ đề
+                </Button>
+              </div>
+            )
           )}
         </div>
 

@@ -5,9 +5,10 @@ import { ReactNode } from 'react'
 interface ProtectedRouteProps {
   children: ReactNode
   requireAdmin?: boolean
+  requireReviewer?: boolean
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false, requireReviewer = false }) => {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -22,7 +23,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
     return <Navigate to="/login" replace />
   }
 
-  if (requireAdmin && user.role !== 'admin') {
+  const userRole = user.role?.toString().toLowerCase()
+  const isAdmin = userRole === 'admin'
+  const isReviewer = !!user.isReviewer || isAdmin
+
+  // If page requires Admin, only 'admin' role allowed
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/" replace />
+  }
+
+  // If page requires Reviewer, either 'admin' or 'isReviewer' flag allowed
+  if (requireReviewer && !isReviewer) {
     return <Navigate to="/" replace />
   }
 

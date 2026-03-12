@@ -17,6 +17,7 @@ interface UserItem {
   experience?: number
   coins: number
   role: string
+  isReviewer?: boolean
 }
 
 interface ExperienceRange {
@@ -150,7 +151,7 @@ export const AdminUsers = () => {
         </div>
         
         <Button onClick={() => { 
-          setEditing({ _id: '', name: '', email: '', level: 1, coins: 0, role: 'user' }); 
+          setEditing({ _id: '', name: '', email: '', level: 1, coins: 0, role: 'user', isReviewer: false }); 
           setPassword('')
           setOriginalLevel(null)
           setExperienceRange(null)
@@ -231,11 +232,18 @@ export const AdminUsers = () => {
                           </div>
                        </td>
                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-center">
-                          <Badge className={`rounded-lg font-black text-[10px] px-2 sm:px-3 py-1 border-none ${
-                            u.role === 'admin' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-500'
-                          }`}>
-                             {u.role ? u.role.toUpperCase() : 'USER'}
-                          </Badge>
+                          <div className="flex flex-col gap-1 items-center justify-center">
+                            <Badge className={`rounded-lg font-black text-[10px] px-2 sm:px-3 py-1 border-none ${
+                              u.role === 'admin' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-500'
+                            }`}>
+                               {u.role ? u.role.toUpperCase() : 'USER'}
+                            </Badge>
+                            {u.isReviewer && (
+                              <Badge className="rounded-lg font-black text-[10px] px-2 sm:px-3 py-1 border-none bg-blue-100 text-blue-600">
+                                REVIEWER
+                              </Badge>
+                            )}
+                          </div>
                        </td>
                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-right">
                           <div className="flex items-center justify-end space-x-1 sm:space-x-2">
@@ -352,18 +360,36 @@ export const AdminUsers = () => {
                      </div>
                   </div>
 
-                  <div className="space-y-2">
-                     <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Vai trò hệ thống</Label>
-                     <div className="relative">
-                        <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
-                        <select 
-                          className="w-full h-12 pl-11 pr-4 bg-gray-50/50 border-2 border-gray-50 rounded-xl font-bold text-sm text-gray-700 focus:bg-white focus:border-primary transition-all outline-none appearance-none" 
-                          value={editing?.role || 'user'} 
-                          onChange={e => setEditing({ ...editing!, role: e.target.value })}
-                        >
-                           <option value="user">User - Học viên</option>
-                           <option value="admin">Admin - Quản trị viên</option>
-                        </select>
+                  <div className="space-y-4">
+                     <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Vai trò hệ thống</Label>
+                        <div className="relative">
+                           <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                           <select 
+                             className="w-full h-12 pl-11 pr-4 bg-gray-50/50 border-2 border-gray-50 rounded-xl font-bold text-sm text-gray-700 focus:bg-white focus:border-primary transition-all outline-none appearance-none" 
+                             value={editing?.role || 'user'} 
+                             onChange={e => setEditing({ ...editing!, role: e.target.value })}
+                           >
+                              <option value="user">User - Học viên</option>
+                              <option value="admin">Admin - Quản trị viên</option>
+                           </select>
+                        </div>
+                     </div>
+
+                     <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Quyền duyệt Ví dụ Vocabulary</Label>
+                        <div className="flex items-center space-x-2 pt-2 ml-1">
+                          <input 
+                            type="checkbox" 
+                            id="isReviewer" 
+                            className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
+                            checked={!!editing?.isReviewer}
+                            onChange={e => setEditing({ ...editing!, isReviewer: e.target.checked })}
+                          />
+                          <label htmlFor="isReviewer" className="text-sm font-bold text-gray-700 cursor-pointer">
+                            Cho phép làm người duyệt duyệt ví dụ
+                          </label>
+                        </div>
                      </div>
                   </div>
                </div>

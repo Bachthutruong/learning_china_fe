@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { 
   Menu, X, Home, BookOpen, TestTube, Brain, Trophy, 
   MoreHorizontal, Users, Coins, FileText, HelpCircle, MessageCircle, 
-  LogOut, User, Settings, Calendar, GraduationCap, Zap, ChevronDown
+  LogOut, User, Settings, Calendar, GraduationCap, Zap, ChevronDown, BookOpenCheck
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
@@ -178,12 +178,24 @@ export const Navbar = () => {
                       <Calendar className="mr-3 h-4 w-4 text-primary" /> Điểm danh nhận quà
                     </DropdownMenuItem>
                     
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.isReviewer) && (
                       <>
                         <DropdownMenuSeparator className="my-2 bg-gray-100" />
-                        <DropdownMenuItem className="rounded-xl px-4 py-3 font-black text-white bg-gray-900 cursor-pointer focus:bg-black focus:text-white" onClick={() => navigate('/admin')}>
-                          <GraduationCap className="mr-3 h-4 w-4" /> Quản trị viên
+                        <DropdownMenuItem 
+                          className="rounded-xl px-4 py-3 font-black text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer focus:bg-indigo-800 focus:text-white mb-1" 
+                          onClick={() => navigate('/admin/example-contributions')}
+                        >
+                          <BookOpenCheck className="mr-3 h-4 w-4" /> Duyệt đóng góp
                         </DropdownMenuItem>
+                        
+                        {user?.role === 'admin' && (
+                          <DropdownMenuItem 
+                            className="rounded-xl px-4 py-3 font-black text-white bg-gray-900 cursor-pointer focus:bg-black focus:text-white" 
+                            onClick={() => navigate('/admin')}
+                          >
+                            <GraduationCap className="mr-3 h-4 w-4" /> Quản trị tổng thể
+                          </DropdownMenuItem>
+                        )}
                       </>
                     )}
                     
