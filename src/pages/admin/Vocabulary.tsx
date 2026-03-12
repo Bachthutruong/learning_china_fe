@@ -4,7 +4,7 @@ import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Badge } from '../../components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { BookOpen, Plus, Edit, Trash2, Search, Download, Upload, Play, Pause, Grid3X3, Table, Loader2, FileSpreadsheet, X, CheckCircle, AlertCircle } from 'lucide-react'
+import { BookOpen, Plus, Edit, Trash2, Search, Download, Upload, Play, Pause, Grid3X3, Table, Loader2, FileSpreadsheet, X, CheckCircle, AlertCircle, CalendarDays } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
 import { AudioUpload } from '../../components/ui/audio-upload'
@@ -82,6 +82,8 @@ export const AdminVocabulary = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [levelFilter, setLevelFilter] = useState<string>('all')
   const [topicFilter, setTopicFilter] = useState<string>('all')
+  const [dateFrom, setDateFrom] = useState<string>('')
+  const [dateTo, setDateTo] = useState<string>('')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editingVocabulary, setEditingVocabulary] = useState<Vocabulary | null>(null)
@@ -125,7 +127,7 @@ export const AdminVocabulary = () => {
   const [vocabularyToDelete, setVocabularyToDelete] = useState<Vocabulary | null>(null)
 
   useEffect(() => { fetchTopics(); fetchLevels() }, [])
-  useEffect(() => { fetchVocabularies() }, [currentPage, itemsPerPage, levelFilter, topicFilter])
+  useEffect(() => { fetchVocabularies() }, [currentPage, itemsPerPage, levelFilter, topicFilter, dateFrom, dateTo])
 
   // Debounced search
   useEffect(() => {
@@ -143,7 +145,9 @@ export const AdminVocabulary = () => {
         params: {
           page: currentPage, limit: itemsPerPage, search: searchTerm,
           level: levelFilter !== 'all' ? levelFilter : undefined,
-          topic: topicFilter !== 'all' ? topicFilter : undefined
+          topic: topicFilter !== 'all' ? topicFilter : undefined,
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
         }
       })
       if (res.data.vocabularies) {
@@ -648,48 +652,97 @@ export const AdminVocabulary = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div><h1 className="text-2xl sm:text-3xl font-black text-gray-900 flex items-center flex-wrap gap-2"><BookOpen className="w-7 h-7 sm:w-8 sm:h-8 mr-2 sm:mr-3 text-primary shrink-0" /> Kho từ vựng</h1></div>
-        <div className="flex flex-col xs:flex-row flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button variant="outline" onClick={downloadTemplate} className="rounded-xl min-h-[44px] w-full xs:flex-1 sm:flex-none"><Download className="mr-2 h-4 w-4 shrink-0" /> Template</Button>
-          <Button variant="outline" onClick={() => { setShowImportDialog(true); setImportProgress(null) }} disabled={importing} className="rounded-xl min-h-[44px] w-full xs:flex-1 sm:flex-none"><Upload className="mr-2 h-4 w-4 shrink-0" /> Import</Button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+          <Button variant="outline" onClick={downloadTemplate} className="rounded-xl min-h-[44px] w-full sm:w-auto"><Download className="mr-2 h-4 w-4 shrink-0" /> Template</Button>
+          <Button variant="outline" onClick={() => { setShowImportDialog(true); setImportProgress(null) }} disabled={importing} className="rounded-xl min-h-[44px] w-full sm:w-auto"><Upload className="mr-2 h-4 w-4 shrink-0" /> Import</Button>
           <Button onClick={() => { resetForm(); setEditingVocabulary(null); setShowCreateDialog(true) }} className="chinese-gradient text-white rounded-xl min-h-[44px] w-full sm:w-auto"><Plus className="mr-2 h-4 w-4 shrink-0" /> Thêm mới</Button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border shadow-xl flex flex-col sm:flex-row gap-4 sm:gap-6 items-stretch sm:items-center flex-wrap">
-        <div className="flex-1 min-w-0 relative">
-          <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-          <Input placeholder="Tìm kiếm..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 sm:pl-11 rounded-xl h-11 min-h-[44px]" />
-        </div>
-        <Select value={levelFilter} onValueChange={setLevelFilter}>
-          <SelectTrigger className="w-full sm:w-32 rounded-xl min-h-[44px]"><SelectValue placeholder="HSK" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tất cả</SelectItem>
-            {levels.map(l => <SelectItem key={l._id} value={(l.level ?? l.number).toString()}>HSK {l.level || l.number}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={topicFilter} onValueChange={setTopicFilter}>
-          <SelectTrigger className="w-full sm:w-40 rounded-xl min-h-[44px]"><SelectValue placeholder="Chủ đề" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tất cả</SelectItem>
-            {topics.map(t => <SelectItem key={t._id} value={t.name}>{t.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-gray-400 uppercase hidden xs:inline">Hiển thị</span>
-          <Select value={itemsPerPage.toString()} onValueChange={v => { setItemsPerPage(parseInt(v)); setCurrentPage(1) }}>
-            <SelectTrigger className="w-20 sm:w-24 rounded-xl min-h-[44px]"><SelectValue /></SelectTrigger>
+      <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border shadow-xl flex flex-col gap-4">
+        {/* Row 1: Search + Level + Topic + Items per page + View toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-stretch sm:items-center flex-wrap">
+          <div className="flex-1 min-w-0 relative">
+            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+            <Input placeholder="Tìm kiếm..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 sm:pl-11 rounded-xl h-11 min-h-[44px]" />
+          </div>
+          <Select value={levelFilter} onValueChange={setLevelFilter}>
+            <SelectTrigger className="w-full sm:w-32 rounded-xl min-h-[44px]"><SelectValue placeholder="HSK" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="5">5</SelectItem>
-              <SelectItem value="12">12</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="all">Tất cả</SelectItem>
+              {levels.map(l => <SelectItem key={l._id} value={(l.level ?? l.number).toString()}>HSK {l.level || l.number}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={topicFilter} onValueChange={setTopicFilter}>
+            <SelectTrigger className="w-full sm:w-40 rounded-xl min-h-[44px]"><SelectValue placeholder="Chủ đề" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              {topics.map(t => <SelectItem key={t._id} value={t.name}>{t.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black text-gray-400 uppercase hidden xs:inline">Hiển thị</span>
+            <Select value={itemsPerPage.toString()} onValueChange={v => { setItemsPerPage(parseInt(v)); setCurrentPage(1) }}>
+              <SelectTrigger className="w-20 sm:w-24 rounded-xl min-h-[44px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="12">12</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="bg-gray-100 p-1 rounded-xl flex">
+            <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="icon" className="h-9 w-9 sm:h-10 sm:w-10 min-h-[44px] min-w-[44px] rounded-lg" onClick={() => setViewMode('grid')}><Grid3X3 className="w-4 h-4" /></Button>
+            <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="icon" className="h-9 w-9 sm:h-10 sm:w-10 min-h-[44px] min-w-[44px] rounded-lg" onClick={() => setViewMode('table')}><Table className="w-4 h-4" /></Button>
+          </div>
         </div>
-        <div className="bg-gray-100 p-1 rounded-xl flex">
-          <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="icon" className="h-9 w-9 sm:h-10 sm:w-10 min-h-[44px] min-w-[44px] rounded-lg" onClick={() => setViewMode('grid')}><Grid3X3 className="w-4 h-4" /></Button>
-          <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="icon" className="h-9 w-9 sm:h-10 sm:w-10 min-h-[44px] min-w-[44px] rounded-lg" onClick={() => setViewMode('table')}><Table className="w-4 h-4" /></Button>
+
+        {/* Row 2: Date range filter */}
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t">
+          <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-gray-400 shrink-0">
+            <CalendarDays className="w-3.5 h-3.5" />
+            Ngày tạo
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-gray-400 shrink-0">Từ</span>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={e => { setDateFrom(e.target.value); setCurrentPage(1) }}
+              className="rounded-xl h-10 w-40 text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-gray-400 shrink-0">Đến</span>
+            <Input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={e => { setDateTo(e.target.value); setCurrentPage(1) }}
+              className="rounded-xl h-10 w-40 text-sm"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <>
+              <span className="text-[10px] font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-lg shrink-0">
+                {dateFrom && dateTo
+                  ? `${new Date(dateFrom).toLocaleDateString('vi-VN')} – ${new Date(dateTo).toLocaleDateString('vi-VN')}`
+                  : dateFrom
+                    ? `Từ ${new Date(dateFrom).toLocaleDateString('vi-VN')}`
+                    : `Đến ${new Date(dateTo).toLocaleDateString('vi-VN')}`}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setDateFrom(''); setDateTo(''); setCurrentPage(1) }}
+                className="rounded-xl h-10 text-gray-400 hover:text-red-500 shrink-0 px-3"
+              >
+                <X className="w-3.5 h-3.5 mr-1" /> Xóa
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -710,7 +763,7 @@ export const AdminVocabulary = () => {
             <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-black text-gray-400">Không tìm thấy từ vựng nào</h3>
             <p className="text-sm text-gray-400 mt-1">
-              {searchTerm || levelFilter !== 'all' || topicFilter !== 'all' ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm' : 'Hãy thêm từ vựng đầu tiên'}
+              {searchTerm || levelFilter !== 'all' || topicFilter !== 'all' || dateFrom || dateTo ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm' : 'Hãy thêm từ vựng đầu tiên'}
             </p>
           </div>
         ) : (
