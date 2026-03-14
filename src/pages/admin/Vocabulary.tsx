@@ -4,7 +4,7 @@ import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Badge } from '../../components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { BookOpen, Plus, Edit, Trash2, Search, Download, Upload, Play, Pause, Grid3X3, Table, Loader2, FileSpreadsheet, X, CheckCircle, AlertCircle, CalendarDays } from 'lucide-react'
+import { BookOpen, Plus, Edit, Trash2, Search, Download, Upload, Play, Pause, Grid3X3, Table, Loader2, FileSpreadsheet, X, CheckCircle, AlertCircle, CalendarDays, CheckSquare, Square } from 'lucide-react'
 import { api } from '../../services/api'
 import toast from 'react-hot-toast'
 import { AudioUpload } from '../../components/ui/audio-upload'
@@ -125,9 +125,12 @@ export const AdminVocabulary = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [vocabularyToDelete, setVocabularyToDelete] = useState<Vocabulary | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   useEffect(() => { fetchTopics(); fetchLevels() }, [])
-  useEffect(() => { fetchVocabularies() }, [currentPage, itemsPerPage, levelFilter, topicFilter, dateFrom, dateTo])
+  useEffect(() => { fetchVocabularies(); setSelectedIds(new Set()) }, [currentPage, itemsPerPage, levelFilter, topicFilter, dateFrom, dateTo])
 
   // Debounced search
   useEffect(() => {
@@ -250,6 +253,40 @@ export const AdminVocabulary = () => {
       await api.delete(`/admin/vocabularies/${vocabularyToDelete._id}`)
       toast.success('Xóa từ vựng thành công!'); setShowDeleteDialog(false); setVocabularyToDelete(null); fetchVocabularies()
     } catch (error: any) { toast.error(error.response?.data?.message || 'Không thể xóa từ vựng') }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === vocabularies.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(vocabularies.map(v => v._id)))
+    }
+  }
+
+  const clearSelection = () => setSelectedIds(new Set())
+
+  const handleBulkDelete = async () => {
+    try {
+      setBulkDeleting(true)
+      const ids = Array.from(selectedIds)
+      await api.post('/admin/vocabularies/bulk-delete', { ids })
+      toast.success(`Đã xóa ${ids.length} từ vựng!`)
+      setShowBulkDeleteDialog(false)
+      clearSelection()
+      fetchVocabularies()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể xóa hàng loạt')
+    } finally {
+      setBulkDeleting(false)
+    }
   }
 
   // Example / Synonym / Antonym helpers
@@ -746,6 +783,32 @@ export const AdminVocabulary = () => {
         </div>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3 flex items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3">
+            <button onClick={clearSelection} className="text-red-400 hover:text-red-600">
+              <X className="w-4 h-4" />
+            </button>
+            <span className="text-sm font-black text-red-700">
+              Đã chọn <span className="text-red-600">{selectedIds.size}</span> từ vựng
+            </span>
+            <button
+              onClick={toggleSelectAll}
+              className="text-xs font-bold text-red-500 hover:text-red-700 underline underline-offset-2"
+            >
+              {selectedIds.size === vocabularies.length ? 'Bỏ chọn tất cả' : `Chọn tất cả ${vocabularies.length} từ trang này`}
+            </button>
+          </div>
+          <Button
+            onClick={() => setShowBulkDeleteDialog(true)}
+            className="bg-red-500 hover:bg-red-600 text-white rounded-xl h-9 px-4 text-sm font-black shrink-0"
+          >
+            <Trash2 className="w-4 h-4 mr-2" /> Xóa {selectedIds.size} từ
+          </Button>
+        </div>
+      )}
+
       {/* Content */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -769,9 +832,17 @@ export const AdminVocabulary = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {vocabularies.map(v => (
-              <div key={v._id} className="bg-white p-6 rounded-[2.5rem] border shadow-sm group hover:shadow-lg transition-shadow">
+              <div key={v._id} className={`bg-white p-6 rounded-[2.5rem] border shadow-sm group hover:shadow-lg transition-all ${selectedIds.has(v._id) ? 'ring-2 ring-red-400 border-red-200' : ''}`}>
                 <div className="flex justify-between items-start">
-                  <div className="text-2xl font-black">{v.word}</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleSelect(v._id)}
+                      className={`shrink-0 transition-colors ${selectedIds.has(v._id) ? 'text-red-500' : 'text-gray-200 hover:text-gray-400'}`}
+                    >
+                      {selectedIds.has(v._id) ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                    </button>
+                    <div className="text-2xl font-black">{v.word}</div>
+                  </div>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(v)}><Edit className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(v)}><Trash2 className="w-4 h-4" /></Button>
@@ -834,7 +905,14 @@ export const AdminVocabulary = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-50/50 border-b">
-                <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Từ vựng</th>
+                <th className="pl-6 pr-2 py-5">
+                  <button onClick={toggleSelectAll} className={`transition-colors ${selectedIds.size === vocabularies.length && vocabularies.length > 0 ? 'text-red-500' : 'text-gray-300 hover:text-gray-500'}`}>
+                    {selectedIds.size === vocabularies.length && vocabularies.length > 0
+                      ? <CheckSquare className="w-5 h-5" />
+                      : <Square className="w-5 h-5" />}
+                  </button>
+                </th>
+                <th className="px-4 py-5 text-[10px] font-black uppercase text-gray-400">Từ vựng</th>
                 <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Nghĩa</th>
                 <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 text-center">Trình độ</th>
                 <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Chủ đề</th>
@@ -844,8 +922,13 @@ export const AdminVocabulary = () => {
             </thead>
             <tbody className="divide-y">
               {vocabularies.map(v => (
-                <tr key={v._id} className="group hover:bg-gray-50/50">
-                  <td className="px-8 py-6">
+                <tr key={v._id} className={`group hover:bg-gray-50/50 ${selectedIds.has(v._id) ? 'bg-red-50/50' : ''}`}>
+                  <td className="pl-6 pr-2 py-6">
+                    <button onClick={() => toggleSelect(v._id)} className={`transition-colors ${selectedIds.has(v._id) ? 'text-red-500' : 'text-gray-200 hover:text-gray-400'}`}>
+                      {selectedIds.has(v._id) ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                    </button>
+                  </td>
+                  <td className="px-4 py-6">
                     <div className="text-lg font-black">{v.word}</div>
                     <div className="text-xs font-bold text-primary">{v.pinyin}</div>
                     {v.zhuyin && <div className="text-xs text-gray-400">{v.zhuyin}</div>}
@@ -1042,6 +1125,34 @@ export const AdminVocabulary = () => {
               {formLoading ? <Loader2 className="animate-spin" /> : 'Xóa'}
             </Button>
             <Button variant="ghost" onClick={() => setShowDeleteDialog(false)} className="h-12 rounded-xl font-bold">Hủy</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent className="rounded-none sm:rounded-[2.5rem] p-4 sm:p-10 text-center max-h-[90dvh] overflow-y-auto max-w-sm">
+          <DialogHeader>
+            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-8 h-8 text-red-500" />
+            </div>
+            <DialogTitle className="text-2xl font-black">Xóa {selectedIds.size} từ vựng?</DialogTitle>
+            <DialogDescription>
+              Toàn bộ <span className="font-bold text-red-600">{selectedIds.size}</span> từ vựng đã chọn sẽ bị xóa vĩnh viễn.
+              Hành động này <span className="font-bold">không thể hoàn tác</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-8">
+            <Button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="h-12 rounded-xl font-black text-white bg-red-500 hover:bg-red-600"
+            >
+              {bulkDeleting ? <><Loader2 className="animate-spin mr-2 h-4 w-4" /> Đang xóa...</> : `Xóa ${selectedIds.size} từ`}
+            </Button>
+            <Button variant="ghost" onClick={() => setShowBulkDeleteDialog(false)} disabled={bulkDeleting} className="h-12 rounded-xl font-bold">
+              Hủy
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
