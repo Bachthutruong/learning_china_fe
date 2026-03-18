@@ -278,7 +278,7 @@ export const ProficiencyTest = () => {
                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Trình độ xác định</p>
                 <div className="text-6xl font-black text-primary">Cấp {testResult.level}</div>
                 <Badge className={`rounded-xl px-4 py-1.5 font-bold ${getProficiencyBadgeColor(testResult.level)}`}>
-                   Tương đương HSK {testResult.level}
+                   Tương đương TOCFL {testResult.level}
                 </Badge>
              </div>
 
@@ -598,7 +598,7 @@ export const ProficiencyTest = () => {
                       { icon: Clock, label: 'Thời gian:', value: '60 phút (2 giai đoạn)', color: 'text-blue-500' },
                       { icon: Target, label: 'Số lượng:', value: 'Tối thiểu 20 câu hỏi', color: 'text-red-500' },
                       { icon: Gem, label: 'Phí tham gia:', value: `${config?.cost || 500} Xu`, color: 'text-amber-500' },
-                      { icon: Shield, label: 'Đánh giá:', value: 'Đa chiều theo HSK mới', color: 'text-green-500' }
+                      { icon: Shield, label: 'Đánh giá:', value: 'Đa chiều theo chuẩn TOCFL', color: 'text-green-500' }
                     ].map((item, i) => (
                       <div key={i} className="flex items-center space-x-3">
                          <div className={`w-8 h-8 rounded-lg ${item.color} bg-current/10 flex items-center justify-center`}>

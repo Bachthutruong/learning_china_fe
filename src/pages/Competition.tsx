@@ -182,7 +182,7 @@ export const Competition = () => {
                           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Cấp độ</p>
                           <div className="flex items-center text-sm font-bold text-gray-700">
                              <Target className="w-4 h-4 mr-2 text-green-500" />
-                             {typeof competition.level === 'string' ? competition.level : (competition.level?.name || 'HSK 1-6')}
+                             {typeof competition.level === 'string' ? competition.level : (competition.level?.name || 'TOCFL 1-6')}
                           </div>
                        </div>
                        <div className="space-y-1">

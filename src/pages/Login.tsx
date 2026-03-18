@@ -98,7 +98,7 @@ export const Login = () => {
                 </div>
                 <div>
                   <p className="text-xs font-bold">Minh Anh</p>
-                  <p className="text-[10px] text-white/60 uppercase">Học viên HSK 5</p>
+                  <p className="text-[10px] text-white/60 uppercase">Học viên TOCFL 5</p>
                 </div>
               </div>
             </div>

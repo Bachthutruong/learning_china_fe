@@ -242,7 +242,7 @@ export const TopicQuiz = ({ topicId, topicName, isOpen, onClose }: TopicQuizProp
             <div className="text-center space-y-10 py-6 animate-in zoom-in duration-500">
               <div className="relative inline-block">
                  <div className="text-8xl">🎉</div>
-                 <div className="absolute -top-2 -right-2 w-8 h-8 chinese-gradient rounded-full flex items-center justify-center text-white text-xs font-black shadow-lg">HSK</div>
+                 <div className="absolute -top-2 -right-2 w-8 h-8 chinese-gradient rounded-full flex items-center justify-center text-white text-xs font-black shadow-lg">TOCFL</div>
               </div>
               
               <div className="space-y-2">

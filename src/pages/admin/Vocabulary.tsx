@@ -715,10 +715,10 @@ export const AdminVocabulary = () => {
             <Input placeholder="Tìm kiếm..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 sm:pl-11 rounded-xl h-11 min-h-[44px]" />
           </div>
           <Select value={levelFilter} onValueChange={setLevelFilter}>
-            <SelectTrigger className="w-full sm:w-32 rounded-xl min-h-[44px]"><SelectValue placeholder="HSK" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-32 rounded-xl min-h-[44px]"><SelectValue placeholder="TOCFL" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả</SelectItem>
-              {levels.map(l => <SelectItem key={l._id} value={(l.level ?? l.number).toString()}>HSK {l.level || l.number}</SelectItem>)}
+              {levels.map(l => <SelectItem key={l._id} value={(l.level ?? l.number).toString()}>TOCFL {l.level || l.number}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={topicFilter} onValueChange={setTopicFilter}>
@@ -896,7 +896,7 @@ export const AdminVocabulary = () => {
 
                 <div className="mt-6 pt-4 border-t flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-gray-300">HSK {v.level}</span>
+                    <span className="text-[10px] font-black text-gray-300">TOCFL {v.level}</span>
                     {v.questions && v.questions.length > 0 && <span className="text-[10px] text-gray-300">• {v.questions.length} câu hỏi</span>}
                   </div>
                   {(v.audio || v.audioUrl) && (
@@ -949,7 +949,7 @@ export const AdminVocabulary = () => {
                     <div className="text-sm font-bold">{v.meaning}</div>
                     {v.partOfSpeech && <div className="text-xs text-gray-400">{v.partOfSpeech}</div>}
                   </td>
-                  <td className="px-8 py-6 text-center"><Badge className="bg-primary/5 text-primary border-none">HSK {v.level}</Badge></td>
+                  <td className="px-8 py-6 text-center"><Badge className="bg-primary/5 text-primary border-none">TOCFL {v.level}</Badge></td>
                   <td className="px-8 py-6">
                     <div className="flex flex-wrap gap-1">
                       {v.topics?.slice(0, 2).map((t, i) => <Badge key={i} variant="outline" className="text-xs">{t}</Badge>)}

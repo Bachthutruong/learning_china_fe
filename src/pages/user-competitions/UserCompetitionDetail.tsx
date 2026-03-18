@@ -409,7 +409,7 @@ export const UserCompetitionDetail = () => {
                                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">{r.requester.name[0]}</div>
                                 <div className="min-w-0">
                                    <p className="text-xs font-black text-gray-900 truncate">{r.requester.name}</p>
-                                   <p className="text-[9px] font-bold text-gray-400">HSK {r.requester.level}</p>
+                                   <p className="text-[9px] font-bold text-gray-400">TOCFL {r.requester.level}</p>
                                 </div>
                              </div>
                              <div className="flex gap-2">

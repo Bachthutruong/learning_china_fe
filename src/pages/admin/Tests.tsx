@@ -271,11 +271,11 @@ export const AdminTests = () => {
     <div className="space-y-8">
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Trình độ HSK</Label>
+          <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Trình độ TOCFL</Label>
           <Select value={form.level.toString()} onValueChange={v => setForm({ ...form, level: parseInt(v) })}>
             <SelectTrigger className="h-14 rounded-2xl border-gray-100 bg-gray-50/50 font-bold"><SelectValue /></SelectTrigger>
             <SelectContent className="rounded-2xl">
-              {levels.map(l => <SelectItem key={l._id} value={l.number.toString()}>HSK Level {l.number} ({l.name})</SelectItem>)}
+              {levels.map(l => <SelectItem key={l._id} value={l.number.toString()}>TOCFL Level {l.number} ({l.name})</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -486,7 +486,7 @@ export const AdminTests = () => {
             <div className="w-10 h-10 chinese-gradient rounded-xl flex items-center justify-center text-white mr-4 shadow-lg"><TestTube className="w-6 h-6" /></div>
             Ngân hàng câu hỏi
           </h1>
-          <p className="text-gray-500 font-medium">Quản lý hệ thống câu hỏi đa dạng theo chuẩn HSK.</p>
+          <p className="text-gray-500 font-medium">Quản lý hệ thống câu hỏi đa dạng theo chuẩn TOCFL.</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={downloadTemplate} className="rounded-xl font-bold border-2 hover:bg-gray-50"><Download className="mr-2 h-4 w-4" /> Template</Button>
@@ -528,7 +528,7 @@ export const AdminTests = () => {
           {items.map(q => (
             <div key={q._id} className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-all group relative flex flex-col">
               <div className="flex justify-between items-start mb-6">
-                <Badge className="bg-primary/5 text-primary border-none rounded-lg font-black text-[10px] px-2.5 py-1">HSK {q.level}</Badge>
+                <Badge className="bg-primary/5 text-primary border-none rounded-lg font-black text-[10px] px-2.5 py-1">TOCFL {q.level}</Badge>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" onClick={() => openHistory(q)} className="w-8 h-8 rounded-lg hover:bg-amber-50 hover:text-amber-600"><Clock className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => openEdit(q)} className="w-8 h-8 rounded-lg hover:bg-blue-50 hover:text-blue-600"><Edit className="w-4 h-4" /></Button>
@@ -566,7 +566,7 @@ export const AdminTests = () => {
                     {q.passage && <p className="text-[10px] text-gray-400 italic mt-1 line-clamp-1 max-w-[400px]">"{q.passage}"</p>}
                   </td>
                   <td className="px-8 py-6"><span className="text-[10px] font-black uppercase text-gray-400 bg-gray-100 px-2 py-1 rounded-md">{q.questionType.replace('-', ' ')}</span></td>
-                  <td className="px-8 py-6 text-center"><Badge className="bg-primary/5 text-primary border-none rounded-lg font-black text-[10px]">HSK {q.level}</Badge></td>
+                  <td className="px-8 py-6 text-center"><Badge className="bg-primary/5 text-primary border-none rounded-lg font-black text-[10px]">TOCFL {q.level}</Badge></td>
                   <td className="px-8 py-6 text-right space-x-1">
                     <Button variant="ghost" size="sm" onClick={() => openHistory(q)} className="h-9 rounded-xl hover:bg-amber-50 hover:text-amber-600"><Clock className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => openEdit(q)} className="h-9 rounded-xl hover:bg-blue-50 hover:text-blue-600"><Edit className="w-4 h-4" /></Button>
@@ -594,7 +594,7 @@ export const AdminTests = () => {
         <DialogContent className="sm:max-w-4xl rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 max-h-[90dvh] overflow-y-auto border-none shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-3xl font-black">Tạo câu hỏi mới</DialogTitle>
-            <DialogDescription className="font-medium text-gray-500">Thiết lập câu hỏi HSK mới cho hệ thống khảo thí.</DialogDescription>
+            <DialogDescription className="font-medium text-gray-500">Thiết lập câu hỏi TOCFL mới cho hệ thống khảo thí.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="pt-6">
             {renderFormFields()}

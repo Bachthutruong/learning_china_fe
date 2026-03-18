@@ -76,7 +76,7 @@ export const CreateUserCompetition = () => {
                  <Input
                    value={formData.title}
                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                   placeholder="Ví dụ: Đại chiến Hán ngữ HSK 5..."
+                   placeholder="Ví dụ: Đại chiến Hán ngữ TOCFL 5..."
                    className="h-14 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold text-lg"
                  />
               </div>
@@ -133,7 +133,7 @@ export const CreateUserCompetition = () => {
                        <p className="text-[10px] font-bold text-gray-400 uppercase">Tổng giờ</p>
                     </div>
                     <div className="text-center">
-                       <p className="text-xl font-black text-gray-900">HSK {user?.level}</p>
+                       <p className="text-xl font-black text-gray-900">TOCFL {user?.level}</p>
                        <p className="text-[10px] font-bold text-gray-400 uppercase">Trình độ</p>
                     </div>
                     <div className="text-center">

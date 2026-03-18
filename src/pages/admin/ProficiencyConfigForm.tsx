@@ -560,7 +560,7 @@ export const ProficiencyConfigForm = () => {
             <div className="space-y-4">
               {formData.initialQuestions.map((q, idx) => (
                 <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100 group">
-                  <div className="flex-1"><Label className="text-[8px] font-black uppercase text-gray-400">HSK</Label><select className="w-full h-10 px-3 bg-white border rounded-xl font-bold" value={q.level} onChange={e => updateInitialQuestion(idx, 'level', parseInt(e.target.value))}>{levels.map(l => <option key={l._id} value={l.level || l.number}>Level {l.level || l.number}</option>)}</select></div>
+                  <div className="flex-1"><Label className="text-[8px] font-black uppercase text-gray-400">TOCFL</Label><select className="w-full h-10 px-3 bg-white border rounded-xl font-bold" value={q.level} onChange={e => updateInitialQuestion(idx, 'level', parseInt(e.target.value))}>{levels.map(l => <option key={l._id} value={l.level || l.number}>Level {l.level || l.number}</option>)}</select></div>
                   <div className="flex-1"><Label className="text-[8px] font-black uppercase text-gray-400">Số lượng</Label><Input type="number" value={q.count} onChange={e => updateInitialQuestion(idx, 'count', parseInt(e.target.value))} className="h-10 rounded-xl" /></div>
                   <Button type="button" variant="ghost" onClick={() => removeInitialQuestion(idx)} className="mt-4 hover:text-red-500"><Trash2 className="w-4 h-4" /></Button>
                 </div>

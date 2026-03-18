@@ -90,7 +90,7 @@ export const AdminCompetitionStats = () => {
               </div>
               <div className="chinese-gradient p-6 rounded-[2rem] text-white shadow-xl shadow-primary/20 text-center min-w-[160px] transform hover:rotate-3 transition-transform">
                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Cấp độ thi</p>
-                 <p className="text-3xl font-black">HSK {comp.level}</p>
+                 <p className="text-3xl font-black">TOCFL {comp.level}</p>
               </div>
            </div>
         </div>

@@ -360,7 +360,7 @@ export const AdminLevels = () => {
                   <Input 
                     value={formData.name} 
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                    placeholder="Ví dụ: Sơ cấp 1, HSK 1..."
+                    placeholder="Ví dụ: Sơ cấp 1, TOCFL 1..."
                     className="h-12 rounded-xl border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold" 
                     required 
                   />

@@ -134,7 +134,7 @@ export const UserCompetitionList = () => {
   }
 
   const getLevelName = (level: any) => {
-    if (typeof level === 'number') return `HSK ${level}`
+    if (typeof level === 'number') return `TOCFL ${level}`
     if (typeof level === 'object' && level?.name) return level.name
     return `Cấp ${level}`
   }

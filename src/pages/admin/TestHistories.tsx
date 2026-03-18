@@ -151,7 +151,7 @@ export const AdminTestHistories = () => {
                           </div>
                        </td>
                        <td className="px-8 py-6 text-center">
-                          <Badge className="bg-primary/5 text-primary border-none rounded-lg font-black text-[10px]">HSK {it.level}</Badge>
+                          <Badge className="bg-primary/5 text-primary border-none rounded-lg font-black text-[10px]">TOCFL {it.level}</Badge>
                        </td>
                        <td className="px-8 py-6 text-center">
                           <div className="flex items-center justify-center space-x-2">

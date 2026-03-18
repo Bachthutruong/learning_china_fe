@@ -129,7 +129,7 @@ export const Register = () => {
               Quay lại
             </Button>
             <h1 className="text-3xl font-black text-gray-900 mb-2">Đăng ký mới</h1>
-            <p className="text-gray-500">Bắt đầu hành trình chinh phục HSK cùng Jiudi.</p>
+            <p className="text-gray-500">Bắt đầu hành trình chinh phục TOCFL cùng Jiudi.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

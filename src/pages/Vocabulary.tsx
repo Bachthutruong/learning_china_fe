@@ -315,7 +315,7 @@ export const Vocabulary = () => {
               Khám phá <span className="text-primary">Hán ngữ</span>
            </h1>
            <p className="text-gray-500 font-medium">
-              Tra cứu và học tập kho từ vựng khổng lồ được phân loại theo trình độ HSK mới nhất.
+              Tra cứu và học tập kho từ vựng khổng lồ được phân loại theo trình độ TOCFL.
            </p>
            
            <div className="flex justify-center pt-4">
@@ -391,7 +391,7 @@ export const Vocabulary = () => {
                       <div className="space-y-4">
                          <div className="flex justify-center space-x-2">
                             <Badge className="bg-primary/10 text-primary border-primary/20 rounded-lg px-3 py-1 font-black text-[10px] uppercase tracking-widest">
-                               HSK Cấp {currentWord.level}
+                               TOCFL Cấp {currentWord.level}
                             </Badge>
                             {currentWord.partOfSpeech && (
                               <Badge variant="outline" className="text-[10px] font-bold uppercase text-gray-400 rounded-lg">

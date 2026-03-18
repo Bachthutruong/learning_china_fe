@@ -141,7 +141,7 @@ export const CompetitionDetail = () => {
                  {[
                    { icon: Calendar, label: 'Bắt đầu', value: new Date(competition.startDate).toLocaleDateString('vi-VN'), color: 'text-blue-500' },
                    { icon: Users, label: 'Tham gia', value: `${Array.isArray(competition.participants) ? competition.participants.length : competition.participants} người`, color: 'text-green-500' },
-                   { icon: Target, label: 'Cấp độ', value: typeof competition.level === 'string' ? competition.level : (competition.level?.name || 'HSK 1-6'), color: 'text-purple-500' },
+                   { icon: Target, label: 'Cấp độ', value: typeof competition.level === 'string' ? competition.level : (competition.level?.name || 'TOCFL 1-6'), color: 'text-purple-500' },
                    { icon: Diamond, label: 'Lệ phí', value: `${competition.cost} Xu`, color: 'text-amber-500' }
                  ].map((item, i) => (
                    <div key={i} className="text-center space-y-1">

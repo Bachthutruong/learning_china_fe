@@ -253,7 +253,7 @@ export const UserCompetitionStats = () => {
           
           <div className="chinese-gradient p-6 rounded-[2rem] text-white shadow-xl shadow-primary/20 text-center min-w-[160px] transform hover:rotate-3 transition-transform">
              <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Trình độ</p>
-             <p className="text-3xl font-black">HSK {competition.level}</p>
+             <p className="text-3xl font-black">TOCFL {competition.level}</p>
           </div>
         </div>
 

@@ -324,7 +324,7 @@ export const BlogPostForm = () => {
                    <Input
                      value={title}
                      onChange={(e) => setTitle(e.target.value)}
-                     placeholder="Ví dụ: Lộ trình chinh phục HSK 6 trong 6 tháng..."
+                     placeholder="Ví dụ: Lộ trình chinh phục TOCFL 6 trong 6 tháng..."
                      className="h-14 rounded-xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-black text-xl"
                      required
                    />
@@ -388,7 +388,7 @@ export const BlogPostForm = () => {
                         value={tagInput}
                         onChange={(e) => setTagInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                        placeholder="HSK, Mẹo học..."
+                        placeholder="TOCFL, Mẹo học..."
                         className="h-10 rounded-lg bg-gray-50 border-gray-100 font-bold text-xs"
                       />
                       <Button type="button" onClick={handleAddTag} className="bg-gray-900 text-white rounded-lg h-10 px-4 font-black text-xs">Thêm</Button>

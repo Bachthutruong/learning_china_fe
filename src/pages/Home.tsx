@@ -22,7 +22,7 @@ const features = [
   {
     icon: BrainCircuit,
     title: 'Test năng lực AI',
-    description: 'Đánh giá chính xác trình độ tiếng Trung của bạn từ HSK 1 đến HSK 9 với công nghệ AI tiên tiến.',
+    description: 'Đánh giá chính xác trình độ tiếng Trung của bạn theo chuẩn TOCFL với công nghệ AI tiên tiến.',
     gradient: 'from-emerald-400 to-teal-600',
     iconColor: 'text-emerald-600'
   },
@@ -162,7 +162,7 @@ export const Home = () => {
                   </div>
                   <div className="absolute -top-6 -right-6 glass-panel p-5 rounded-3xl shadow-2xl border-primary/20 animate-float delay-700">
                     <div className="text-center">
-                      <p className="text-2xl font-black text-primary">HSK 6</p>
+                      <p className="text-2xl font-black text-primary">TOCFL 6</p>
                       <p className="text-[10px] text-gray-500 font-bold uppercase">Mục tiêu của bạn</p>
                     </div>
                   </div>
