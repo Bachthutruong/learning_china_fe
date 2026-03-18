@@ -13,6 +13,7 @@ import {
   Loader2,
   BookOpen,
   Tag,
+  Edit,
   Play,
   RotateCcw,
   ArrowLeft,
@@ -76,6 +77,10 @@ export const VocabularyLearning = () => {
   // Removed add-to-topic local selection; handled in AddVocabulary dialog
   const [loading, setLoading] = useState(true)
   const [showCreateTopicDialog, setShowCreateTopicDialog] = useState(false)
+  const [showEditTopicDialog, setShowEditTopicDialog] = useState(false)
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
+  const [editingTopicName, setEditingTopicName] = useState('')
+  const [editingTopicDescription, setEditingTopicDescription] = useState('')
   const [showAddVocabularyDialog, setShowAddVocabularyDialog] = useState(false)
   const [newTopicName, setNewTopicName] = useState('')
   const [newTopicDescription, setNewTopicDescription] = useState('')
@@ -207,6 +212,36 @@ export const VocabularyLearning = () => {
         ? [] // Bỏ chọn nếu đã chọn
         : [topicId] // Chỉ chọn 1 chủ đề
     )
+  }
+
+  const openEditTopic = (topic: PersonalTopic, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingTopicId(topic._id)
+    setEditingTopicName(topic.name)
+    setEditingTopicDescription(topic.description || '')
+    setShowEditTopicDialog(true)
+  }
+
+  const handleUpdateTopic = async () => {
+    if (!editingTopicId || !editingTopicName.trim()) {
+      toast.error('Vui lòng nhập tên chủ đề')
+      return
+    }
+    try {
+      await api.put(`/vocabulary-learning/user/personal-topics/${editingTopicId}`, {
+        name: editingTopicName.trim(),
+        description: editingTopicDescription.trim()
+      })
+      toast.success('Đã cập nhật chủ đề')
+      setShowEditTopicDialog(false)
+      setEditingTopicId(null)
+      setEditingTopicName('')
+      setEditingTopicDescription('')
+      fetchPersonalTopics()
+    } catch (error: any) {
+      console.error('Error updating topic:', error)
+      toast.error(error.response?.data?.message || 'Không thể cập nhật chủ đề')
+    }
   }
 
 
@@ -513,9 +548,19 @@ export const VocabularyLearning = () => {
                     }`}>
                       <Tag className="w-6 h-6" />
                     </div>
-                    <div className="flex flex-col items-end space-y-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Từ vựng</span>
-                      <span className="text-lg font-black text-gray-900">{topic.vocabularyCount}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => openEditTopic(topic, e)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-primary transition-colors"
+                        title="Chỉnh sửa tên, mô tả"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <div className="flex flex-col items-end space-y-1">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Từ vựng</span>
+                        <span className="text-lg font-black text-gray-900">{topic.vocabularyCount}</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -827,6 +872,42 @@ export const VocabularyLearning = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+      {/* Edit Topic Dialog */}
+      <Dialog open={showEditTopicDialog} onOpenChange={(open) => { setShowEditTopicDialog(open); if (!open) { setEditingTopicId(null); setEditingTopicName(''); setEditingTopicDescription('') } }}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-lg sm:w-auto rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 border-none shadow-2xl">
+          <DialogHeader className="text-center space-y-4 mb-8">
+            <DialogTitle className="text-2xl font-black text-gray-900">Chỉnh sửa chủ đề</DialogTitle>
+            <p className="text-gray-500 font-medium leading-relaxed">Đổi tên hoặc mô tả chủ đề của bạn.</p>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="editTopicName" className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Tên chủ đề</Label>
+              <Input
+                id="editTopicName"
+                value={editingTopicName}
+                onChange={(e) => setEditingTopicName(e.target.value)}
+                placeholder="Tên chủ đề..."
+                className="h-14 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editTopicDescriptionVL" className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Mô tả (tùy chọn)</Label>
+              <Input
+                id="editTopicDescriptionVL"
+                value={editingTopicDescription}
+                onChange={(e) => setEditingTopicDescription(e.target.value)}
+                placeholder="Mô tả ngắn gọn..."
+                className="h-14 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+              />
+            </div>
+            <div className="flex gap-4 pt-4">
+              <Button variant="ghost" onClick={() => { setShowEditTopicDialog(false); setEditingTopicId(null) }} className="flex-1 h-12 rounded-xl font-bold text-gray-400">Hủy</Button>
+              <Button onClick={handleUpdateTopic} disabled={!editingTopicName.trim()} className="flex-1 chinese-gradient h-12 rounded-xl font-black text-white shadow-lg">Lưu thay đổi</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Vocabulary Dialog */}
       <Dialog open={showAddVocabularyDialog} onOpenChange={(open) => {

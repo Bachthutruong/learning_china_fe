@@ -46,6 +46,15 @@ interface QuizQuestion {
   explanation?: string
 }
 
+/** Chuẩn hóa chuỗi ví dụ để Pinyin và Nghĩa xuống dòng khi hiển thị. */
+function formatExampleDisplay(text: string): string {
+  if (!text || typeof text !== 'string') return ''
+  return text
+    .replace(/\s+Pinyin:\s*/g, '\nPinyin: ')
+    .replace(/\s+Nghĩa:\s*/g, '\nNghĩa: ')
+    .trim()
+}
+
 interface VocabularyStudyCardProps {
   vocabulary: Vocabulary
   onStatusChange: (status: 'learned' | 'studying' | 'skipped') => Promise<void>
@@ -334,7 +343,7 @@ export const VocabularyStudyCard = ({
                {vocabulary.examples.length > 0 && (
                  <div className="space-y-4 w-full">
                     <h4 className="text-sm font-black uppercase text-blue-600 flex items-center"><span className="w-6 h-0.5 bg-blue-600 mr-2" /> Ví dụ minh họa</h4>
-                    <ul className="space-y-3">{vocabulary.examples.map((ex, i) => <li key={i} className="text-sm text-gray-600 font-medium bg-blue-50/50 p-3 rounded-xl border border-blue-50">{ex}</li>)}</ul>
+                    <ul className="space-y-3">{vocabulary.examples.map((ex, i) => <li key={i} className="text-sm text-gray-600 font-medium bg-blue-50/50 p-3 rounded-xl border border-blue-50 whitespace-pre-line">{formatExampleDisplay(ex)}</li>)}</ul>
                  </div>
                )}
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
+import { Textarea } from '../../components/ui/textarea'
 import { Label } from '../../components/ui/label'
 import { Badge } from '../../components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
@@ -56,6 +57,15 @@ interface QuizQuestion {
   // Hỗ trợ cả câu hỏi 1 đáp án và nhiều đáp án
   correctAnswer: number | number[]
   explanation?: string
+}
+
+/** Chuẩn hóa chuỗi ví dụ để Pinyin và Nghĩa xuống dòng khi hiển thị (dù trong DB đang lưu một dòng hay đã có \\n). */
+function formatExampleDisplay(text: string): string {
+  if (!text || typeof text !== 'string') return ''
+  return text
+    .replace(/\s+Pinyin:\s*/g, '\nPinyin: ')
+    .replace(/\s+Nghĩa:\s*/g, '\nNghĩa: ')
+    .trim()
 }
 
 interface VocabularyFormData {
@@ -292,11 +302,11 @@ export const AdminVocabulary = () => {
   // Example / Synonym / Antonym helpers
   const addExample = () => { if (newExample.trim()) { setFormData(prev => ({ ...prev, examples: [...prev.examples, newExample.trim()] })); setNewExample('') } }
   const removeExample = (i: number) => { setFormData(prev => ({ ...prev, examples: prev.examples.filter((_, idx) => idx !== i) })); if (editingExampleIndex === i) cancelEditExample() }
-  const startEditExample = (i: number) => { setEditingExampleIndex(i); setEditingExampleText(formData.examples[i]) }
+  const startEditExample = (i: number) => { setEditingExampleIndex(i); setEditingExampleText(formatExampleDisplay(formData.examples[i])) }
   const saveEditExample = () => {
     if (editingExampleIndex !== null && editingExampleText.trim()) {
       const updated = [...formData.examples]
-      updated[editingExampleIndex] = editingExampleText.trim()
+      updated[editingExampleIndex] = formatExampleDisplay(editingExampleText.trim())
       setFormData(prev => ({ ...prev, examples: updated }))
       cancelEditExample()
     }
@@ -505,13 +515,13 @@ export const AdminVocabulary = () => {
           {formData.examples.map((ex, i) => (
             <div key={i} className="space-y-2">
               {editingExampleIndex === i ? (
-                <div className="flex flex-col sm:flex-row gap-2 bg-blue-50 border-2 border-blue-200 px-3 py-2 rounded-xl">
-                  <Input
+                <div className="flex flex-col gap-2 bg-blue-50 border-2 border-blue-200 px-3 py-2 rounded-xl">
+                  <Textarea
                     value={editingExampleText}
                     onChange={e => setEditingExampleText(e.target.value)}
-                    placeholder="Chỉnh sửa ví dụ..."
-                    className="rounded-xl flex-1"
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveEditExample())}
+                    placeholder="Chỉnh sửa ví dụ (câu chữ, Pinyin:, Nghĩa: mỗi phần xuống dòng)..."
+                    className="rounded-xl flex-1 min-h-[100px] font-normal resize-y"
+                    rows={4}
                   />
                   <div className="flex gap-2">
                     <Button type="button" size="sm" onClick={saveEditExample} disabled={!editingExampleText.trim()} className="rounded-xl chinese-gradient text-white">Lưu</Button>
@@ -520,7 +530,7 @@ export const AdminVocabulary = () => {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl">
-                  <span className="text-sm flex-1">{ex}</span>
+                  <span className="text-sm flex-1 whitespace-pre-line">{formatExampleDisplay(ex)}</span>
                   <Button type="button" variant="ghost" size="sm" onClick={() => startEditExample(i)} className="shrink-0"><Edit className="h-4 w-4" /></Button>
                   <Button type="button" variant="ghost" size="sm" onClick={() => removeExample(i)} className="shrink-0"><X className="h-4 w-4" /></Button>
                 </div>
@@ -862,8 +872,10 @@ export const AdminVocabulary = () => {
                 )}
 
                 {v.examples && v.examples.length > 0 && (
-                  <div className="mt-3 text-xs text-gray-500 space-y-0.5">
-                    {v.examples.slice(0, 2).map((ex, i) => <p key={i}>• {ex}</p>)}
+                  <div className="mt-3 text-xs text-gray-500 space-y-1">
+                    {v.examples.slice(0, 2).map((ex, i) => (
+                      <p key={i} className="whitespace-pre-line">• {formatExampleDisplay(ex)}</p>
+                    ))}
                     {v.examples.length > 2 && <p className="text-gray-400">... +{v.examples.length - 2}</p>}
                   </div>
                 )}

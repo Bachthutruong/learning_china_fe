@@ -5,12 +5,11 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { 
-  // ArrowLeft,
   Plus, 
   Search,
   BookOpen,
   Tag,
-  
+  Edit,
   Loader2,
   CheckCircle
 } from 'lucide-react'
@@ -65,6 +64,10 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateTopicDialog, setShowCreateTopicDialog] = useState(false)
+  const [showEditTopicDialog, setShowEditTopicDialog] = useState(false)
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
+  const [editingTopicName, setEditingTopicName] = useState('')
+  const [editingTopicDescription, setEditingTopicDescription] = useState('')
   const [newTopicName, setNewTopicName] = useState('')
   const [newTopicDescription, setNewTopicDescription] = useState('')
   const [page, setPage] = useState(1)
@@ -146,7 +149,7 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
       
       const response = await api.get('/vocabulary/by-categories', {
         params: {
-          categories: selectedCategories.join(','),
+          categories: JSON.stringify(selectedCategories),
           search: searchTerm,
           limit: 20,
           page: currentPage
@@ -222,6 +225,35 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
         ? prev.filter(id => id !== topicId)
         : [...prev, topicId]
     )
+  }
+
+  const openEditTopic = (topic: PersonalTopic) => {
+    setEditingTopicId(topic._id)
+    setEditingTopicName(topic.name)
+    setEditingTopicDescription(topic.description || '')
+    setShowEditTopicDialog(true)
+  }
+
+  const handleUpdateTopic = async () => {
+    if (!editingTopicId || !editingTopicName.trim()) {
+      toast.error('Vui lòng nhập tên chủ đề')
+      return
+    }
+    try {
+      await api.put(`/vocabulary-learning/user/personal-topics/${editingTopicId}`, {
+        name: editingTopicName.trim(),
+        description: editingTopicDescription.trim()
+      })
+      toast.success('Đã cập nhật chủ đề')
+      setShowEditTopicDialog(false)
+      setEditingTopicId(null)
+      setEditingTopicName('')
+      setEditingTopicDescription('')
+      fetchPersonalTopics()
+    } catch (error: any) {
+      console.error('Error updating topic:', error)
+      toast.error(error.response?.data?.message || 'Không thể cập nhật chủ đề')
+    }
   }
 
   const handleAddVocabularies = async () => {
@@ -375,21 +407,32 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
 
                <div className="flex flex-wrap gap-3">
                   {personalTopics.map((topic) => (
-                    <button
-                      key={topic._id}
-                      onClick={() => handleTopicSelect(topic._id)}
-                      className={`flex items-center px-6 py-3 rounded-2xl border-2 transition-all font-bold ${
-                        selectedPersonalTopics.includes(topic._id)
-                          ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-100'
-                          : 'bg-white text-gray-500 border-gray-100 hover:border-green-300 hover:text-green-600'
-                      }`}
-                    >
-                      <Tag className={`w-4 h-4 mr-3 ${selectedPersonalTopics.includes(topic._id) ? 'text-white' : 'text-green-500'}`} />
-                      {topic.name}
-                      <Badge className={`ml-3 rounded-lg border-none ${selectedPersonalTopics.includes(topic._id) ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-400'}`}>
-                         {topic.vocabularyCount}
-                      </Badge>
-                    </button>
+                    <div key={topic._id} className="relative inline-flex">
+                      <button
+                        onClick={() => handleTopicSelect(topic._id)}
+                        className={`flex items-center pl-6 pr-10 py-3 rounded-2xl border-2 transition-all font-bold ${
+                          selectedPersonalTopics.includes(topic._id)
+                            ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-100'
+                            : 'bg-white text-gray-500 border-gray-100 hover:border-green-300 hover:text-green-600'
+                        }`}
+                      >
+                        <Tag className={`w-4 h-4 mr-3 ${selectedPersonalTopics.includes(topic._id) ? 'text-white' : 'text-green-500'}`} />
+                        {topic.name}
+                        <Badge className={`ml-3 rounded-lg border-none ${selectedPersonalTopics.includes(topic._id) ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                           {topic.vocabularyCount}
+                        </Badge>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); openEditTopic(topic) }}
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors ${
+                          selectedPersonalTopics.includes(topic._id) ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-100 text-gray-400'
+                        }`}
+                        title="Chỉnh sửa tên, mô tả"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </div>
                   ))}
                </div>
             </div>
@@ -533,6 +576,42 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
                 >
                   Tạo ngay
                 </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Topic Dialog */}
+        <Dialog open={showEditTopicDialog} onOpenChange={(open) => { setShowEditTopicDialog(open); if (!open) { setEditingTopicId(null); setEditingTopicName(''); setEditingTopicDescription('') } }}>
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-lg sm:w-auto rounded-xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-10 border-none shadow-2xl">
+            <DialogHeader className="text-center space-y-4 mb-8">
+              <DialogTitle className="text-2xl font-black text-gray-900">Chỉnh sửa chủ đề</DialogTitle>
+              <p className="text-gray-500 font-medium leading-relaxed">Đổi tên hoặc mô tả chủ đề của bạn.</p>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="editTopicName" className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Tên chủ đề</Label>
+                <Input
+                  id="editTopicName"
+                  value={editingTopicName}
+                  onChange={(e) => setEditingTopicName(e.target.value)}
+                  placeholder="Tên chủ đề..."
+                  className="h-14 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editTopicDescription" className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Mô tả (tùy chọn)</Label>
+                <Input
+                  id="editTopicDescription"
+                  value={editingTopicDescription}
+                  onChange={(e) => setEditingTopicDescription(e.target.value)}
+                  placeholder="Mô tả ngắn gọn..."
+                  className="h-14 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary transition-all font-bold"
+                />
+              </div>
+              <div className="flex gap-4 pt-4">
+                <Button variant="ghost" onClick={() => { setShowEditTopicDialog(false); setEditingTopicId(null) }} className="flex-1 h-12 rounded-xl font-bold text-gray-400">Hủy</Button>
+                <Button onClick={handleUpdateTopic} disabled={!editingTopicName.trim()} className="flex-1 chinese-gradient h-12 rounded-xl font-black text-white shadow-lg">Lưu thay đổi</Button>
               </div>
             </div>
           </DialogContent>
