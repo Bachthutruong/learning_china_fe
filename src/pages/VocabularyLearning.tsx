@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { VocabularyStudyCard } from '../components/VocabularyStudyCard'
 import { TopicQuiz } from '../components/TopicQuiz'
+import { PronunciationButton } from '../components/PronunciationButton'
 import { AddVocabulary } from './AddVocabulary'
 import {
   Plus,
@@ -658,6 +659,14 @@ export const VocabularyLearning = () => {
                       onClick={() => handleVocabularyClick(vocabulary)}
                       className="group p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gray-50/50 border border-gray-100 hover:border-primary/30 hover:bg-white hover:shadow-lg transition-all text-center cursor-pointer relative min-h-[80px] sm:min-h-[90px] flex flex-col items-center justify-center active:scale-[0.98]"
                     >
+                      <div className="absolute top-1.5 left-1.5">
+                        <PronunciationButton
+                          text={vocabulary.word}
+                          audioUrl={vocabulary.audioUrl || vocabulary.audio}
+                          size="sm"
+                          title={`Nghe phát âm ${vocabulary.word}`}
+                        />
+                      </div>
                       <div className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 group-hover:text-primary transition-colors">{vocabulary.word}</div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{vocabulary.pinyin}</div>
                       <div className="text-xs text-gray-500 line-clamp-1 mt-2 font-medium">{vocabulary.meaning}</div>

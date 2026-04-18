@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
+import { PronunciationButton } from '../components/PronunciationButton'
 
 interface PersonalTopic {
   _id: string
@@ -46,6 +47,7 @@ interface Vocabulary {
   antonyms: string[]
   imageUrl?: string
   audioUrl?: string
+  audio?: string
 }
 
 interface AddVocabularyProps {
@@ -473,6 +475,14 @@ export const AddVocabulary = ({ inDialog, initialSelectedPersonalTopics }: AddVo
                               : 'bg-white border-gray-50 hover:border-blue-200 hover:bg-blue-50/30'
                           }`}
                         >
+                          <div className="absolute top-1.5 left-1.5">
+                            <PronunciationButton
+                              text={vocabulary.word}
+                              audioUrl={vocabulary.audioUrl || vocabulary.audio}
+                              size="sm"
+                              title={`Nghe phát âm ${vocabulary.word}`}
+                            />
+                          </div>
                           <p className={`text-2xl font-black transition-colors ${selectedVocabularies.includes(vocabulary._id) ? 'text-blue-700' : 'text-gray-900'}`}>{vocabulary.word}</p>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{vocabulary.pinyin}</p>
                           <p className="text-xs text-gray-500 line-clamp-1 mt-2 font-medium">{vocabulary.meaning}</p>

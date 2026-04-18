@@ -11,7 +11,6 @@ import {
   Brain, 
   TrendingUp,
   Play,
-  Pause,
   RotateCcw,
   CheckCircle,
   XCircle,
@@ -21,6 +20,7 @@ import {
 } from 'lucide-react'
 import { api } from '../services/api'
 import { ReportErrorDialog } from '../components/ReportErrorDialog'
+import { PronunciationButton } from '../components/PronunciationButton'
 import toast from 'react-hot-toast'
 
 interface Vocabulary {
@@ -60,7 +60,6 @@ export const Vocabulary = () => {
   const [topics, setTopics] = useState<Topic[]>([])
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showQuiz, setShowQuiz] = useState(false)
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
@@ -126,15 +125,6 @@ export const Vocabulary = () => {
     } catch (error) {
       console.error('Failed to search vocabulary:', error)
       toast.error('Không thể tìm kiếm từ vựng')
-    }
-  }
-
-  const handlePlayAudio = () => {
-    if (currentWord?.audio) {
-      setIsPlaying(true)
-      const audio = new Audio(currentWord.audio)
-      audio.play()
-      audio.onended = () => setIsPlaying(false)
     }
   }
 
@@ -400,7 +390,16 @@ export const Vocabulary = () => {
                             )}
                          </div>
                          <h2 className="text-8xl md:text-9xl font-black text-gray-900 tracking-tight">{currentWord.word}</h2>
-                         <p className="text-2xl md:text-3xl font-bold text-primary italic uppercase tracking-[0.2em]">{currentWord.pinyin}</p>
+                         <div className="flex items-center justify-center gap-4">
+                            <p className="text-2xl md:text-3xl font-bold text-primary italic uppercase tracking-[0.2em]">{currentWord.pinyin}</p>
+                            <PronunciationButton
+                              text={currentWord.word}
+                              audioUrl={currentWord.audio}
+                              size="md"
+                              variant="outline"
+                              title={`Nghe phát âm ${currentWord.word}`}
+                            />
+                         </div>
                       </div>
 
                       {currentWord.imageUrl && (
@@ -440,15 +439,14 @@ export const Vocabulary = () => {
                             </div>
                          </div>
 
-                         {currentWord.audio && (
-                           <Button
-                             onClick={handlePlayAudio}
-                             disabled={isPlaying}
-                             className="w-16 h-16 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
-                           >
-                             {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current ml-1" />}
-                           </Button>
-                         )}
+                         <PronunciationButton
+                           text={currentWord.word}
+                           audioUrl={currentWord.audio}
+                           size="lg"
+                           variant="solid"
+                           className="!rounded-full"
+                           title={`Nghe phát âm ${currentWord.word}`}
+                         />
                       </div>
                    </div>
                 </div>
@@ -560,12 +558,18 @@ export const Vocabulary = () => {
                           }
                         }}
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
                             <h5 className="font-semibold">{vocab.word}</h5>
-                            <p className="text-sm text-gray-600">{vocab.meaning}</p>
+                            <p className="text-sm text-gray-600 line-clamp-1">{vocab.meaning}</p>
                             <p className="text-xs text-gray-500">{vocab.pinyin}</p>
                           </div>
+                          <PronunciationButton
+                            text={vocab.word}
+                            audioUrl={vocab.audio}
+                            size="sm"
+                            title={`Nghe phát âm ${vocab.word}`}
+                          />
                           <input
                             type="checkbox"
                             checked={selectedVocabularies.includes(vocab._id)}

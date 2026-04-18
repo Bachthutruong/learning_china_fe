@@ -21,6 +21,7 @@ import { Label } from './ui/label'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { ReportErrorDialog } from './ReportErrorDialog'
+import { PronunciationButton } from './PronunciationButton'
 
 interface Vocabulary {
   _id: string
@@ -255,7 +256,16 @@ export const VocabularyStudyCard = ({
            <div className="relative z-10 p-6 sm:p-8 md:p-12 lg:p-20 text-center space-y-6 sm:space-y-8 md:space-y-12">
               <div className="space-y-3 sm:space-y-4 animate-in fade-in zoom-in duration-700">
                  <h2 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-black text-gray-900 tracking-tight">{vocabulary.word}</h2>
-                 <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary italic font-serif uppercase tracking-widest">{vocabulary.pinyin}</p>
+                 <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
+                    <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary italic font-serif uppercase tracking-widest">{vocabulary.pinyin}</p>
+                    <PronunciationButton
+                      text={vocabulary.word}
+                      audioUrl={vocabulary.audioUrl}
+                      size="md"
+                      variant="outline"
+                      title={`Nghe phát âm ${vocabulary.word}`}
+                    />
+                 </div>
               </div>
 
               <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
@@ -291,13 +301,22 @@ export const VocabularyStudyCard = ({
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="w-[95vw] max-w-4xl sm:max-w-5xl lg:max-w-6xl max-h-[90vh] rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl z-[100]">
           <div className="chinese-gradient p-8 md:p-12 text-white relative">
-             <div className="relative z-10 space-y-2">
-                <h3 className="text-5xl font-black">{vocabulary.word}</h3>
-                <div className="flex items-center space-x-4 opacity-90 font-bold">
-                   <span className="text-xl tracking-widest uppercase">{vocabulary.pinyin}</span>
-                   <span className="w-1.5 h-1.5 bg-white/50 rounded-full" />
-                   <span className="text-lg">{vocabulary.partOfSpeech}</span>
+             <div className="relative z-10 flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                   <h3 className="text-5xl font-black">{vocabulary.word}</h3>
+                   <div className="flex items-center space-x-4 opacity-90 font-bold">
+                      <span className="text-xl tracking-widest uppercase">{vocabulary.pinyin}</span>
+                      <span className="w-1.5 h-1.5 bg-white/50 rounded-full" />
+                      <span className="text-lg">{vocabulary.partOfSpeech}</span>
+                   </div>
                 </div>
+                <PronunciationButton
+                  text={vocabulary.word}
+                  audioUrl={vocabulary.audioUrl}
+                  size="lg"
+                  className="!bg-white/15 !text-white hover:!bg-white/25 border border-white/30"
+                  title={`Nghe phát âm ${vocabulary.word}`}
+                />
              </div>
           </div>
 
