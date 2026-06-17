@@ -27,7 +27,8 @@ import {
   CreditCard,
   Award,
   FileText,
-  MessageSquarePlus
+  MessageSquarePlus,
+  GraduationCap
 } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -122,6 +123,12 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
       badge: stats.reports > 0 ? stats.reports.toString() : null
     },
     {
+      title: 'Lớp học',
+      icon: GraduationCap,
+      href: '/admin/classes',
+      badge: null
+    },
+    {
       title: 'Từ vựng',
       icon: BookOpen,
       href: '/admin/vocabulary',
@@ -136,7 +143,7 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
     {
       title: 'Duyệt Ví Dụ',
       icon: MessageSquarePlus,
-      href: '#',
+      href: '#example-review',
       badge: null,
       submenu: [
         {
@@ -242,7 +249,7 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
     {
       title: 'Cuộc thi người dùng',
       icon: Trophy,
-      href: '#',
+      href: '#user-competition',
       badge: null,
       submenu: [
         {
@@ -283,16 +290,20 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
     // If only a reviewer, only show "Duyệt Ví Dụ"
     if (isReviewer) {
       if (item.title === 'Duyệt Ví Dụ') {
-        // Filter submenu to only show "Danh sách đóng góp"
-        if (item.submenu) {
-          item.submenu = item.submenu.filter(sub => sub.title === 'Danh sách đóng góp')
-        }
         return true
       }
       return false
     }
 
     return false
+  }).map(item => {
+    if (user?.role?.toLowerCase() !== 'admin' && item.title === 'Duyệt Ví Dụ' && item.submenu) {
+      return {
+        ...item,
+        submenu: item.submenu.filter(sub => sub.title === 'Danh sách đóng góp')
+      }
+    }
+    return item
   })
 
   const toggleMenu = (menuKey: string) => {
@@ -306,6 +317,7 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
   }
 
   const isActive = (href: string) => {
+    if (href.startsWith('#')) return false
     if (href === '/admin') {
       return location.pathname === '/admin'
     }
@@ -364,14 +376,14 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
           const Icon = item.icon
           const active = isActive(item.href)
           const hasSubmenu = item.submenu && item.submenu.length > 0
-          const isExpanded = expandedMenus.has(item.href)
-          
+          const isExpanded = expandedMenus.has(item.title)
+
           return (
-            <div key={item.href} className="space-y-1">
+            <div key={item.title} className="space-y-1">
               {hasSubmenu ? (
                 <div>
                   <button
-                    onClick={() => toggleMenu(item.href)}
+                    onClick={() => toggleMenu(item.title)}
                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all ${
                       isExpanded || active
                         ? 'bg-white/10 text-white'
@@ -461,5 +473,3 @@ export const AdminSidebar = ({ className, onStatsUpdate, onMobileClose }: AdminS
     </div>
   )
 }
-
-

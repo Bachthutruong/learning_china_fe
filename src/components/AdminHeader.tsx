@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from './ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
+import { Avatar, AvatarFallback } from './ui/avatar'
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -79,7 +79,6 @@ export const AdminHeader = ({ onOpenMobileMenu }: AdminHeaderProps) => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 flex items-center space-x-3 px-2 rounded-xl hover:bg-gray-50 transition-all group">
                 <Avatar className="h-8 w-8 rounded-lg shadow-sm border border-gray-100 group-hover:border-primary transition-all">
-                  <AvatarImage src="/avatars/admin.jpg" alt="Admin" />
                   <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
                     {user?.name?.charAt(0) || 'A'}
                   </AvatarFallback>

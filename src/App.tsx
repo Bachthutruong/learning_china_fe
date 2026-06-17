@@ -52,6 +52,8 @@ import { TestList } from './pages/TestList'
 import { TestDetail } from './pages/TestDetail'
 import { NewTestPage } from './pages/NewTestPage'
 import { Checkin } from './pages/Checkin'
+import { MyClasses } from './pages/MyClasses'
+import { AdminClasses, TeacherClasses } from './pages/classes/ClassManagement'
 
 // User Competition pages
 import {
@@ -165,6 +167,16 @@ function App() {
               <Route path="/coin-history" element={
                 <ProtectedRoute>
                   <UserCoinHistory />
+                </ProtectedRoute>
+              } />
+              <Route path="/my-classes" element={
+                <ProtectedRoute>
+                  <MyClasses />
+                </ProtectedRoute>
+              } />
+              <Route path="/teacher/classes" element={
+                <ProtectedRoute requireTeacher>
+                  <TeacherClasses />
                 </ProtectedRoute>
               } />
               
@@ -307,6 +319,13 @@ function App() {
                 <ProtectedRoute requireAdmin>
                   <AdminLayout>
                     <AdminUsers />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/classes" element={
+                <ProtectedRoute requireAdmin>
+                  <AdminLayout>
+                    <AdminClasses />
                   </AdminLayout>
                 </ProtectedRoute>
               } />

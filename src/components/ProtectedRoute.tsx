@@ -6,9 +6,10 @@ interface ProtectedRouteProps {
   children: ReactNode
   requireAdmin?: boolean
   requireReviewer?: boolean
+  requireTeacher?: boolean
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false, requireReviewer = false }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false, requireReviewer = false, requireTeacher = false }) => {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -25,6 +26,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
 
   const userRole = user.role?.toString().toLowerCase()
   const isAdmin = userRole === 'admin'
+  const isTeacher = userRole === 'teacher' || isAdmin
   const isReviewer = !!user.isReviewer || isAdmin
 
   // If page requires Admin, only 'admin' role allowed
@@ -37,7 +39,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
     return <Navigate to="/" replace />
   }
 
+  if (requireTeacher && !isTeacher) {
+    return <Navigate to="/" replace />
+  }
+
   return <>{children}</>
 }
-
 

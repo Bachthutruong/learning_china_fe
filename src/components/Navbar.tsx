@@ -34,6 +34,7 @@ export const Navbar = () => {
 
   const mainNav = [
     { label: 'Từ vựng', path: '/vocabulary-learning', icon: BookOpen },
+    { label: 'Lớp học', path: '/my-classes', icon: GraduationCap },
     { label: 'Luyện thi', path: '/tests', icon: TestTube },
     { label: 'Năng lực', path: '/proficiency', icon: Brain },
     { label: 'Đấu trường', path: '/competition', icon: Trophy },
@@ -177,6 +178,9 @@ export const Navbar = () => {
                     <DropdownMenuItem className="rounded-xl px-4 py-3 font-bold text-gray-600 cursor-pointer focus:bg-gray-50" onClick={() => navigate('/checkin')}>
                       <Calendar className="mr-3 h-4 w-4 text-primary" /> Điểm danh nhận quà
                     </DropdownMenuItem>
+                    <DropdownMenuItem className="rounded-xl px-4 py-3 font-bold text-gray-600 cursor-pointer focus:bg-gray-50" onClick={() => navigate('/my-classes')}>
+                      <GraduationCap className="mr-3 h-4 w-4 text-primary" /> Lớp học của tôi
+                    </DropdownMenuItem>
                     
                     {(user?.role === 'admin' || user?.isReviewer) && (
                       <>
@@ -196,6 +200,18 @@ export const Navbar = () => {
                             <GraduationCap className="mr-3 h-4 w-4" /> Quản trị tổng thể
                           </DropdownMenuItem>
                         )}
+                      </>
+                    )}
+
+                    {(user?.role === 'teacher' || user?.role === 'admin') && (
+                      <>
+                        <DropdownMenuSeparator className="my-2 bg-gray-100" />
+                        <DropdownMenuItem 
+                          className="rounded-xl px-4 py-3 font-black text-white bg-emerald-600 hover:bg-emerald-700 cursor-pointer focus:bg-emerald-800 focus:text-white" 
+                          onClick={() => navigate('/teacher/classes')}
+                        >
+                          <GraduationCap className="mr-3 h-4 w-4" /> Lớp giảng dạy
+                        </DropdownMenuItem>
                       </>
                     )}
                     

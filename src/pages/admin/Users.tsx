@@ -234,7 +234,7 @@ export const AdminUsers = () => {
                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-center">
                           <div className="flex flex-col gap-1 items-center justify-center">
                             <Badge className={`rounded-lg font-black text-[10px] px-2 sm:px-3 py-1 border-none ${
-                              u.role === 'admin' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-500'
+                              u.role === 'admin' ? 'bg-purple-100 text-purple-600' : u.role === 'teacher' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-500'
                             }`}>
                                {u.role ? u.role.toUpperCase() : 'USER'}
                             </Badge>
@@ -371,6 +371,7 @@ export const AdminUsers = () => {
                              onChange={e => setEditing({ ...editing!, role: e.target.value })}
                            >
                               <option value="user">User - Học viên</option>
+                              <option value="teacher">Teacher - Giáo viên</option>
                               <option value="admin">Admin - Quản trị viên</option>
                            </select>
                         </div>
