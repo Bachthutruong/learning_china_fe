@@ -25,6 +25,7 @@ import {
   Trash2,
   TrendingUp,
   UserCheck,
+  UserPlus,
   Users
 } from 'lucide-react'
 
@@ -64,6 +65,15 @@ interface LearningClass {
   status: 'active' | 'archived'
   sessionsCount?: number
   upcomingCount?: number
+  pendingJoinRequests?: number
+}
+
+interface JoinRequest {
+  _id: string
+  studentId: UserOption
+  message?: string
+  status: string
+  createdAt?: string
 }
 
 interface ClassSession {
@@ -271,6 +281,9 @@ export const ClassManagement = ({ mode }: ClassManagementProps) => {
   const [statsSession, setStatsSession] = useState<ClassSession | null>(null)
   const [statsRoster, setStatsRoster] = useState<RosterItem[]>([])
   const [statsLoading, setStatsLoading] = useState(false)
+  const [joinRequestsOpen, setJoinRequestsOpen] = useState(false)
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([])
+  const [joinRequestsLoading, setJoinRequestsLoading] = useState(false)
   // Server-side pagination + search for the class list
   const [classesTotal, setClassesTotal] = useState(0)
   const [classPage, setClassPage] = useState(1)
@@ -463,6 +476,33 @@ export const ClassManagement = ({ mode }: ClassManagementProps) => {
       toast.error(error.response?.data?.message || 'Không thể cập nhật học viên')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const openJoinRequests = async () => {
+    if (!selectedClass) return
+    setJoinRequestsOpen(true)
+    setJoinRequests([])
+    setJoinRequestsLoading(true)
+    try {
+      const res = await api.get(`/classes/${selectedClass._id}/join-requests`)
+      setJoinRequests(res.data.requests || [])
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể tải yêu cầu vào lớp')
+    } finally {
+      setJoinRequestsLoading(false)
+    }
+  }
+
+  const reviewJoinRequest = async (studentId: string, status: 'approved' | 'rejected') => {
+    if (!selectedClass) return
+    try {
+      await api.patch(`/classes/${selectedClass._id}/join-requests/${studentId}`, { status })
+      toast.success(status === 'approved' ? 'Đã duyệt vào lớp' : 'Đã từ chối yêu cầu')
+      setJoinRequests(prev => prev.filter(item => String(item.studentId._id) !== String(studentId)))
+      await Promise.all([fetchClassDetail(selectedClass._id), fetchClasses()])
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể xử lý yêu cầu')
     }
   }
 
@@ -809,6 +849,12 @@ export const ClassManagement = ({ mode }: ClassManagementProps) => {
                   </Button>
                   <Button variant="outline" onClick={openStudentDialog} className="rounded-xl font-black border-gray-200">
                     <Users className="mr-2 h-4 w-4" /> Quản lý học viên
+                  </Button>
+                  <Button variant="outline" onClick={openJoinRequests} className="rounded-xl font-black border-gray-200 relative">
+                    <UserPlus className="mr-2 h-4 w-4" /> Duyệt vào lớp
+                    {!!selectedClass.pendingJoinRequests && (
+                      <Badge className="ml-2 bg-red-500 text-white border-none text-[10px] h-5 min-w-[20px] justify-center px-1 font-black">{selectedClass.pendingJoinRequests}</Badge>
+                    )}
                   </Button>
                   {isAdmin && (
                     <>
@@ -1397,6 +1443,51 @@ export const ClassManagement = ({ mode }: ClassManagementProps) => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={joinRequestsOpen} onOpenChange={setJoinRequestsOpen}>
+        <DialogContent className="sm:max-w-2xl rounded-[2rem] border-none shadow-2xl p-5 sm:p-8">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-gray-900 flex items-center gap-3">
+              <UserPlus className="h-7 w-7 text-primary" /> Duyệt yêu cầu vào lớp
+            </DialogTitle>
+          </DialogHeader>
+          {joinRequestsLoading ? (
+            <div className="py-14 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : joinRequests.length === 0 ? (
+            <div className="py-12 text-center">
+              <CheckCircle2 className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+              <p className="font-black text-gray-500">Không có yêu cầu nào đang chờ.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[68vh] overflow-y-auto pr-1">
+              {joinRequests.map((reqItem) => (
+                <div key={reqItem._id} className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-11 w-11 rounded-2xl chinese-gradient text-white flex items-center justify-center font-black shrink-0">
+                      {reqItem.studentId?.name?.charAt(0) || '?'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-black text-gray-900">{reqItem.studentId?.name}</p>
+                      <p className="text-xs font-medium text-gray-500">{reqItem.studentId?.email}</p>
+                      {reqItem.message && (
+                        <p className="mt-2 rounded-xl bg-white p-2.5 text-sm font-medium text-gray-600 border border-gray-100">{reqItem.message}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Button onClick={() => reviewJoinRequest(reqItem.studentId._id, 'approved')} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black">
+                      <CheckCircle2 className="mr-2 h-4 w-4" /> Duyệt
+                    </Button>
+                    <Button variant="outline" onClick={() => reviewJoinRequest(reqItem.studentId._id, 'rejected')} className="flex-1 rounded-xl font-black border-red-100 text-red-500 hover:bg-red-50">
+                      Từ chối
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </DialogContent>

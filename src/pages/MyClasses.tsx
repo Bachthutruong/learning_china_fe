@@ -13,13 +13,18 @@ import {
   CalendarClock,
   CheckCircle2,
   ClipboardCheck,
+  Clock,
   FileQuestion,
   GraduationCap,
   Link as LinkIcon,
   Loader2,
   MessageSquare,
+  Search,
   Send,
-  UserMinus
+  Sparkles,
+  UserMinus,
+  UserPlus,
+  Users
 } from 'lucide-react'
 
 interface UserInfo {
@@ -100,6 +105,19 @@ const formatDateTime = (value?: string) => {
 
 const isBefore = (value: string) => new Date() < new Date(value)
 const isAfter = (value: string) => new Date() > new Date(value)
+const money = (value: number) => new Intl.NumberFormat('vi-VN').format(value || 0)
+
+interface AvailableClass {
+  _id: string
+  name: string
+  description?: string
+  capacity: number
+  tuitionFee: number
+  teacherIds: UserInfo[]
+  studentCount: number
+  sessionsCount: number
+  myRequestStatus: 'pending' | 'approved' | 'rejected' | 'cancelled' | null
+}
 
 const ATTENDANCE_LABELS: Record<string, string> = {
   full: 'Tham gia đầy đủ',
@@ -150,6 +168,16 @@ export const MyClasses = () => {
   const [submitting, setSubmitting] = useState(false)
   const [sessionPage, setSessionPage] = useState(1)
   const [sessionPageSize, setSessionPageSize] = useState(5)
+  // Browse & request to join classes
+  const [availableClasses, setAvailableClasses] = useState<AvailableClass[]>([])
+  const [availableTotal, setAvailableTotal] = useState(0)
+  const [availPage, setAvailPage] = useState(1)
+  const [availPageSize, setAvailPageSize] = useState(6)
+  const [availSearch, setAvailSearch] = useState('')
+  const [availSearchDebounced, setAvailSearchDebounced] = useState('')
+  const [availLoading, setAvailLoading] = useState(false)
+  const [joinTarget, setJoinTarget] = useState<AvailableClass | null>(null)
+  const [joinMessage, setJoinMessage] = useState('')
 
   useEffect(() => {
     fetchClasses()
@@ -157,6 +185,50 @@ export const MyClasses = () => {
 
   // Reset session pagination when switching class
   useEffect(() => { setSessionPage(1) }, [selectedClassId])
+
+  // Debounced search + paginated fetch for available classes
+  useEffect(() => { const t = setTimeout(() => setAvailSearchDebounced(availSearch), 350); return () => clearTimeout(t) }, [availSearch])
+  useEffect(() => { setAvailPage(1) }, [availSearchDebounced, availPageSize])
+  useEffect(() => { fetchAvailable() }, [availPage, availPageSize, availSearchDebounced])
+
+  const fetchAvailable = async () => {
+    try {
+      setAvailLoading(true)
+      const res = await api.get('/classes/available', { params: { page: availPage, limit: availPageSize, search: availSearchDebounced } })
+      setAvailableClasses(res.data.classes || [])
+      setAvailableTotal(res.data.total || 0)
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể tải danh sách lớp')
+    } finally {
+      setAvailLoading(false)
+    }
+  }
+
+  const submitJoin = async () => {
+    if (!joinTarget) return
+    try {
+      setSubmitting(true)
+      await api.post(`/classes/${joinTarget._id}/join`, { message: joinMessage })
+      toast.success('Đã gửi yêu cầu vào lớp')
+      setJoinTarget(null)
+      setJoinMessage('')
+      fetchAvailable()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể gửi yêu cầu')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const cancelJoin = async (klass: AvailableClass) => {
+    try {
+      await api.delete(`/classes/${klass._id}/join`)
+      toast.success('Đã hủy yêu cầu vào lớp')
+      fetchAvailable()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể hủy yêu cầu')
+    }
+  }
 
   const fetchClasses = async () => {
     try {
@@ -635,7 +707,103 @@ export const MyClasses = () => {
             </section>
           </div>
         )}
+
+        {/* Browse & request to join classes */}
+        <div className="rounded-[2rem] bg-white border border-gray-100 shadow-xl p-5 sm:p-6 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" /> Khám phá & xin vào lớp học
+              </h2>
+              <p className="mt-1 text-sm font-medium text-gray-500">Gửi yêu cầu tham gia, giáo viên/quản trị sẽ duyệt cho bạn.</p>
+            </div>
+            <div className="relative sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                value={availSearch}
+                onChange={e => setAvailSearch(e.target.value)}
+                className="h-10 rounded-xl font-bold pl-9 text-sm"
+                placeholder="Tìm lớp theo tên..."
+              />
+            </div>
+          </div>
+
+          {availLoading ? (
+            <div className="py-10 flex justify-center"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
+          ) : availableClasses.length === 0 ? (
+            <div className="rounded-2xl bg-gray-50 p-8 text-center">
+              <BookOpen className="h-9 w-9 text-gray-300 mx-auto mb-2" />
+              <p className="font-black text-gray-500">{availSearchDebounced ? 'Không tìm thấy lớp phù hợp.' : 'Hiện chưa có lớp nào để đăng ký.'}</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availableClasses.map((klass) => (
+                <div key={klass._id} className="rounded-2xl border border-gray-100 bg-gray-50/60 p-4 flex flex-col">
+                  <h3 className="font-black text-gray-900">{klass.name}</h3>
+                  <p className="mt-1 text-xs font-medium text-gray-500 line-clamp-2 min-h-[32px]">{klass.description || 'Chưa có mô tả'}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge className="rounded-lg bg-indigo-50 text-indigo-600 border-none text-[10px]">{klass.teacherIds?.[0]?.name || 'Chưa có GV'}</Badge>
+                    <Badge className="rounded-lg bg-white text-gray-600 border border-gray-100 text-[10px] flex items-center gap-1"><Users className="h-3 w-3" /> {klass.studentCount}/{klass.capacity}</Badge>
+                    <Badge className="rounded-lg bg-white text-gray-600 border border-gray-100 text-[10px] flex items-center gap-1"><CalendarClock className="h-3 w-3" /> {klass.sessionsCount} buổi</Badge>
+                  </div>
+                  <p className="mt-2 text-sm font-black text-primary">{money(klass.tuitionFee)}đ</p>
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    {klass.myRequestStatus === 'pending' ? (
+                      <div className="flex items-center gap-2">
+                        <Badge className="rounded-lg bg-amber-50 text-amber-600 border-none flex-1 justify-center py-1.5 font-black"><Clock className="h-3.5 w-3.5 mr-1" /> Đang chờ duyệt</Badge>
+                        <Button variant="outline" onClick={() => cancelJoin(klass)} className="rounded-xl font-black border-gray-200 h-9 px-3 text-xs">Hủy</Button>
+                      </div>
+                    ) : klass.myRequestStatus === 'rejected' ? (
+                      <Button onClick={() => { setJoinTarget(klass); setJoinMessage('') }} className="w-full rounded-xl font-black bg-gray-900 hover:bg-black text-white h-10">
+                        <UserPlus className="mr-2 h-4 w-4" /> Bị từ chối • Xin lại
+                      </Button>
+                    ) : (
+                      <Button onClick={() => { setJoinTarget(klass); setJoinMessage('') }} className="w-full rounded-xl font-black chinese-gradient text-white h-10">
+                        <UserPlus className="mr-2 h-4 w-4" /> Xin vào lớp
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {availableTotal > availPageSize && (
+            <div className="pt-3 border-t border-gray-100">
+              <Pagination
+                total={availableTotal}
+                page={availPage}
+                pageSize={availPageSize}
+                onPageChange={setAvailPage}
+                onPageSizeChange={setAvailPageSize}
+                pageSizeOptions={[6, 12, 24]}
+                itemLabel="lớp"
+              />
+            </div>
+          )}
+        </div>
       </div>
+
+      <Dialog open={!!joinTarget} onOpenChange={(open) => !open && setJoinTarget(null)}>
+        <DialogContent className="sm:max-w-lg rounded-[2rem] border-none shadow-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-gray-900 flex items-center gap-3">
+              <UserPlus className="h-7 w-7 text-primary" /> Xin vào lớp
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-gray-500">Lớp <span className="font-black text-gray-900">{joinTarget?.name}</span> • GV: {joinTarget?.teacherIds?.[0]?.name || 'Chưa có'}</p>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Lời nhắn (không bắt buộc)</Label>
+              <Textarea value={joinMessage} onChange={e => setJoinMessage(e.target.value)} className="min-h-28 rounded-xl font-medium" placeholder="Giới thiệu ngắn về bạn, lý do muốn tham gia..." />
+            </div>
+            <Button disabled={submitting} onClick={submitJoin} className="w-full h-12 rounded-xl chinese-gradient text-white font-black">
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              Gửi yêu cầu
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!leaveSession} onOpenChange={(open) => !open && setLeaveSession(null)}>
         <DialogContent className="sm:max-w-xl rounded-[2rem] border-none shadow-2xl p-6">
